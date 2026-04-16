@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+	<meta charset="utf-8"/>
+	<meta name="viewport" content="width=device-width, initial-scale=1"/>
+	<title>Decks Salvos — Mytragor</title>
+	<style>
+	:root {
+		color-scheme: dark;
+		--bg-top: #160f09;
+		--bg-bottom: #040608;
+		--panel: rgba(11, 16, 24, 0.82);
+		--panel-strong: rgba(10, 13, 20, 0.94);
+		--panel-soft: rgba(255, 255, 255, 0.04);
+		--line: rgba(247, 202, 115, 0.2);
+		--line-strong: rgba(247, 202, 115, 0.44);
+		--gold: #f7ca73;
+		--gold-deep: #b98538;
+		--text: #f3ecde;
+		--muted: #b5bbca;
+		--shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
+	}
+	body {
+		margin: 0;
+		min-height: 100vh;
+		color: var(--text);
+		font-family: "Segoe UI", Tahoma, sans-serif;
+		background:
+			radial-gradient(circle at center, rgba(10,10,15,0.14) 0%, rgba(10,10,15,0.58) 72%),
+			linear-gradient(rgba(10,10,15,0.28), rgba(10,10,15,0.28)),
+			url("../bgambientes/fundostartdeck.png") center 12% / cover no-repeat fixed;
+		background-color: #0a0a0f;
+	}
+	body::before {
+		content: "";
+		position: fixed;
+		inset: 0;
+		pointer-events: none;
+		background:
+			radial-gradient(circle at 20% 18%, rgba(247, 202, 115, 0.08), transparent 20%),
+			radial-gradient(circle at 82% 24%, rgba(105, 54, 16, 0.28), transparent 24%),
+			radial-gradient(circle at 50% 100%, rgba(247, 202, 115, 0.06), transparent 38%);
+	}
+	.topbar {
+		position: sticky;
+		top: 0;
+		z-index: 10;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 18px;
+		padding: 18px 24px;
+		background: linear-gradient(180deg, rgba(14, 10, 7, 0.98), rgba(9, 14, 21, 0.9));
+		border-bottom: 1px solid rgba(247, 202, 115, 0.14);
+		backdrop-filter: blur(16px);
+	}
+	.logoWrap {
+		position: relative;
+		display: inline-block;
+		line-height: 0;
+		isolation: isolate;
+	}
+	.logoWrap::after {
+		content: "";
+		position: absolute;
+		inset: 12% -1% 10% -1%;
+		pointer-events: none;
+		z-index: 0;
+		background: radial-gradient(ellipse at 50% 50%, #f5cc6a55 0%, #d6a84733 42%, transparent 72%);
+		filter: blur(6px);
+		animation: logoGoldAura 2.8s ease-in-out infinite;
+	}
+	.logoImg {
+		width: 190px;
+		border-radius: 10px;
+		position: relative;
+		z-index: 1;
+		filter:
+			sepia(1)
+			saturate(3.4)
+			hue-rotate(350deg)
+			brightness(1.1)
+			contrast(1.1)
+			drop-shadow(0 0 2px #ffe7a8)
+			drop-shadow(0 0 8px #e2bb5a)
+			drop-shadow(0 2px 0 #6e531e)
+			drop-shadow(0 8px 20px #00000066);
+		animation: logoGoldPulse 2.8s ease-in-out infinite;
+	}
+	.topbarMeta {
+		display: flex;
+		align-items: center;
+		gap: 14px;
+		flex-wrap: wrap;
+		justify-content: flex-end;
+	}
+	.topbarHeading {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		margin-right: 8px;
+	}
+	.topbarTitle,
+	.sidebarTitle,
+	.detailTitle {
+		font-family: Georgia, "Times New Roman", serif;
+		letter-spacing: 0.04em;
+	}
+	.topbarTitle {
+		font-size: 22px;
+		color: var(--gold);
+	}
+	.topbarSubtitle {
+		font-size: 12px;
+		text-transform: uppercase;
+		letter-spacing: 0.16em;
+		color: var(--muted);
+	}
+	.searchInput {
+		width: 240px;
+		padding: 11px 14px;
+		border-radius: 999px;
+		border: 1px solid rgba(247, 202, 115, 0.16);
+		background: rgba(255, 255, 255, 0.03);
+		color: var(--text);
+		outline: none;
+		box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+	}
+	.searchInput::placeholder {
+		color: #97a0b3;
+	}
+	.btn {
+		appearance: none;
+		border: 1px solid rgba(247, 202, 115, 0.18);
+		border-radius: 999px;
+		padding: 10px 18px;
+		background: linear-gradient(180deg, #f0cd7a 0%, #c78f3a 100%);
+		color: #1b1208;
+		font-size: 14px;
+		font-weight: 700;
+		text-decoration: none;
+		cursor: pointer;
+		box-shadow: 0 10px 24px rgba(178, 117, 35, 0.18);
+		transition: transform 0.16s ease, filter 0.16s ease, box-shadow 0.16s ease;
+	}
+	.btn:hover {
+		transform: translateY(-2px);
+		filter: brightness(1.03);
+		box-shadow: 0 14px 28px rgba(178, 117, 35, 0.25);
+	}
+	.btn.isMuted {
+		background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+		color: var(--text);
+		border-color: rgba(255,255,255,0.08);
+		box-shadow: none;
+	}
+	.btn.isDanger {
+		background: linear-gradient(180deg, #dc6d5b, #a63b2f);
+		color: #fff1eb;
+		border-color: rgba(255, 163, 140, 0.22);
+	}
+	.appShell {
+		display: grid;
+		grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+		gap: 22px;
+		padding: 22px;
+		min-height: calc(100vh - 96px);
+		box-sizing: border-box;
+	}
+	.sidebarPanel,
+	.detailPanel {
+		position: relative;
+		background: linear-gradient(180deg, rgba(22, 17, 12, 0.78), var(--panel));
+		border: 1px solid rgba(247, 202, 115, 0.12);
+		border-radius: 26px;
+		box-shadow: var(--shadow);
+		overflow: hidden;
+	}
+	.sidebarPanel::before,
+	.detailPanel::before {
+		content: "";
+		position: absolute;
+		inset: 0;
+		pointer-events: none;
+		background: linear-gradient(180deg, rgba(255,255,255,0.04), transparent 24%);
+	}
+	.sidebarPanel {
+		display: flex;
+		flex-direction: column;
+		min-height: 0;
+	}
+	.sidebarHeader,
+	.detailHeaderShell {
+		padding: 20px 22px 18px;
+		border-bottom: 1px solid rgba(247, 202, 115, 0.09);
+	}
+	.sidebarTitle {
+		font-size: 24px;
+		color: var(--gold);
+	}
+	.sidebarSubtitle {
+		margin-top: 6px;
+		color: var(--muted);
+		font-size: 13px;
+		line-height: 1.5;
+	}
+	.deckList {
+		padding: 14px;
+		overflow: auto;
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+	}
+	.deckListItem {
+		display: grid;
+		grid-template-columns: 52px minmax(0, 1fr);
+		gap: 12px;
+		width: 100%;
+		padding: 12px;
+		border-radius: 18px;
+		border: 1px solid rgba(255,255,255,0.05);
+		background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));
+		color: inherit;
+		text-align: left;
+		cursor: pointer;
+		transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+	}
+	.deckListItem:hover {
+		transform: translateX(4px);
+		border-color: rgba(247, 202, 115, 0.22);
+	}
+	.deckListItem.isActive {
+		background: linear-gradient(180deg, rgba(94, 55, 15, 0.42), rgba(255,255,255,0.05));
+		border-color: var(--line-strong);
+		box-shadow: inset 0 0 0 1px rgba(247, 202, 115, 0.08);
+	}
+	.deckListLeader {
+		width: 52px;
+		height: 72px;
+		border-radius: 12px;
+		object-fit: cover;
+		border: 1px solid rgba(247, 202, 115, 0.28);
+		background: #101726;
+		box-shadow: 0 10px 18px rgba(0,0,0,0.28);
+	}
+	.deckListBody {
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		gap: 5px;
+	}
+	.deckListName {
+		font-size: 15px;
+		font-weight: 700;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.deckListLeaderName,
+	.deckListMeta {
+		font-size: 12px;
+		color: var(--muted);
+	}
+	.emptyList {
+		padding: 22px;
+		border-radius: 18px;
+		background: rgba(255,255,255,0.025);
+		border: 1px dashed rgba(247, 202, 115, 0.18);
+		color: var(--muted);
+		text-align: center;
+	}
+	.detailPanel {
+		display: flex;
+		flex-direction: column;
+		min-height: 0;
+	}
+	.emptyState {
+		min-height: 100%;
+		display: grid;
+		place-items: center;
+		padding: 28px;
+		text-align: center;
+		color: var(--muted);
+	}
+	.emptyStateBox {
+		max-width: 420px;
+		padding: 34px 28px;
+		border-radius: 22px;
+		background: rgba(255,255,255,0.025);
+		border: 1px dashed rgba(247, 202, 115, 0.18);
+	}
+	.detailContent {
+		display: flex;
+		flex-direction: column;
+		min-height: 0;
+	}
+	.detailHeader {
+		display: grid;
+		grid-template-columns: 184px minmax(0, 1fr);
+		gap: 22px;
+		align-items: start;
+	}
+	.detailLeader {
+		width: 184px;
+		height: 258px;
+		border-radius: 22px;
+		object-fit: cover;
+		border: 2px solid rgba(247, 202, 115, 0.32);
+		background: #101726;
+		box-shadow: 0 18px 42px rgba(0,0,0,0.3);
+	}
+	.detailText {
+		display: flex;
+		flex-direction: column;
+		gap: 14px;
+		min-width: 0;
+	}
+	.detailEyebrow {
+		font-size: 11px;
+		letter-spacing: 0.18em;
+		text-transform: uppercase;
+		color: var(--gold);
+	}
+	.detailTitle {
+		font-size: 34px;
+		line-height: 1.05;
+		margin: 0;
+	}
+	.detailLeaderName {
+		font-size: 16px;
+		color: var(--muted);
+	}
+	.detailSummary,
+	.detailTags,
+	.detailActions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 10px;
+	}
+	.statPill,
+	.tagPill {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		padding: 7px 12px;
+		border-radius: 999px;
+		background: rgba(255,255,255,0.04);
+		border: 1px solid rgba(255,255,255,0.06);
+		font-size: 12px;
+		color: var(--text);
+	}
+	.statPill strong {
+		color: var(--gold);
+		font-weight: 700;
+	}
+	.deckCardsWrap {
+		padding: 0 22px 22px;
+		overflow: auto;
+	}
+	.deckCardsHeader {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		padding: 16px 0 14px;
+	}
+	.deckCardsTitle {
+		font-family: Georgia, "Times New Roman", serif;
+		font-size: 22px;
+		color: var(--gold);
+	}
+	.deckCardsNote {
+		font-size: 12px;
+		color: var(--muted);
+	}
+	.selectedDeckGrid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(78px, 1fr));
+		gap: 10px;
+	}
+	.selectedCard {
+		position: relative;
+		border-radius: 14px;
+		overflow: hidden;
+		background: #111828;
+		border: 1px solid rgba(247, 202, 115, 0.1);
+		box-shadow: 0 12px 24px rgba(0,0,0,0.2);
+		cursor: pointer;
+		transition: transform 0.15s ease, border-color 0.15s ease;
+	}
+	.selectedCard:hover {
+		transform: translateY(-3px);
+		border-color: rgba(247, 202, 115, 0.28);
+	}
+	.selectedCard img {
+		display: block;
+		width: 100%;
+		aspect-ratio: 5 / 7;
+		object-fit: cover;
+	}
+	.selectedCardName {
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		padding: 18px 8px 8px;
+		background: linear-gradient(180deg, transparent, rgba(4, 6, 8, 0.96));
+		font-size: 10px;
+		text-align: center;
+		letter-spacing: 0.02em;
+	}
+	@keyframes logoGoldPulse {
+		0%, 100% {
+			filter:
+				sepia(1)
+				saturate(3.4)
+				hue-rotate(350deg)
+				brightness(1.08)
+				contrast(1.08)
+				drop-shadow(0 0 2px #ffe7a8)
+				drop-shadow(0 0 10px #e2bb5a)
+				drop-shadow(0 2px 0 #6e531e)
+				drop-shadow(0 8px 20px #00000066);
+		}
+		50% {
+			filter:
+				sepia(1)
+				saturate(3.6)
+				hue-rotate(350deg)
+				brightness(1.16)
+				contrast(1.14)
+				drop-shadow(0 0 3px #fff1c0)
+				drop-shadow(0 0 14px #f2cb68)
+				drop-shadow(0 2px 0 #7d5d22)
+				drop-shadow(0 10px 22px #00000066);
+		}
+	}
+	@keyframes logoGoldAura {
+		0%, 100% {
+			background: radial-gradient(ellipse at 50% 50%, #f5cc6a66 0%, #d6a84733 42%, transparent 72%);
+			opacity: .55;
+		}
+		50% {
+			background: radial-gradient(ellipse at 50% 50%, #f7d26a88 0%, #d6a8474d 42%, transparent 72%);
+			opacity: .9;
+		}
+	}
+	@media (max-width: 1100px) {
+		.appShell {
+			grid-template-columns: 292px minmax(0, 1fr);
+		}
+		.detailHeader {
+			grid-template-columns: 148px minmax(0, 1fr);
+		}
+		.detailLeader {
+			width: 148px;
+			height: 208px;
+		}
+	}
+	@media (max-width: 860px) {
+		.topbar {
+			flex-direction: column;
+			align-items: stretch;
+		}
+		.topbarMeta {
+			justify-content: stretch;
+		}
+		.searchInput,
+		.btn {
+			width: 100%;
+			box-sizing: border-box;
+		}
+		.appShell {
+			grid-template-columns: 1fr;
+			padding: 14px;
+		}
+		.sidebarPanel {
+			max-height: 42vh;
+		}
+	}
+	@media (max-width: 640px) {
+		.detailHeader {
+			grid-template-columns: 1fr;
+		}
+		.detailLeader {
+			width: min(68vw, 220px);
+			height: auto;
+			aspect-ratio: 5 / 7;
+			justify-self: center;
+		}
+		.detailTitle {
+			font-size: 28px;
+		}
+		.selectedDeckGrid {
+			grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
+		}
+	}
+	</style>
+	<link rel="stylesheet" href="../mobile.css" media="(max-width:880px)">
+</head>
+<body>
+	<div class="topbar">
+		<div class="logoWrap"><img class="logoImg" src="/logo/logomytragor.png" alt="Mytragor" onerror="this.src='../logo/logomytragor.png'" /></div>
+		<div class="topbarMeta">
+			<div class="topbarHeading">
+				<span class="topbarTitle">Decks Salvos</span>
+				<span class="topbarSubtitle" id="deckCount">0 decks salvos</span>
+			</div>
+			<input id="searchDecks" class="searchInput" placeholder="Buscar decks ou líder..." />
+			<a href="deckbuilder.html" class="btn">Montar baralho</a>
+		</div>
+	</div>
+
+	<div class="appShell">
+		<aside class="sidebarPanel">
+			<div class="sidebarHeader">
+				<div class="sidebarTitle">Biblioteca</div>
+				<div class="sidebarSubtitle">Escolha um deck na lateral para abrir a lista completa no centro da tela.</div>
+			</div>
+			<div id="deckList" class="deckList"></div>
+		</aside>
+
+		<section class="detailPanel">
+			<div id="emptyState" class="emptyState">
+				<div class="emptyStateBox">
+					<h2 class="detailTitle" style="font-size:28px;margin:0 0 10px;">Nenhum deck selecionado</h2>
+					<div>Use a busca ou clique em um deck salvo para ver o líder e todas as cartas com tamanho confortável.</div>
+				</div>
+			</div>
+
+			<div id="deckDetail" class="detailContent" hidden>
+				<div class="detailHeaderShell">
+					<div class="detailHeader">
+						<img id="detailLeader" class="detailLeader" alt="Líder do deck" />
+						<div class="detailText">
+							<div class="detailEyebrow">Deck Selecionado</div>
+							<h1 id="detailTitle" class="detailTitle"></h1>
+							<div id="detailLeaderName" class="detailLeaderName"></div>
+							<div id="detailSummary" class="detailSummary"></div>
+							<div id="detailTags" class="detailTags"></div>
+							<div id="detailActions" class="detailActions"></div>
+						</div>
+					</div>
+				</div>
+
+				<div class="deckCardsWrap">
+					<div class="deckCardsHeader">
+						<div class="deckCardsTitle">Lista do Deck</div>
+						<div id="deckCardsNote" class="deckCardsNote"></div>
+					</div>
+					<div id="selectedDeckGrid" class="selectedDeckGrid"></div>
+				</div>
+			</div>
+		</section>
+	</div>
+
+	<script src="../cards/cartas.js"></script>
+	<script src="../mobile.js"></script>
+	<script>
+function initFirebaseCompatLocal(){
+	try{
+		if(window._mytragor_firebase_init_local) return;
+		if(typeof FIREBASE_CONFIG === 'undefined') return;
+		if(window.firebase && firebase.initializeApp){
+			firebase.initializeApp(FIREBASE_CONFIG);
+			window._mytragor_firebase_init_local = true;
+		}
+	}catch(e){ console.warn('initFirebaseCompatLocal failed', e); }
+}
+
+async function loadUserDecksFromFirestoreLocal(){
+	try{
+		initFirebaseCompatLocal();
+		if(!window.firebase || !firebase.auth) return [];
+		const user = firebase.auth().currentUser;
+		if(!user) return [];
+		const db = firebase.firestore();
+		const snap = await db.collection('users').doc(user.uid).collection('decks').get();
+		return snap.docs.map(d => ({ _id: d.id, ...(d.data() || {}) }));
+	}catch(e){ console.warn('loadUserDecksFromFirestoreLocal failed', e); return []; }
+}
+
+async function deleteDeckFromFirestoreLocal(id){
+	try{
+		initFirebaseCompatLocal();
+		if(!window.firebase || !firebase.auth) return false;
+		const user = firebase.auth().currentUser;
+		if(!user) return false;
+		const db = firebase.firestore();
+		await db.collection('users').doc(user.uid).collection('decks').doc(id).delete();
+		return true;
+	}catch(e){ console.warn('deleteDeckFromFirestoreLocal failed', e); return false; }
+}
+
+const CHOSEN_IMAGES = {
+	katsu: '../chosens/layout-katsuvingador.ai.png',
+	valbrak: '../chosens/layout-valbrak.ai.png',
+	leafae: '../chosens/layout-leafaefloresta.ai.png',
+	ademais: '../chosens/layout-ademais.ai.png'
+};
+
+const CARD_BACK_IMAGE = 'layout-background.ai.png';
+const deckState = {
+	all: [],
+	filtered: [],
+	activeKey: ''
+};
+
+function normalizeDeck(raw, index) {
+	const cards = Array.isArray(raw && raw.cards)
+		? raw.cards.map(card => {
+			if (typeof card === 'string') return card;
+			if (card && typeof card.name === 'string') return card.name;
+			return String(card || '').trim();
+		}).filter(Boolean)
+		: [];
+	const deckName = String(raw && (raw.deckName || raw.leader || raw.leaderName) || `Deck ${index + 1}`);
+	const leaderName = String(raw && (raw.leader || raw.leaderName) || 'Desconhecido');
+	return {
+		...(raw || {}),
+		deckName,
+		leader: leaderName,
+		leaderName,
+		leaderKey: raw && raw.leaderKey ? String(raw.leaderKey) : '',
+		leaderImg: raw && raw.leaderImg ? String(raw.leaderImg) : '',
+		fragImg: raw && raw.fragImg ? String(raw.fragImg) : '',
+		tags: Array.isArray(raw && raw.tags) ? raw.tags.map(tag => String(tag)) : [],
+		cards
+	};
+}
+
+function normalizeLeaderKey(value){
+	return String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '');
+}
+
+function getDeckName(deck){
+	return deck.deckName || deck.leader || deck.leaderName || 'Deck';
+}
+
+function getLeaderName(deck){
+	return deck.leader || deck.leaderName || 'Desconhecido';
+}
+
+function getDeckKey(deck){
+	if(deck._id) return `remote:${deck._id}`;
+	return [getDeckName(deck), getLeaderName(deck), deck.fragImg || '', (deck.cards || []).join('|')].join('::');
+}
+
+function resolveLeaderImage(deck){
+	if (deck.leaderImg) return deck.leaderImg;
+	const leaderKey = normalizeLeaderKey(deck.leaderKey || deck.leader || deck.leaderName || '');
+	if (leaderKey.includes('ademais')) return CHOSEN_IMAGES.ademais;
+	if (leaderKey.includes('katsu')) return CHOSEN_IMAGES.katsu;
+	if (leaderKey.includes('valbrak')) return CHOSEN_IMAGES.valbrak;
+	if (leaderKey.includes('leafae')) return CHOSEN_IMAGES.leafae;
+	return CARD_BACK_IMAGE;
+}
+
+function updateDeckCount(n){
+	const el = document.getElementById('deckCount');
+	if (el) el.textContent = `${n} deck${n === 1 ? '' : 's'} salvo${n === 1 ? '' : 's'}`;
+}
+
+function resolveImg(path) {
+	if (!path) return CARD_BACK_IMAGE;
+	try {
+		if (/^(https?:|data:|file:|\/\/)/i.test(path)) return path;
+		let normalized = String(path).replace(/\\/g, '/').replace(/^\.\//, '').replace(/^\.\.\//, '');
+		const href = (window.location && window.location.href) || '';
+		const pathname = (window.location && window.location.pathname) || '';
+		const inLegacyAssetsUi = pathname.includes('/assets/ui/');
+		const inUi = pathname.includes('/ui/');
+
+		if (normalized.startsWith('assets/')) {
+			if (inLegacyAssetsUi) {
+				const marker = '/assets/ui/';
+				const idx = href.indexOf(marker);
+				if (idx >= 0) {
+					const root = href.slice(0, idx + 1);
+					return new URL(normalized, root).href;
+				}
+			}
+			normalized = normalized.slice('assets/'.length);
+		}
+
+		const candidate = inLegacyAssetsUi || inUi ? ('../' + normalized) : normalized;
+		return new URL(candidate, href).href;
+	} catch (e) {
+		return path;
+	}
+}
+
+function getCardImg(cardName) {
+	if (!window.CARD_DEFS) return CARD_BACK_IMAGE;
+	const def = CARD_DEFS.find(c => c.name === cardName);
+	return resolveImg(def && def.img ? def.img : CARD_BACK_IMAGE);
+}
+
+function encodeDeck(deck) {
+	try {
+		const deckData = {
+			leader: deck.leaderName || deck.leader || '',
+			leaderKey: deck.leaderKey || '',
+			cards: deck.cards || [],
+			fragImg: deck.fragImg || null,
+			deckName: deck.deckName || ''
+		};
+		return 'MTG:' + btoa(JSON.stringify(deckData));
+	} catch (e) {
+		console.warn('encodeDeck failed', e);
+		return '';
+	}
+}
+
+async function getSavedDecks() {
+	let remote = [];
+	try { remote = await loadUserDecksFromFirestoreLocal(); } catch (e) {}
+	if (Array.isArray(remote) && remote.length) return remote.map((deck, index) => normalizeDeck(deck, index));
+	const raw = localStorage.getItem('mytragor_decks');
+	if (!raw) return [];
+	try {
+		const parsed = JSON.parse(raw);
+		return Array.isArray(parsed) ? parsed.map((deck, index) => normalizeDeck(deck, index)) : [];
+	} catch {
+		return [];
+	}
+}
+
+function showEmptyState() {
+	const emptyState = document.getElementById('emptyState');
+	const detail = document.getElementById('deckDetail');
+	emptyState.hidden = false;
+	emptyState.style.display = 'grid';
+	detail.hidden = true;
+	detail.style.display = 'none';
+}
+
+function showDetailState() {
+	const emptyState = document.getElementById('emptyState');
+	const detail = document.getElementById('deckDetail');
+	emptyState.hidden = true;
+	emptyState.style.display = 'none';
+	detail.hidden = false;
+	detail.style.display = 'flex';
+}
+
+function createPill(label, value) {
+	const pill = document.createElement('div');
+	pill.className = 'statPill';
+	pill.innerHTML = `<strong>${value}</strong> ${label}`;
+	return pill;
+}
+
+function renderTags(target, tags) {
+	target.innerHTML = '';
+	if (!Array.isArray(tags) || !tags.length) return;
+	tags.forEach(tag => {
+		const pill = document.createElement('div');
+		pill.className = 'tagPill';
+		pill.textContent = String(tag);
+		target.appendChild(pill);
+	});
+}
+
+function renderDeckList(decks) {
+	const list = document.getElementById('deckList');
+	list.innerHTML = '';
+	if (!decks.length) {
+		const empty = document.createElement('div');
+		empty.className = 'emptyList';
+		empty.textContent = 'Nenhum deck encontrado com esse nome.';
+		list.appendChild(empty);
+		return;
+	}
+
+	decks.forEach(deck => {
+		const key = getDeckKey(deck);
+		const button = document.createElement('button');
+		button.type = 'button';
+		button.dataset.deckKey = key;
+		button.className = `deckListItem${deckState.activeKey === key ? ' isActive' : ''}`;
+		button.onclick = () => {
+			deckState.activeKey = key;
+			renderDeckList(deckState.filtered);
+			renderDeckDetail(deck);
+		};
+
+		const leader = document.createElement('img');
+		leader.className = 'deckListLeader';
+		leader.src = resolveImg(resolveLeaderImage(deck));
+		leader.alt = getLeaderName(deck);
+		leader.onerror = () => { leader.src = CARD_BACK_IMAGE; };
+
+		const body = document.createElement('div');
+		body.className = 'deckListBody';
+
+		const name = document.createElement('div');
+		name.className = 'deckListName';
+		name.textContent = getDeckName(deck);
+
+		const leaderName = document.createElement('div');
+		leaderName.className = 'deckListLeaderName';
+		leaderName.textContent = `Líder: ${getLeaderName(deck)}`;
+
+		const meta = document.createElement('div');
+		meta.className = 'deckListMeta';
+		meta.textContent = `${(deck.cards || []).length} cartas${deck.fragImg ? ' · com fragmento' : ''}`;
+
+		body.appendChild(name);
+		body.appendChild(leaderName);
+		body.appendChild(meta);
+		button.appendChild(leader);
+		button.appendChild(body);
+		list.appendChild(button);
+	});
+}
+
+function showCardModal(imgSrc, cardName) {
+	let modal = document.getElementById('cardModal');
+	if (!modal) {
+		modal = document.createElement('div');
+		modal.id = 'cardModal';
+		modal.style.position = 'fixed';
+		modal.style.inset = '0';
+		modal.style.background = 'rgba(0,0,0,0.82)';
+		modal.style.display = 'flex';
+		modal.style.alignItems = 'center';
+		modal.style.justifyContent = 'center';
+		modal.style.zIndex = '9999';
+		modal.onclick = () => { modal.remove(); };
+		document.body.appendChild(modal);
+	} else {
+		modal.innerHTML = '';
+		modal.style.display = 'flex';
+	}
+	const img = document.createElement('img');
+	img.src = imgSrc;
+	img.alt = cardName;
+	img.style.maxWidth = '90vw';
+	img.style.maxHeight = '90vh';
+	img.style.borderRadius = '18px';
+	img.style.boxShadow = '0 12px 40px rgba(0,0,0,0.45)';
+	modal.appendChild(img);
+}
+
+function createActionButton(label, className, onClick) {
+	const button = document.createElement('button');
+	button.type = 'button';
+	button.className = className ? `btn ${className}` : 'btn';
+	button.textContent = label;
+	button.onclick = onClick;
+	return button;
+}
+
+function renderDeckCards(deck) {
+	const grid = document.getElementById('selectedDeckGrid');
+	const note = document.getElementById('deckCardsNote');
+	grid.innerHTML = '';
+	note.textContent = `${(deck.cards || []).length} carta${(deck.cards || []).length === 1 ? '' : 's'} exibida${(deck.cards || []).length === 1 ? '' : 's'}`;
+
+	if (!deck.cards || !deck.cards.length) {
+		const empty = document.createElement('div');
+		empty.className = 'emptyList';
+		empty.style.gridColumn = '1 / -1';
+		empty.textContent = 'Esse deck ainda não tem cartas salvas.';
+		grid.appendChild(empty);
+		return;
+	}
+
+	deck.cards.forEach(cardName => {
+		const imgSrc = getCardImg(cardName);
+		const card = document.createElement('button');
+		card.type = 'button';
+		card.className = 'selectedCard';
+		card.title = cardName;
+		card.onclick = () => showCardModal(imgSrc, cardName);
+
+		const img = document.createElement('img');
+		img.src = imgSrc;
+		img.alt = cardName;
+		img.onerror = () => { img.src = CARD_BACK_IMAGE; };
+
+		const label = document.createElement('div');
+		label.className = 'selectedCardName';
+		label.textContent = cardName;
+
+		card.appendChild(img);
+		card.appendChild(label);
+		grid.appendChild(card);
+	});
+}
+
+function renderDeckDetail(deck) {
+	if (!deck) {
+		showEmptyState();
+		return;
+	}
+
+	showDetailState();
+
+	try {
+		const leaderSrc = resolveImg(resolveLeaderImage(deck));
+		const leader = document.getElementById('detailLeader');
+		leader.src = leaderSrc;
+		leader.alt = getLeaderName(deck);
+		leader.onerror = () => { leader.src = CARD_BACK_IMAGE; };
+
+		document.getElementById('detailTitle').textContent = getDeckName(deck);
+		document.getElementById('detailLeaderName').textContent = `Líder: ${getLeaderName(deck)}`;
+
+		const summary = document.getElementById('detailSummary');
+		summary.innerHTML = '';
+		summary.appendChild(createPill('cartas', (deck.cards || []).length));
+		summary.appendChild(createPill('líder', '1'));
+		if (deck.fragImg) summary.appendChild(createPill('fragmento', 'Visual'));
+		if (deck._id) summary.appendChild(createPill('backup', 'Nuvem'));
+
+		renderTags(document.getElementById('detailTags'), deck.tags || []);
+
+		const actions = document.getElementById('detailActions');
+		actions.innerHTML = '';
+		actions.appendChild(createActionButton('Jogar', '', () => {
+			try {
+				localStorage.setItem('mytragor_play_deck', JSON.stringify({
+					deckName: deck.deckName || '',
+					leader: deck.leaderName || deck.leader || '',
+					leaderImg: deck.leaderImg || null,
+					cards: deck.cards || [],
+					fragImg: deck.fragImg || null
+				}));
+			} catch (e) {}
+			window.open('../../mytragor_simulador.html', '_blank');
+		}));
+		actions.appendChild(createActionButton('Copiar lista', 'isMuted', () => {
+			if (navigator.clipboard) navigator.clipboard.writeText((deck.cards || []).join('\n'));
+			alert('Lista de cartas copiada para a área de transferência.');
+		}));
+		actions.appendChild(createActionButton('Copiar código', 'isMuted', () => {
+			const deckCode = encodeDeck(deck);
+			if (navigator.clipboard) navigator.clipboard.writeText(deckCode);
+			alert('Código do deck copiado! Cole no montador para importar.');
+		}));
+		actions.appendChild(createActionButton('Excluir', 'isDanger', async () => {
+			if (!confirm('Excluir este deck salvo?')) return;
+			if (deck._id) {
+				const ok = await deleteDeckFromFirestoreLocal(deck._id).catch(() => false);
+				if (!ok) {
+					alert('Falha ao deletar no servidor; verifique conexão.');
+					return;
+				}
+				try {
+					const allLocal = JSON.parse(localStorage.getItem('mytragor_decks') || '[]');
+					const idx = allLocal.findIndex(x => x._id === deck._id || (x.deckName === deck.deckName && x.leader === deck.leader));
+					if (idx >= 0) {
+						allLocal.splice(idx, 1);
+						localStorage.setItem('mytragor_decks', JSON.stringify(allLocal));
+					}
+				} catch (e) {}
+			} else {
+				const all = JSON.parse(localStorage.getItem('mytragor_decks') || '[]');
+				const realIdx = all.findIndex(x => (x.deckName === deck.deckName && x.leader === deck.leader) || (x.leaderName === deck.leaderName && x.deckName === deck.deckName));
+				if (realIdx >= 0) {
+					all.splice(realIdx, 1);
+					localStorage.setItem('mytragor_decks', JSON.stringify(all));
+				}
+			}
+			await renderDecks();
+		}));
+
+		renderDeckCards(deck);
+	} catch (error) {
+		console.warn('renderDeckDetail failed', error, deck);
+		showEmptyState();
+	}
+}
+
+function syncActiveDeck(decks) {
+	if (!decks.length) {
+		deckState.activeKey = '';
+		return null;
+	}
+	const current = decks.find(deck => getDeckKey(deck) === deckState.activeKey);
+	if (current) return current;
+	deckState.activeKey = getDeckKey(decks[0]);
+	return decks[0];
+}
+
+async function renderDecks() {
+	const decks = await getSavedDecks();
+	const q = (document.getElementById('searchDecks') && document.getElementById('searchDecks').value || '').toLowerCase().trim();
+	const filtered = q ? decks.filter(deck => (`${getDeckName(deck)} ${getLeaderName(deck)}`).toLowerCase().includes(q)) : decks;
+	deckState.all = decks;
+	deckState.filtered = filtered;
+	updateDeckCount(filtered.length);
+	const activeDeck = syncActiveDeck(filtered);
+	renderDeckList(filtered);
+	renderDeckDetail(activeDeck);
+}
+
+renderDecks();
+
+const search = document.getElementById('searchDecks');
+if (search) search.addEventListener('input', () => { renderDecks(); });
+
+window.addEventListener('storage', event => {
+	if (event.key === 'mytragor_decks') renderDecks();
+});
+	</script>
+</body>
+</html>

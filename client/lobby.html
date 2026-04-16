@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width,initial-scale=1" />
+	<title>Mytragor Lobby</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:wght@400;500;600;700&display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="/src/style.css" />
+</head>
+<body class="lobbyBody">
+	<div class="page lobbyPage">
+		<div class="lobbyStage">
+			<div class="lobbyReserveColumn" aria-hidden="true"></div>
+			<main class="lobbyCenterColumn">
+				<header class="panel cardPad lobbyTopBar">
+					<div class="roomHeader lobbyHeader">
+						<div class="title">
+							<div class="lobbyBrand">
+								<img class="lobbyLogo" src="/logo/logomytragor.png" alt="Mytragor" />
+								<div class="lobbyHeroCopy">
+									<div class="lobbyEyebrow">Salão de guerra online</div>
+									<h2>Lobby de Desafios</h2>
+									<p>Escolha seu deck, marque presença na arena e acompanhe as salas abertas sem roubar o centro visual da arte de batalha.</p>
+								</div>
+							</div>
+						</div>
+						<button class="btnGhost lobbyBackBtn" onclick="location.href='index.html'" type="button">Voltar</button>
+					</div>
+				</header>
+
+				<div class="lobbyGrid lobbyGridRefined">
+					<section class="card cardPad panel lobbyLeft lobbyDeckPanel">
+						<div class="lobbySectionEyebrow">Preparação do duelo</div>
+						<div class="lobbySectionHead">
+							<h3>Deck, líder e prontidão</h3>
+						</div>
+
+						<div class="grid2 lobbyChoiceGrid">
+							<div>
+								<label>Selecione o deck</label>
+								<select id="deck">
+									<option value="">(carregando decks salvos...)</option>
+								</select>
+							</div>
+							<div>
+								<label>Líder</label>
+								<select id="leader" disabled>
+									<option value="">(auto pelo deck salvo)</option>
+								</select>
+							</div>
+						</div>
+
+						<div class="lobbyReadyBlock">
+							<button class="btnGold readyPrimary" id="btnReady" type="button">Desafiar</button>
+							<div class="lobbyReadyMeta">
+								<span class="pill">Status: <b id="ready" class="bad">NÃO PRONTO</b></span>
+								<p class="readyHint">Quando os dois duelistas confirmarem prontidão, a partida começa automaticamente.</p>
+							</div>
+						</div>
+
+						<details class="advancedPanel">
+							<summary>Configurações avançadas</summary>
+							<div class="advancedBody">
+								<label>Endpoint (ws)</label>
+								<input class="input" id="endpoint" value="ws://localhost:2567" />
+
+								<label>Room ID (vazio = criar)</label>
+								<input class="input" id="roomId" placeholder="ex: ABC123" />
+
+								<div class="actionsRow advancedActions">
+									<button class="btnGold secondary" id="btnJoinSelected" type="button">Entrar selecionada</button>
+								</div>
+
+								<div class="zoneTitle">Eventos</div>
+								<pre class="log" id="log"></pre>
+							</div>
+						</details>
+					</section>
+
+					<section class="card cardPad panel lobbyRight lobbyRoomsPanel">
+						<div class="lobbySectionEyebrow">Salão das salas</div>
+						<div class="lobbySectionHead">
+							<h3>Sala atual e desafios abertos</h3>
+							<p>Veja sua posição na mesa, acompanhe quem já entrou e aceite confrontos abertos com leitura rápida.</p>
+						</div>
+
+						<div class="actionsRow roomStateRow lobbyCompactState">
+							<span class="pill">Slot: <b id="slot">—</b></span>
+							<span class="pill">Fase: <b id="phase">—</b></span>
+						</div>
+
+						<div class="lobbySubPanel">
+							<div class="zoneTitle">Jogadores na sala</div>
+							<div id="players" class="playersMount">—</div>
+						</div>
+
+						<div class="lobbySubPanel">
+							<div class="roomsHeader">
+								<div class="zoneTitle">Salas abertas</div>
+								<button class="btnGhost lobbyUtilityBtn" id="btnRefreshRooms" type="button">Atualizar</button>
+							</div>
+							<div id="roomList" class="roomList"></div>
+						</div>
+					</section>
+				</div>
+			</main>
+			<div class="lobbyReserveColumn" aria-hidden="true"></div>
+		</div>
+	</div>
+
+	<script type="module" src="/src/lobby.ts"></script>
+</body>
+</html>

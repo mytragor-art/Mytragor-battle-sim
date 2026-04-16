@@ -1,0 +1,18 @@
+{
+	"compilerOptions": {
+		"target": "ES2020",
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"strict": true,
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"forceConsistentCasingInFileNames": true,
+		"jsx": "preserve",
+		"allowJs": false,
+		"allowImportingTsExtensions": false,
+		"types": []
+	},
+	"include": ["src/**/*", "index.html"],
+	"exclude": ["node_modules", "dist"]
+}
+

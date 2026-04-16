@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mytragor</title>
+  <style>
+    :root{
+      --bg1:#06070a;
+      --bg2:#0b0f18;
+      --card:#0f1420cc;
+      --stroke:#ffffff14;
+      --text:#e9edf7;
+      --muted:#a8b1c6;
+      --gold1:#f7d26a;
+      --gold2:#caa24a;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color:var(--text);
+      min-height:100vh;
+      overflow-x:hidden;
+      background:
+        radial-gradient(1200px 700px at 70% 10%, #1a1f2e 0%, transparent 60%),
+        radial-gradient(900px 600px at 20% 80%, #141a28 0%, transparent 55%),
+        linear-gradient(180deg, var(--bg1), var(--bg2));
+    }
+
+    .wrap{
+      width:min(1100px, 92vw);
+      margin:0 auto;
+      padding:28px 0 60px;
+    }
+
+    header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+      padding:10px 0 26px;
+    }
+
+    .brand{
+      display:flex; align-items:center; gap:14px;
+    }
+
+    .sigil{
+      width:64px;
+      height:64px;
+      position:relative;
+      display:grid;
+      place-items:center;
+      perspective:600px;
+    }
+    .d20{
+      width:58px;
+      height:58px;
+      position:relative;
+      transform-style:preserve-3d;
+      animation:d20spin 3.8s linear infinite;
+      filter: drop-shadow(0 6px 14px #00000066);
+    }
+    .d20::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      clip-path:polygon(50% 2%, 76% 12%, 94% 34%, 88% 62%, 66% 86%, 34% 86%, 12% 62%, 6% 34%, 24% 12%);
+      background:linear-gradient(145deg, #ffe39a 0%, #e2ba63 45%, #b9892f 100%);
+      border:1px solid #f7d26a;
+      box-shadow:
+        inset 0 0 0 1px #fff1c1aa,
+        inset 0 -6px 10px #8a6324aa,
+        0 0 10px #f7d26a55;
+      transform:rotateX(15deg);
+    }
+    .d20::after{
+      content:"";
+      position:absolute;
+      inset:10px;
+      clip-path:polygon(50% 4%, 74% 14%, 90% 34%, 84% 60%, 64% 80%, 36% 80%, 16% 60%, 10% 34%, 26% 14%);
+      background:
+        linear-gradient(120deg, transparent 0 34%, #fff6d7aa 44%, transparent 56%),
+        linear-gradient(180deg, #ffffff22, #00000022);
+      mix-blend-mode:screen;
+      transform:translateZ(1px);
+    }
+    @keyframes d20spin{
+      from{ transform:rotateY(0deg) rotateX(8deg); }
+      to{ transform:rotateY(360deg) rotateX(8deg); }
+    }
+
+    .brand h1{
+      margin:0;
+      font-size:22px;
+      letter-spacing:0.8px;
+    }
+    .logoWrap{
+      position:relative;
+      display:inline-block;
+      line-height:0;
+      isolation:isolate;
+    }
+    .logoWrap::after{
+      content:"";
+      position:absolute;
+      inset:12% -1% 10% -1%;
+      pointer-events:none;
+      z-index:0;
+      background: radial-gradient(ellipse at 50% 50%, #f5cc6a55 0%, #d6a84733 42%, transparent 72%);
+      filter: blur(6px);
+      animation:logoGoldAura 2.8s ease-in-out infinite;
+    }
+    .brandLogo{
+      display:block;
+      height:100px;
+      width:auto;
+      margin:0;
+      object-fit:contain;
+      position:relative;
+      z-index:1;
+      filter:
+        sepia(1)
+        saturate(3.4)
+        hue-rotate(350deg)
+        brightness(1.1)
+        contrast(1.1)
+        drop-shadow(0 0 2px #ffe7a8)
+        drop-shadow(0 0 8px #e2bb5a)
+        drop-shadow(0 2px 0 #6e531e)
+        drop-shadow(0 8px 20px #00000066);
+      animation:logoGoldPulse 2.8s ease-in-out infinite;
+    }
+    @keyframes logoGoldPulse{
+      0%, 100%{
+        filter:
+          sepia(1)
+          saturate(3.4)
+          hue-rotate(350deg)
+          brightness(1.08)
+          contrast(1.08)
+          drop-shadow(0 0 2px #ffe7a8)
+          drop-shadow(0 0 10px #e2bb5a)
+          drop-shadow(0 2px 0 #6e531e)
+          drop-shadow(0 8px 20px #00000066);
+      }
+      50%{
+        filter:
+          sepia(1)
+          saturate(3.6)
+          hue-rotate(350deg)
+          brightness(1.16)
+          contrast(1.14)
+          drop-shadow(0 0 3px #fff1c0)
+          drop-shadow(0 0 14px #f2cb68)
+          drop-shadow(0 2px 0 #7d5d22)
+          drop-shadow(0 10px 22px #00000066);
+      }
+    }
+    @keyframes logoGoldAura{
+      0%, 100%{
+        background: radial-gradient(ellipse at 50% 50%, #f5cc6a66 0%, #d6a84733 42%, transparent 72%);
+        opacity:.55;
+      }
+      50%{
+        background: radial-gradient(ellipse at 50% 50%, #f7d26a88 0%, #d6a8474d 42%, transparent 72%);
+        opacity:.9;
+      }
+    }
+    .brand small{
+      display:block;
+      color:var(--muted);
+      margin-top:2px;
+      font-size:12px;
+      letter-spacing:0.2px;
+    }
+
+    .link{
+      border:1px solid var(--stroke);
+      background:#0f1420aa;
+      color:var(--muted);
+      padding:10px 14px;
+      border-radius:14px;
+      cursor:pointer;
+      transition:background .2s ease, border-color .2s ease;
+    }
+    .link:hover{ background:#141b2aff; border-color:#ffffff22; }
+
+    .hero{
+      display:grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap:18px;
+      align-items:stretch;
+    }
+    @media (max-width: 900px){
+      .hero{ grid-template-columns:1fr; }
+    }
+
+    .panel{
+      background:var(--card);
+      border:1px solid var(--stroke);
+      border-radius:22px;
+      padding:18px;
+      box-shadow: 0 16px 60px #00000066;
+      backdrop-filter: blur(10px);
+      position:relative;
+      overflow:hidden;
+    }
+
+    .panel:after{
+      content:"";
+      position:absolute;
+      inset:-2px;
+      background: radial-gradient(500px 220px at 20% 0%, #f7d26a20, transparent 60%);
+      pointer-events:none;
+    }
+
+    .title{
+      margin:0 0 10px;
+      font-size:36px;
+      letter-spacing:.4px;
+      line-height:1.05;
+    }
+
+    .subtitle{
+      margin:0 0 18px;
+      color:var(--muted);
+      line-height:1.45;
+      font-size:15px;
+      max-width:54ch;
+    }
+
+    .ctaRow{
+      display:flex; gap:12px; align-items:center; flex-wrap:wrap;
+      margin-top:6px;
+    }
+
+    .btnPrimary{
+      background: linear-gradient(135deg, var(--gold1), var(--gold2));
+      border:0;
+      color:#1b1405;
+      font-weight:800;
+      padding:14px 18px;
+      border-radius:18px;
+      cursor:pointer;
+      box-shadow: 0 12px 40px #caa24a33;
+      transition:transform .06s ease, filter .2s ease;
+      letter-spacing:.4px;
+    }
+    .btnPrimary:hover{ filter:saturate(1.05); }
+    .btnPrimary:active{ transform: translateY(1px); }
+
+    .ghost{
+      border:1px solid var(--stroke);
+      background:#0f1420aa;
+      color:var(--text);
+      padding:12px 14px;
+      border-radius:18px;
+      cursor:pointer;
+      transition:background .2s ease, border-color .2s ease;
+    }
+    .ghost:hover{ background:#141b2aff; border-color:#ffffff22; }
+
+    .side{
+      display:grid;
+      gap:12px;
+    }
+
+    .mini{
+      background:#0f1420a8;
+      border:1px solid var(--stroke);
+      border-radius:18px;
+      padding:14px;
+    }
+    .mini b{ display:block; margin-bottom:6px; }
+    .mini span{ color:var(--muted); font-size:13px; line-height:1.35; }
+
+    footer{
+      margin-top:18px;
+      color:#7f8aa4;
+      font-size:12px;
+      text-align:center;
+      opacity:.85;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="sigil" aria-hidden="true"><div class="d20"></div></div>
+        <div>
+          <div class="logoWrap">
+          <img class="brandLogo" src="/logo/logomytragor.png" alt="Mytragor" />
+          </div>
+          <small>Trading Card Game • Simulador</small>
+        </div>
+      </div>
+
+      <button class="link" id="btnCredits">Créditos</button>
+    </header>
+
+    <section class="hero">
+      <div class="panel">
+        <h2 class="title">Entre no conflito.</h2>
+        <p class="subtitle">
+          Um simulador focado em partidas rápidas, decisões duras e evolução por turnos.
+          Sem poluição visual: o jogo aparece quando você apertar iniciar.
+        </p>
+
+        <div class="ctaRow">
+          <button class="btnPrimary" id="btnStart">INICIAR</button>
+          <button class="ghost" id="btnHow">Como funciona</button>
+          <button class="ghost" id="btnDeckBuilder">Montar Deck</button>
+          <button class="ghost" id="btnDecksSalvos">Decks Salvos</button>
+        </div>
+      </div>
+
+      <div class="side">
+        <div class="mini">
+          <b>Multiplayer</b>
+          <span>Entre em uma sala, escolha deck e líder, confirme pronto e comece.</span>
+        </div>
+        <div class="mini">
+          <b>Partidas em evolução</b>
+          <span>Fragmentos acumulam por turno do jogador e o ritmo acelera até o limite.</span>
+        </div>
+        <div class="mini">
+          <b>Protótipo</b>
+          <span>UI minimalista agora, mecânica primeiro. Depois polimos tudo.</span>
+        </div>
+      </div>
+    </section>
+
+    <footer>Mytragor • MVP • Build local</footer>
+  </div>
+
+  <script>
+    // Troque o destino aqui:
+    // - se seu lobby está em lobby.html, deixa assim
+    // - se está em /client/index.html, coloca isso
+    const LOBBY_URL = "lobby.html";
+    const DECKBUILDER_URL = "./ui/deckbuilder.html";
+    const DECKS_SALVOS_URL = "./ui/decks_salvos.html";
+
+    document.getElementById("btnStart").onclick = () => {
+      window.location.href = LOBBY_URL;
+    };
+
+    document.getElementById("btnHow").onclick = () => {
+      alert("Fluxo: Iniciar → Lobby → escolher Deck/Líder → Ready → Start.");
+    };
+
+    document.getElementById("btnDeckBuilder").onclick = () => {
+      window.location.href = DECKBUILDER_URL;
+    };
+
+    document.getElementById("btnDecksSalvos").onclick = () => {
+      window.location.href = DECKS_SALVOS_URL;
+    };
+
+    document.getElementById("btnCredits").onclick = () => {
+      alert("Mytragor TCG — Simulador MVP");
+    };
+  </script>
+
+</body>
+</html>

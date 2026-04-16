@@ -1,0 +1,1412 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Montador de Deck - Simulador Mytragor</title>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <link rel="stylesheet" href="../mobile.css" media="(max-width:880px)">
+  <style>
+    :root {
+      --bg-panel: linear-gradient(180deg, rgba(14,26,43,.92), rgba(8,14,26,.78));
+      --line: rgba(250,204,21,0.08);
+      --txt: #e6eef8;
+      --muted: #9ca3af;
+      --gold-a: #facc15;
+      --gold-b: #f59e0b;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      height: 100vh;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at center, rgba(10,10,15,0.14) 0%, rgba(10,10,15,0.58) 72%),
+        linear-gradient(rgba(10,10,15,0.28), rgba(10,10,15,0.28)),
+        url("../bgambientes/fundostartdeck.png") center 12% / cover no-repeat fixed;
+      background-color: #0a0a0f;
+      color: var(--txt);
+      font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial;
+      position: relative;
+    }
+
+    .container {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 10px 12px;
+      overflow: hidden;
+    }
+
+    .top {
+      flex: 0 0 auto;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      min-height: 86px;
+    }
+
+    .top .logoWrap{
+      grid-column: 2;
+      position: relative;
+      display: inline-block;
+      line-height: 0;
+      isolation: isolate;
+      justify-self: center;
+    }
+
+    .top .logoWrap::after{
+      content:"";
+      position:absolute;
+      inset:12% -1% 10% -1%;
+      pointer-events:none;
+      z-index:0;
+      background: radial-gradient(ellipse at 50% 50%, #f5cc6a55 0%, #d6a84733 42%, transparent 72%);
+      filter: blur(6px);
+      animation:logoGoldAura 2.8s ease-in-out infinite;
+    }
+
+    .top .brandLogo {
+      width: min(30vw, 210px);
+      border-radius: 10px;
+      position: relative;
+      z-index: 1;
+      filter:
+        sepia(1)
+        saturate(3.4)
+        hue-rotate(350deg)
+        brightness(1.1)
+        contrast(1.1)
+        drop-shadow(0 0 2px #ffe7a8)
+        drop-shadow(0 0 8px #e2bb5a)
+        drop-shadow(0 2px 0 #6e531e)
+        drop-shadow(0 8px 20px #00000066);
+      animation:logoGoldPulse 2.8s ease-in-out infinite;
+    }
+
+    @keyframes logoGoldPulse{
+      0%, 100%{
+        filter:
+          sepia(1)
+          saturate(3.4)
+          hue-rotate(350deg)
+          brightness(1.08)
+          contrast(1.08)
+          drop-shadow(0 0 2px #ffe7a8)
+          drop-shadow(0 0 10px #e2bb5a)
+          drop-shadow(0 2px 0 #6e531e)
+          drop-shadow(0 8px 20px #00000066);
+      }
+      50%{
+        filter:
+          sepia(1)
+          saturate(3.6)
+          hue-rotate(350deg)
+          brightness(1.16)
+          contrast(1.14)
+          drop-shadow(0 0 3px #fff1c0)
+          drop-shadow(0 0 14px #f2cb68)
+          drop-shadow(0 2px 0 #7d5d22)
+          drop-shadow(0 10px 22px #00000066);
+      }
+    }
+
+    @keyframes logoGoldAura{
+      0%, 100%{
+        background: radial-gradient(ellipse at 50% 50%, #f5cc6a66 0%, #d6a84733 42%, transparent 72%);
+        opacity:.55;
+      }
+      50%{
+        background: radial-gradient(ellipse at 50% 50%, #f7d26a88 0%, #d6a8474d 42%, transparent 72%);
+        opacity:.9;
+      }
+    }
+
+    h1 {
+      margin: 0;
+      color: var(--gold-a);
+      font-family: 'Cinzel', Georgia, serif;
+      font-size: 28px;
+      line-height: 1.1;
+      grid-column: 1;
+      justify-self: start;
+      text-align: left;
+    }
+
+    .board {
+      flex: 1;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: 320px minmax(780px, 1fr) 420px;
+      gap: 10px;
+    }
+
+    .panel {
+      background: var(--bg-panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow: 0 12px 30px rgba(2,6,23,.7);
+      min-height: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      padding: 10px;
+    }
+
+    .panel h2 {
+      margin: 0 0 8px;
+      font-size: 17px;
+      color: var(--txt);
+    }
+
+    .btn {
+      border: 1px solid rgba(250,200,60,.12);
+      background: linear-gradient(180deg, var(--gold-a), var(--gold-b));
+      color: #111;
+      font-weight: 700;
+      border-radius: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .btn:disabled {
+      background: #555;
+      color: #aaa;
+      cursor: not-allowed;
+      border-color: rgba(255,255,255,.08);
+    }
+
+    .btn.ghost {
+      background: transparent;
+      color: #cbd5e1;
+      border-color: rgba(255,255,255,.16);
+      font-weight: 600;
+    }
+
+    #btnLimpar,
+    #btnVerDecks {
+      background: linear-gradient(180deg, #e6ebf0 0%, #aeb8c4 100%);
+      color: #14181d;
+      border-color: rgba(255,255,255,.44);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.72), 0 8px 20px rgba(0,0,0,.18);
+      text-shadow: 0 1px 0 rgba(255,255,255,.35);
+      font-weight: 800;
+    }
+
+    #btnLimpar:hover,
+    #btnVerDecks:hover {
+      filter: brightness(1.03);
+    }
+
+    .preview-card {
+      border: 1px solid rgba(250,204,21,.1);
+      border-radius: 10px;
+      padding: 8px;
+      background: linear-gradient(180deg, #071025, #0b1220);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      min-height: 0;
+    }
+
+    .preview-card img {
+      width: 188px;
+      height: 282px;
+      object-fit: cover;
+      border-radius: 6px;
+      box-shadow: 0 8px 20px rgba(0,0,0,.65);
+      flex: 0 0 auto;
+    }
+
+    .preview-meta {
+      width: 100%;
+      min-width: 0;
+      overflow: visible;
+      max-height: none;
+      font-size: 13px;
+      line-height: 1.28;
+      text-align: left;
+    }
+
+    .preview-title {
+      color: var(--gold-a);
+      font-weight: 800;
+      margin-bottom: 3px;
+    }
+
+    .preview-sub {
+      color: var(--muted);
+      margin-bottom: 6px;
+      font-size: 12px;
+    }
+
+    .preview-stats {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 6px;
+    }
+
+    .preview-stat {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 7px;
+      border-radius: 999px;
+      border: 1px solid rgba(250,204,21,.14);
+      background: rgba(255,255,255,.04);
+      color: #dbe4f1;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .deck-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+
+    .deck-actions {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .deck-actions input {
+      width: 150px;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.25);
+      color: var(--txt);
+      font-size: 12px;
+    }
+
+    .deck-info {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .deck-info h3 {
+      margin: 0 0 6px;
+      font-size: 13px;
+      color: #cbd5e1;
+    }
+
+    .leader-row,
+    .frag-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .mini-tile {
+      width: 92px;
+      min-height: 140px;
+      border-radius: 10px;
+      padding: 6px;
+      text-align: center;
+      background: linear-gradient(180deg, rgba(16,32,57,.6), rgba(8,18,32,.6));
+      box-shadow: 0 6px 16px rgba(2,6,23,.6);
+      cursor: pointer;
+      border: 1px solid rgba(255,255,255,.05);
+      color: var(--txt);
+      font-size: 10px;
+    }
+
+    .mini-tile.selected { border-color: rgba(250,204,21,.45); }
+
+    .mini-tile img {
+      width: 78px;
+      height: 116px;
+      object-fit: cover;
+      border-radius: 5px;
+      display: block;
+      margin: 0 auto 4px;
+    }
+
+    .deck-grid {
+      flex: 1;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: repeat(7, minmax(86px, 1fr));
+      grid-template-rows: repeat(6, minmax(0, 1fr));
+      gap: 6px;
+      overflow: hidden;
+      padding: 2px;
+    }
+
+    .deck-slot {
+      border-radius: 9px;
+      border: 1px dashed rgba(255,255,255,.15);
+      background: rgba(255,255,255,.02);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #667085;
+      font-size: 10px;
+      text-align: center;
+      padding: 4px;
+    }
+
+    .deck-card {
+      border-radius: 9px;
+      background: linear-gradient(180deg, rgba(16,32,57,.65), rgba(8,18,32,.65));
+      border: 1px solid rgba(250,200,60,.15);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 2px;
+      padding: 3px;
+      cursor: pointer;
+      overflow: hidden;
+      text-align: center;
+      font-size: 8px;
+    }
+
+    .deck-card img {
+      width: 52px;
+      height: 78px;
+      object-fit: cover;
+      border-radius: 4px;
+      flex: 0 0 auto;
+    }
+
+    .choices-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .filtersBar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .filterSearchInput {
+      flex: 1 1 220px;
+      min-width: 200px;
+      padding: 9px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.25);
+      color: var(--txt);
+      font-size: 12px;
+    }
+
+    .filterDropdown {
+      position: relative;
+    }
+
+    .filterToggle {
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      color: #dbe4f1;
+      border-radius: 10px;
+      padding: 8px 11px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      min-width: 108px;
+      text-align: left;
+      transition: border-color .16s ease, background .16s ease, transform .16s ease;
+    }
+
+    .filterToggle:hover,
+    .filterToggle.is-open {
+      border-color: rgba(250,204,21,.24);
+      background: rgba(250,204,21,.08);
+      transform: translateY(-1px);
+    }
+
+    .filterMenu {
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      min-width: 240px;
+      max-width: min(360px, 72vw);
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(250,204,21,.14);
+      background: linear-gradient(180deg, rgba(10,16,28,.98), rgba(7,12,21,.94));
+      box-shadow: 0 14px 30px rgba(0,0,0,.45);
+      display: none;
+      z-index: 40;
+    }
+
+    .filterDropdown[data-filter-group="kind"] .filterMenu {
+      left: auto;
+      right: 0;
+    }
+
+    .filterDropdown.is-open .filterMenu {
+      display: block;
+    }
+
+    .filterMenuTitle {
+      margin: 0 0 10px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .6px;
+      text-transform: uppercase;
+      color: #facc15;
+    }
+
+    .filterChipWrap {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .filterClearBtn {
+      padding: 8px 10px;
+    }
+
+    .chip {
+      border: 1px solid rgba(255,255,255,.1);
+      background: rgba(255,255,255,.03);
+      color: #cbd5e1;
+      border-radius: 999px;
+      padding: 5px 9px;
+      font-size: 12px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .chip.selected {
+      background: linear-gradient(180deg, var(--gold-a), var(--gold-b));
+      color: #111;
+      border-color: rgba(250,200,60,.2);
+    }
+
+    .pager {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin: 2px 0 8px;
+      flex: 0 0 auto;
+    }
+
+    .pager span {
+      min-width: 84px;
+      text-align: center;
+      color: #cbd5e1;
+      font-size: 12px;
+    }
+
+    .pool-grid {
+      flex: 1;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(88px, 1fr));
+      grid-template-rows: repeat(3, minmax(0, 1fr));
+      gap: 6px;
+      overflow: hidden;
+      padding: 2px;
+    }
+
+    .pool-card {
+      border-radius: 9px;
+      background: linear-gradient(180deg, rgba(16,32,57,.62), rgba(8,18,32,.62));
+      border: 1px solid rgba(255,255,255,.08);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 2px;
+      padding: 4px;
+      cursor: pointer;
+      text-align: center;
+      overflow: hidden;
+      font-size: 9px;
+    }
+
+    .pool-card img {
+      width: 56px;
+      height: 84px;
+      object-fit: cover;
+      border-radius: 4px;
+      flex: 0 0 auto;
+    }
+
+    .pool-card.disabled {
+      opacity: .5;
+      filter: grayscale(.7);
+      cursor: not-allowed;
+    }
+
+    .pool-card-note {
+      color: #f7dd8a;
+      font-size: 8px;
+      line-height: 1.15;
+      opacity: .9;
+      text-shadow: 0 0 8px rgba(247,221,138,.16);
+    }
+
+    .modalOverlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(2,6,23,.62);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+
+    .modalBox {
+      width: min(980px, 96vw);
+      max-height: 90vh;
+      overflow-y: auto;
+      background: #0b1220;
+      border: 1px solid rgba(250,204,21,.12);
+      color: var(--txt);
+      border-radius: 10px;
+      padding: 14px;
+      box-shadow: 0 10px 38px rgba(0,0,0,.55);
+    }
+
+    .leader-modal-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .leader-modal-card {
+      border-radius: 9px;
+      border: 1px solid rgba(255,255,255,.1);
+      background: rgba(255,255,255,.03);
+      padding: 6px;
+      text-align: center;
+      cursor: pointer;
+      font-size: 10px;
+      min-height: 170px;
+    }
+
+    .leader-modal-card img {
+      width: 84px;
+      height: 126px;
+      object-fit: cover;
+      border-radius: 5px;
+      display: block;
+      margin: 0 auto 4px;
+    }
+
+    #btnBackMenu {
+      position: fixed;
+      right: 14px;
+      top: 14px;
+      z-index: 10001;
+    }
+  </style>
+</head>
+<body>
+  <button id="btnBackMenu" class="btn" onclick="location.href='../../index.html'">Voltar ao menu</button>
+
+  <div class="container">
+    <div class="top">
+      <div class="logoWrap">
+        <img class="brandLogo" src="/logo/logomytragor.png" alt="Logo Mytragor" onerror="this.src='../logo/logomytragor.png'">
+      </div>
+      <h1>Montador de Deck</h1>
+    </div>
+
+    <div class="board">
+      <section class="panel">
+        <h2>Pré-visualização</h2>
+        <div id="fixedPreview" class="preview-card">
+          <img src="layout-background.ai.png" alt="Prévia" id="previewImg">
+          <div class="preview-meta">
+            <div class="preview-title" id="previewTitle">Passe o mouse</div>
+            <div class="preview-sub" id="previewSub">Carta selecionada</div>
+            <div class="preview-stats" id="previewStats"></div>
+            <div id="previewText">A prévia da carta aparecerá aqui.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="deck-header">
+          <h2>Seu deck (41 slots)</h2>
+          <div class="deck-actions">
+            <input id="deckNameInput" type="text" placeholder="Nome do deck">
+            <button id="btnSalvar" class="btn" disabled>Salvar</button>
+            <button id="btnPlay" class="btn" disabled>Jogar</button>
+            <button id="btnLimpar" class="btn ghost">Limpar</button>
+            <button id="btnVerDecks" class="btn ghost">Ver decks</button>
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <div id="deckSize" style="font-weight:800;color:var(--gold-a);">0/41 cartas</div>
+          <div id="deckMeta" style="font-size:11px;color:var(--muted);">(líder + 40)</div>
+        </div>
+
+        <div id="deckList" class="deck-grid"></div>
+
+        <div style="margin-top:8px;border-top:1px solid rgba(255,255,255,.08);padding-top:8px;display:flex;gap:6px;">
+          <input id="importCodeInput" type="text" placeholder="Colar código do deck..." style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.14);background:rgba(0,0,0,.25);color:var(--txt);font-size:12px;">
+          <button id="btnImportDeck" class="btn">Importar deck</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="choices-head">
+          <h2>Cartas disponíveis</h2>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <div id="filterSummary" style="font-size:11px;color:#cbd5e1;">Nenhum filtro</div>
+            <button id="btnShowTutorial" class="btn ghost" style="padding:6px 10px;">Tutorial</button>
+          </div>
+        </div>
+
+        <div class="filtersBar">
+          <input id="filterSearch" class="filterSearchInput" placeholder="Buscar carta...">
+
+          <div class="filterDropdown" data-filter-group="kind">
+            <button id="kindFilterToggle" class="filterToggle" type="button">Tipo</button>
+            <div class="filterMenu" id="kindFilterMenu">
+              <div class="filterMenuTitle">Tipo de carta</div>
+              <div class="filterChipWrap">
+                <div class="chip" data-kind="ally">Aliado</div>
+                <div class="chip" data-kind="spell">Magia</div>
+                <div class="chip" data-kind="equip">Equipamento</div>
+                <div class="chip" data-kind="env">Ambiente</div>
+                <div class="chip" data-kind="truque">Truque</div>
+                <div class="chip" data-kind="chosen">Escolhido</div>
+                <div class="chip" data-kind="fragment">Fragmento</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="filterDropdown" data-filter-group="filiation">
+            <button id="filiationFilterToggle" class="filterToggle" type="button">Filiação</button>
+            <div class="filterMenu" id="filiationFilterMenu">
+              <div class="filterMenuTitle">Filiação</div>
+              <div class="filterChipWrap" id="filiationChips"></div>
+            </div>
+          </div>
+
+          <div class="filterDropdown" data-filter-group="cost">
+            <button id="costFilterToggle" class="filterToggle" type="button">Custo</button>
+            <div class="filterMenu" id="costFilterMenu">
+              <div class="filterMenuTitle">Custo</div>
+              <div class="filterChipWrap" id="costChips">
+                <div class="chip" data-cost="0">C0</div>
+                <div class="chip" data-cost="1">C1</div>
+                <div class="chip" data-cost="2">C2</div>
+                <div class="chip" data-cost="3">C3</div>
+                <div class="chip" data-cost="4">C4</div>
+                <div class="chip" data-cost="5">C5+</div>
+              </div>
+            </div>
+          </div>
+
+          <button id="btnClearFilters" class="btn ghost filterClearBtn">Limpar filtros</button>
+        </div>
+
+        <div class="pager">
+          <button id="btnPrevPage" class="btn ghost" style="padding:6px 10px;">◀</button>
+          <span id="pageInfo">1/1</span>
+          <button id="btnNextPage" class="btn ghost" style="padding:6px 10px;">▶</button>
+        </div>
+
+        <div id="cardPool" class="pool-grid"></div>
+      </section>
+    </div>
+  </div>
+
+  <script src="../cards/cartas.js?v=3"></script>
+  <script>
+    const CARD_BACK_IMAGE = 'layout-background.ai.png';
+    const BASE_CARD_POOL = (window.CARD_DEFS || []).filter(card => {
+      if (!['ally','spell','equip','env','truque'].includes(card.kind)) return false;
+      const key = String(card.key || '');
+      const img = String(card.img || '');
+      const name = String(card.name || '');
+      if (key.startsWith('token_')) return false;
+      if (img.includes('/tokens/')) return false;
+      if (name === 'Cidadãos Unidos') return false;
+      if (name === 'Aranhas Negras, Novato' && key === 'token_aranhas') return false;
+      return true;
+    });
+
+    const deckList = document.getElementById('deckList');
+    const cardPool = document.getElementById('cardPool');
+    const deckSize = document.getElementById('deckSize');
+    const btnSalvar = document.getElementById('btnSalvar');
+    const btnPlay = document.getElementById('btnPlay');
+    const btnLimpar = document.getElementById('btnLimpar');
+    const btnVerDecks = document.getElementById('btnVerDecks');
+    const deckNameInput = document.getElementById('deckNameInput');
+
+    const previewImg = document.getElementById('previewImg');
+    const previewTitle = document.getElementById('previewTitle');
+    const previewSub = document.getElementById('previewSub');
+    const previewStats = document.getElementById('previewStats');
+    const previewText = document.getElementById('previewText');
+
+    const filterSearch = document.getElementById('filterSearch');
+    const filiationChips = document.getElementById('filiationChips');
+    const costChips = document.getElementById('costChips');
+    const filterSummary = document.getElementById('filterSummary');
+    const kindFilterToggle = document.getElementById('kindFilterToggle');
+    const filiationFilterToggle = document.getElementById('filiationFilterToggle');
+    const costFilterToggle = document.getElementById('costFilterToggle');
+    const pageInfo = document.getElementById('pageInfo');
+    const btnPrevPage = document.getElementById('btnPrevPage');
+    const btnNextPage = document.getElementById('btnNextPage');
+
+    const btnImportDeck = document.getElementById('btnImportDeck');
+    const importCodeInput = document.getElementById('importCodeInput');
+
+    const FRAG_OPTIONS = [
+      { label: 'Arcano', img: '../fragments/layout-fragmento_arcano.png' },
+      { label: 'Marcial', img: '../fragments/layout-fragmento_marcial.png' },
+      { label: 'Religioso', img: '../fragments/layout-fragmento_religioso.png' },
+      { label: 'Sombras', img: '../fragments/layout-fragmento_sombras.png' }
+    ];
+
+    let LEADERS = [];
+    if (Array.isArray(window.CARD_DEFS) && window.CARD_DEFS.length) {
+      LEADERS = window.CARD_DEFS.filter(c => c.kind === 'leader').map(c => c);
+    } else {
+      LEADERS = [
+        { name: 'Valbrak', img: '../chosens/layout-valbrak.ai.png', filiacao: 'Arcana' },
+        { name: 'Katsu', img: '../chosens/layout-katsuvingador.ai.png', filiacao: 'Marcial' },
+        { name: 'Leafae', img: '../chosens/layout-leafaefloresta.ai.png', filiacao: 'Religioso' },
+        { name: 'Ademais, Aranhas Negras', img: '../chosens/layout-ademais.ai.png', filiacao: 'Sombras' }
+      ];
+    }
+
+    const LEADER_FILIACAO = {};
+    LEADERS.forEach(l => { if (l && l.name) LEADER_FILIACAO[l.name] = l.filiacao || l.filiation || ''; });
+
+    const CHOSEN_POOL = LEADERS.map(leader => ({
+      ...leader,
+      kind: 'chosen',
+      tipo: 'Escolhido'
+    }));
+
+    const FRAGMENT_POOL = FRAG_OPTIONS.map((opt, index) => ({
+      name: `Fragmento ${opt.label}`,
+      label: opt.label,
+      img: opt.img,
+      kind: 'fragment',
+      tipo: 'Fragmento',
+      fragmentId: index + 1,
+      text: `Seleciona o fragmento visual ${opt.label}.`
+    }));
+
+    function getSelectablePool() {
+      return [...BASE_CARD_POOL, ...CHOSEN_POOL, ...FRAGMENT_POOL];
+    }
+
+    let deck = [];
+    let chosenLeader = null;
+    let chosenFragImg = null;
+
+    const filterState = {
+      query: '',
+      kinds: new Set(),
+      filiation: null,
+      cost: null,
+      page: 1,
+      pageSize: 12
+    };
+
+    function normalizeText(s) {
+      return String(s || '').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
+    }
+
+    function formatFilterLabel(value) {
+      const normalized = String(value || '').trim().toLowerCase();
+      if (normalized === 'arcana') return 'Arcano';
+      return String(value || '');
+    }
+
+    function resolveImg(path) {
+      if (!path) return CARD_BACK_IMAGE;
+      try {
+        if (/^(https?:|data:|file:|\/\/)/i.test(path)) return path;
+        let normalized = String(path).replace(/\\/g, '/').replace(/^\.\//, '').replace(/^\.\.\//, '');
+        const pathname = (window.location && window.location.pathname) || '';
+        const inLegacyAssetsUi = pathname.includes('/assets/ui/');
+        const inUi = pathname.includes('/ui/');
+
+        if (normalized.startsWith('assets/')) {
+          normalized = normalized.slice('assets/'.length);
+        }
+
+        const candidate = inLegacyAssetsUi || inUi ? ('../' + normalized) : normalized;
+        return new URL(candidate, window.location.href).href;
+      } catch {
+        return path;
+      }
+    }
+
+    function isCardAllowed(card) {
+      if (!chosenLeader) return true;
+      const leaderF = LEADER_FILIACAO[chosenLeader.name] || null;
+      if (!leaderF) return true;
+      if (card.kind === 'chosen' || card.kind === 'fragment') return true;
+      const cardF = String(card.filiacao || '').toLowerCase();
+      return cardF === 'neutra' || cardF === String(leaderF).toLowerCase();
+    }
+
+    function setPreview(card) {
+      if (!card) return;
+      const name = card.name || 'Sem nome';
+      const fil = card.filiacao || '';
+      const cost = card.cost != null ? `• Custo ${card.cost}` : '';
+      previewImg.src = resolveImg(card.img);
+      previewImg.onerror = () => { previewImg.src = CARD_BACK_IMAGE; };
+      previewTitle.textContent = name;
+      previewSub.textContent = `${fil} ${cost}`.trim();
+      previewStats.innerHTML = '';
+      if (card.kind === 'chosen' || card.kind === 'leader') {
+        const vida = card.hp ?? card.maxHp;
+        if (vida != null) {
+          const item = document.createElement('div');
+          item.className = 'preview-stat';
+          item.textContent = `Vida: ${vida}`;
+          previewStats.appendChild(item);
+        }
+      } else if (card.kind === 'ally') {
+        const values = [
+          ['Vida', card.hp ?? card.maxHp],
+          ['Ataque', card.damage ?? card.atkBonus],
+          ['Resistência', card.ac]
+        ];
+        values.forEach(([label, value]) => {
+          if (value == null) return;
+          const item = document.createElement('div');
+          item.className = 'preview-stat';
+          item.textContent = `${label}: ${value}`;
+          previewStats.appendChild(item);
+        });
+      }
+      previewText.innerHTML = String(card.text || card.description || card.tipo || '').replace(/\n/g, '<br>') || 'Sem descrição';
+    }
+
+    function attachPreview(el, card) {
+      if (!el || !card) return;
+      el.addEventListener('mouseenter', () => setPreview(card));
+      el.addEventListener('touchstart', () => setPreview(card), { passive: true });
+    }
+
+    function applyFilters(pool) {
+      const q = normalizeText(filterState.query);
+
+      return pool.filter(card => {
+        if (filterState.kinds.size && !filterState.kinds.has((card.kind || '').toLowerCase())) return false;
+        if (filterState.filiation && String(card.filiacao || '').toLowerCase() !== String(filterState.filiation).toLowerCase()) return false;
+        if (filterState.cost != null && card.kind !== 'chosen' && card.kind !== 'fragment') {
+          const c = Number(card.cost || 0);
+          if (filterState.cost === 5) { if (c < 5) return false; }
+          else if (c !== filterState.cost) return false;
+        }
+        if (q) {
+          const hay = normalizeText(`${card.name || ''} ${card.text || ''} ${card.tipo || ''} ${card.filiacao || ''}`);
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      });
+    }
+
+    function refreshFilterSummary() {
+      const parts = [];
+      if (filterState.filiation) parts.push(filterState.filiation);
+      if (filterState.cost != null) parts.push(`Custo ${filterState.cost === 5 ? '5+' : filterState.cost}`);
+      if (filterState.query) parts.push('Busca');
+      filterSummary.textContent = parts.length ? parts.join(' • ') : 'Nenhum filtro';
+
+      if (kindFilterToggle) {
+        kindFilterToggle.textContent = filterState.kinds.size ? `Tipo (${filterState.kinds.size})` : 'Tipo';
+      }
+      if (filiationFilterToggle) {
+        filiationFilterToggle.textContent = filterState.filiation ? `Filiação: ${filterState.filiation}` : 'Filiação';
+      }
+      if (costFilterToggle) {
+        costFilterToggle.textContent = filterState.cost != null ? `Custo: ${filterState.cost === 5 ? '5+' : filterState.cost}` : 'Custo';
+      }
+    }
+
+    function setupFilterMenus() {
+      const dropdowns = Array.from(document.querySelectorAll('.filterDropdown'));
+
+      function closeAll(except) {
+        dropdowns.forEach(dropdown => {
+          if (dropdown === except) return;
+          dropdown.classList.remove('is-open');
+          const toggle = dropdown.querySelector('.filterToggle');
+          if (toggle) toggle.classList.remove('is-open');
+        });
+      }
+
+      dropdowns.forEach(dropdown => {
+        const toggle = dropdown.querySelector('.filterToggle');
+        if (!toggle) return;
+        toggle.addEventListener('click', (event) => {
+          event.stopPropagation();
+          const isOpen = dropdown.classList.contains('is-open');
+          closeAll(dropdown);
+          dropdown.classList.toggle('is-open', !isOpen);
+          toggle.classList.toggle('is-open', !isOpen);
+        });
+
+        const menu = dropdown.querySelector('.filterMenu');
+        if (menu) {
+          menu.addEventListener('click', (event) => event.stopPropagation());
+        }
+      });
+
+      document.addEventListener('click', () => closeAll(null));
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') closeAll(null);
+      });
+    }
+
+    function renderPool() {
+      cardPool.innerHTML = '';
+      const filtered = applyFilters(getSelectablePool()).sort((a, b) => {
+        if ((a.kind === 'chosen' || a.kind === 'fragment') && !(b.kind === 'chosen' || b.kind === 'fragment')) return -1;
+        if (!(a.kind === 'chosen' || a.kind === 'fragment') && (b.kind === 'chosen' || b.kind === 'fragment')) return 1;
+        const fa = String(a.filiacao || '').toLowerCase();
+        const fb = String(b.filiacao || '').toLowerCase();
+        if (fa !== fb) return fa.localeCompare(fb, 'pt');
+        return String(a.name || '').toLowerCase().localeCompare(String(b.name || '').toLowerCase(), 'pt');
+      });
+
+      if (!filtered.length) {
+        cardPool.innerHTML = '<div style="grid-column:1/-1;color:#9ca3af;padding:8px;">Nenhuma carta encontrada.</div>';
+        pageInfo.textContent = '0/0';
+        btnPrevPage.disabled = true;
+        btnNextPage.disabled = true;
+        return;
+      }
+
+      const totalPages = Math.max(1, Math.ceil(filtered.length / filterState.pageSize));
+      if (filterState.page > totalPages) filterState.page = totalPages;
+      const start = (filterState.page - 1) * filterState.pageSize;
+      const pageCards = filtered.slice(start, start + filterState.pageSize);
+
+      pageInfo.textContent = `${filterState.page}/${totalPages}`;
+      btnPrevPage.disabled = filterState.page <= 1;
+      btnNextPage.disabled = filterState.page >= totalPages;
+
+      pageCards.forEach(card => {
+        const allowed = isCardAllowed(card);
+        const tile = document.createElement('div');
+        tile.className = 'pool-card' + (allowed ? '' : ' disabled');
+        if ((card.kind === 'chosen' && chosenLeader && chosenLeader.name === card.name) || (card.kind === 'fragment' && chosenFragImg === card.img)) {
+          tile.style.borderColor = 'rgba(250,204,21,.6)';
+          tile.style.boxShadow = '0 0 0 1px rgba(250,204,21,.25) inset';
+        }
+        const displayName = card.kind === 'chosen'
+          ? `👑 ${card.name}`
+          : card.kind === 'fragment'
+            ? `🧩 ${card.label || card.name}`
+            : card.name;
+        tile.innerHTML = card.kind === 'fragment'
+          ? `<img src="${resolveImg(card.img)}" alt="${displayName}"><div>${displayName}</div><div class="pool-card-note">Somente visual</div>`
+          : `<img src="${resolveImg(card.img)}" alt="${displayName}"><div>${displayName}</div>`;
+        tile.querySelector('img').onerror = function(){ this.src = CARD_BACK_IMAGE; };
+
+        if (card.kind === 'chosen') {
+          tile.onclick = () => {
+            chosenLeader = chosenLeader && chosenLeader.name === card.name ? null : card;
+            renderPool();
+            renderDeck();
+            setPreview(card);
+          };
+        } else if (card.kind === 'fragment') {
+          tile.onclick = () => {
+            chosenFragImg = chosenFragImg === card.img ? null : card.img;
+            renderPool();
+            setPreview(card);
+          };
+        } else if (allowed) {
+          tile.onclick = () => addToDeck(card);
+        } else {
+          tile.onclick = () => {
+            const lf = chosenLeader ? (LEADER_FILIACAO[chosenLeader.name] || '?') : '?';
+            alert(`Deck fixado para ${lf}. Só cartas ${lf} ou Neutras.`);
+          };
+        }
+
+        attachPreview(tile, card);
+        cardPool.appendChild(tile);
+      });
+    }
+
+    function renderDeck() {
+      deckList.innerHTML = '';
+      const sortedDeck = [...deck].sort((a, b) => String(a.name).localeCompare(String(b.name), 'pt'));
+
+      for (let i = 0; i < 41; i++) {
+        if (i === 0 && chosenLeader) {
+          const tile = document.createElement('div');
+          tile.className = 'deck-card';
+          tile.innerHTML = `<img src="${resolveImg(chosenLeader.img)}" alt="${chosenLeader.name}"><div><b>Líder:</b> ${chosenLeader.name}</div>`;
+          tile.querySelector('img').onerror = function(){ this.src = CARD_BACK_IMAGE; };
+          attachPreview(tile, chosenLeader);
+          deckList.appendChild(tile);
+          continue;
+        }
+
+        const card = sortedDeck[i - 1];
+        if (i > 0 && card) {
+          const tile = document.createElement('div');
+          tile.className = 'deck-card';
+          tile.innerHTML = `<img src="${resolveImg(card.img)}" alt="${card.name}"><div>${card.name}</div>`;
+          tile.querySelector('img').onerror = function(){ this.src = CARD_BACK_IMAGE; };
+          tile.onclick = () => removeFromDeck(deck.indexOf(card));
+          attachPreview(tile, card);
+          deckList.appendChild(tile);
+        } else {
+          const slot = document.createElement('div');
+          slot.className = 'deck-slot';
+          slot.textContent = i === 0 ? 'Líder' : 'Vazio';
+          deckList.appendChild(slot);
+        }
+      }
+
+      deckSize.textContent = `${(chosenLeader ? 1 : 0) + deck.length}/41 cartas`;
+      btnSalvar.disabled = !(chosenLeader && deck.length === 40);
+      btnPlay.disabled = !(chosenLeader && deck.length === 40);
+    }
+
+    function openLeaderPickModal(requestedCard) {
+      const overlay = document.createElement('div');
+      overlay.className = 'modalOverlay';
+
+      const box = document.createElement('div');
+      box.className = 'modalBox';
+      box.innerHTML = `
+        <h3 style="margin:0 0 8px;">Escolha o líder do deck</h3>
+        <p style="margin:0 0 6px;color:#cbd5e1;">Para adicionar <b>${requestedCard.name}</b>, escolha um líder da mesma filiação.</p>
+        <div class="leader-modal-grid" id="leaderModalGrid"></div>
+        <div style="text-align:right;margin-top:10px;"><button class="btn ghost" id="leaderModalCancel">Cancelar</button></div>
+      `;
+
+      overlay.appendChild(box);
+      document.body.appendChild(overlay);
+
+      const grid = box.querySelector('#leaderModalGrid');
+      LEADERS.forEach(leader => {
+        const tile = document.createElement('div');
+        tile.className = 'leader-modal-card';
+        tile.innerHTML = `<img src="${resolveImg(leader.img)}" alt="${leader.name}"><div>${leader.name}</div>`;
+        tile.querySelector('img').onerror = function(){ this.src = CARD_BACK_IMAGE; };
+        tile.onclick = () => {
+          chosenLeader = leader;
+          deck.push(requestedCard);
+          renderDeck();
+          renderPool();
+          setPreview(requestedCard);
+          document.body.removeChild(overlay);
+        };
+        attachPreview(tile, leader);
+        grid.appendChild(tile);
+      });
+
+      box.querySelector('#leaderModalCancel').onclick = () => document.body.removeChild(overlay);
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) document.body.removeChild(overlay); });
+    }
+
+    function addToDeck(card) {
+      if (deck.length >= 40) return;
+
+      const copies = deck.filter(c => c.name === card.name).length;
+      if (copies >= 3) return;
+
+      if (chosenLeader) {
+        const leaderF = String(LEADER_FILIACAO[chosenLeader.name] || '').toLowerCase();
+        const cardF = String(card.filiacao || '').toLowerCase();
+        if (leaderF && cardF !== 'neutra' && cardF !== leaderF) {
+          alert(`Este deck aceita apenas cartas ${LEADER_FILIACAO[chosenLeader.name]} ou Neutras.`);
+          return;
+        }
+      } else {
+        if (String(card.filiacao || '').toLowerCase() !== 'neutra') {
+          openLeaderPickModal(card);
+          return;
+        }
+      }
+
+      deck.push(card);
+      renderDeck();
+      renderPool();
+      setPreview(card);
+    }
+
+    function removeFromDeck(idx) {
+      deck.splice(idx, 1);
+      renderDeck();
+    }
+
+    function getSavedDecksLocal() {
+      const raw = localStorage.getItem('mytragor_decks');
+      if (!raw) return [];
+      try { return JSON.parse(raw); } catch { return []; }
+    }
+
+    function saveSavedDecksLocal(arr) {
+      localStorage.setItem('mytragor_decks', JSON.stringify(arr));
+    }
+
+    btnSalvar.onclick = function () {
+      if (!chosenLeader || deck.length !== 40) return;
+      const deckName = (deckNameInput.value || '').trim();
+
+      const payload = {
+        deckName,
+        leader: chosenLeader.name,
+        leaderName: chosenLeader.name,
+        leaderImg: chosenLeader.img,
+        cards: deck.map(c => c.name),
+        fragImg: chosenFragImg || null,
+        tags: []
+      };
+
+      const all = getSavedDecksLocal();
+      all.push(payload);
+      saveSavedDecksLocal(all);
+
+      alert(`Deck salvo: ${deckName || chosenLeader.name}`);
+    };
+
+    btnPlay.onclick = function () {
+      if (!chosenLeader || deck.length !== 40) {
+        alert('Selecione um líder e complete 40 cartas antes de testar.');
+        return;
+      }
+      const deckName = (deckNameInput.value || '').trim();
+      const payload = {
+        deckName,
+        leader: chosenLeader.name,
+        leaderImg: chosenLeader.img,
+        cards: deck.map(c => c.name),
+        fragImg: chosenFragImg || null
+      };
+      localStorage.setItem('mytragor_play_deck', JSON.stringify(payload));
+      window.open('../../mytragor_simulador.html', '_blank');
+    };
+
+    btnLimpar.onclick = function () {
+      deck = [];
+      renderDeck();
+    };
+
+    btnVerDecks.onclick = function () {
+      location.href = 'decks_salvos.html';
+    };
+
+    function decodeDeck(code) {
+      try {
+        if (!code.startsWith('MTG:')) throw new Error('Invalid');
+        const data = JSON.parse(atob(code.slice(4)));
+        return {
+          leaderName: data.leader || '',
+          cards: data.cards || [],
+          fragImg: data.fragImg || null,
+          deckName: data.deckName || ''
+        };
+      } catch {
+        return null;
+      }
+    }
+
+    btnImportDeck.onclick = function () {
+      const code = (importCodeInput.value || '').trim();
+      if (!code) return alert('Cole um código válido.');
+      const data = decodeDeck(code);
+      if (!data) return alert('Código inválido.');
+
+      deck = [];
+      chosenLeader = null;
+      chosenFragImg = data.fragImg || null;
+
+      if (data.leaderName) {
+        const leader = LEADERS.find(l => String(l.name).toLowerCase() === String(data.leaderName).toLowerCase());
+        if (leader) chosenLeader = leader;
+      }
+
+      (data.cards || []).forEach(name => {
+        const card = BASE_CARD_POOL.find(c => c.name === name);
+        if (card && deck.length < 40) deck.push(card);
+      });
+
+      if (data.deckName) deckNameInput.value = data.deckName;
+      importCodeInput.value = '';
+
+      renderPool();
+      renderDeck();
+      alert(`Deck importado: ${deck.length} cartas${chosenLeader ? ', líder: ' + chosenLeader.name : ''}`);
+    };
+
+    function setupFilters() {
+      filterSearch.addEventListener('input', (e) => {
+        filterState.query = e.target.value || '';
+        filterState.page = 1;
+        refreshFilterSummary();
+        renderPool();
+      });
+
+      document.querySelectorAll('.chip[data-kind]').forEach(ch => {
+        ch.addEventListener('click', () => {
+          const k = (ch.dataset.kind || '').toLowerCase();
+          if (!k) return;
+          if (filterState.kinds.has(k)) {
+            filterState.kinds.delete(k);
+            ch.classList.remove('selected');
+          } else {
+            filterState.kinds.add(k);
+            ch.classList.add('selected');
+          }
+          filterState.page = 1;
+          refreshFilterSummary();
+          renderPool();
+        });
+      });
+
+      const filias = Array.from(new Set(getSelectablePool().map(c => (c.filiacao || '').toString()).filter(Boolean))).sort((a, b) => a.localeCompare(b));
+      const allChip = document.createElement('div');
+      allChip.className = 'chip selected';
+      allChip.textContent = '(todas)';
+      allChip.onclick = () => {
+        filterState.filiation = null;
+        filterState.page = 1;
+        filiationChips.querySelectorAll('.chip').forEach(x => x.classList.remove('selected'));
+        allChip.classList.add('selected');
+        refreshFilterSummary();
+        renderPool();
+      };
+      filiationChips.appendChild(allChip);
+
+      filias.forEach(f => {
+        const ch = document.createElement('div');
+        ch.className = 'chip';
+        ch.textContent = formatFilterLabel(f);
+        ch.onclick = () => {
+          if (filterState.filiation === f) {
+            filterState.filiation = null;
+            allChip.classList.add('selected');
+            ch.classList.remove('selected');
+          } else {
+            filterState.filiation = f;
+            filiationChips.querySelectorAll('.chip').forEach(x => x.classList.remove('selected'));
+            ch.classList.add('selected');
+          }
+          filterState.page = 1;
+          refreshFilterSummary();
+          renderPool();
+        };
+        filiationChips.appendChild(ch);
+      });
+
+      costChips.querySelectorAll('.chip[data-cost]').forEach(ch => {
+        ch.addEventListener('click', () => {
+          const v = Number(ch.dataset.cost);
+          if (filterState.cost === v) {
+            filterState.cost = null;
+            ch.classList.remove('selected');
+          } else {
+            filterState.cost = v;
+            costChips.querySelectorAll('.chip[data-cost]').forEach(x => x.classList.remove('selected'));
+            ch.classList.add('selected');
+          }
+          filterState.page = 1;
+          refreshFilterSummary();
+          renderPool();
+        });
+      });
+
+      document.getElementById('btnClearFilters').onclick = () => {
+        filterState.query = '';
+        filterState.kinds = new Set();
+        filterState.filiation = null;
+        filterState.cost = null;
+        filterState.page = 1;
+
+        filterSearch.value = '';
+        document.querySelectorAll('.chip[data-kind], .chip[data-cost]').forEach(x => x.classList.remove('selected'));
+        filiationChips.querySelectorAll('.chip').forEach(x => x.classList.remove('selected'));
+        allChip.classList.add('selected');
+
+        refreshFilterSummary();
+        renderPool();
+      };
+
+      btnPrevPage.onclick = () => {
+        if (filterState.page > 1) {
+          filterState.page--;
+          renderPool();
+        }
+      };
+
+      btnNextPage.onclick = () => {
+        const total = applyFilters(getSelectablePool()).length;
+        const totalPages = Math.max(1, Math.ceil(total / filterState.pageSize));
+        if (filterState.page < totalPages) {
+          filterState.page++;
+          renderPool();
+        }
+      };
+    }
+
+    (function setupTutorialModal(){
+      const btn = document.getElementById('btnShowTutorial');
+      if (!btn) return;
+      btn.onclick = () => {
+        const overlay = document.createElement('div');
+        overlay.className = 'modalOverlay';
+        const box = document.createElement('div');
+        box.className = 'modalBox';
+        box.innerHTML = `
+          <h2 style="margin-top:0;color:var(--gold-a);">Tutorial rápido</h2>
+          <ol style="line-height:1.5;padding-left:18px;">
+            <li>Escolha um líder para fixar a filiação.</li>
+            <li>Monte 40 cartas (máximo 3 cópias por carta).</li>
+            <li>Use filtros e paginação para navegar.</li>
+            <li>Salve ou teste com o botão Jogar.</li>
+          </ol>
+          <div style="text-align:right;"><button class="btn" id="closeTutorial">Fechar</button></div>
+        `;
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+        box.querySelector('#closeTutorial').onclick = () => document.body.removeChild(overlay);
+        overlay.addEventListener('click', e => { if (e.target === overlay) document.body.removeChild(overlay); });
+      };
+    })();
+
+    setupFilterMenus();
+    setupFilters();
+    renderPool();
+    renderDeck();
+  </script>
+
+  <script src="../mobile.js"></script>
+</body>
+</html>

@@ -1,0 +1,2319 @@
+/* Responsibility: wire Match UI with Colyseus network. This is the only place combining UI + NET. */
+
+import { bindMatchHandlers, connectClient, joinMatchById } from "../net/mp";
+import { getGameInputs, log, logText, renderButtonRow } from "../ui/gameView";
+import { setupBoardScale } from "../ui/boardScale";
+import { setupArenaSlots } from "../ui/arenaSlots";
+import { getDisplayName } from "../ui/profile";
+import { resolveServerEndpoint } from "../config/runtime";
+import { canAttackCardQuiet, endAttackCleanup, resolveAttackOn, selectAttacker, type AttackSelection, type AttackTarget as BattleTarget, type BattleCard, type BattleRuntime, type BattleSide } from "../game/battle";
+
+type CardDef = {
+	name: string;
+	key?: string;
+	aliases?: string[];
+	img?: string;
+	kind?: string;
+	effect?: string;
+	effectA?: string;
+	effectB?: string;
+	cost?: number;
+	tipo?: string;
+	classe?: string;
+	filiacao?: string;
+	hp?: number;
+	text?: string;
+};
+
+type InspectorView = {
+	cardId: string;
+	side?: BattleSide;
+	lane?: "hand" | "field" | "support" | "leader" | "env" | "deck" | "grave" | "banished";
+	index?: number | null;
+};
+
+const view = getGameInputs();
+setupBoardScale();
+setupArenaSlots();
+
+const cardDefs = (window as Window & { CARD_DEFS?: CardDef[] }).CARD_DEFS ?? [];
+const cardLookup = new Map<string, CardDef>();
+const CARD_BACK_ASSET = "ui/layout-background.ai.png";
+
+function envAliasesForCard(card: CardDef): string[] {
+	const normalizedName = normalizeCardId(String(card?.name || ""));
+	if (normalizedName === "tempestadearcana") return ["tempestadearcana", "tempestadearcanaenv"];
+	if (normalizedName === "camposensanguentados") return ["camposensanguentados", "campoensanguentado", "camposbg"];
+	if (normalizedName === "caminhodassombras") return ["caminhosdassombras", "caminhodassombras"];
+	if (normalizedName === "catedralensolarada") return ["catedralensolarada"];
+	return [];
+}
+
+for (const card of cardDefs) {
+	if (!card?.name) continue;
+	const imgRaw = String(card.img || "");
+	const imgClean = pathNoAssetsPrefix(imgRaw);
+	const imgFile = imgRaw.split("/").pop() || "";
+	const imgBase = imgFile.replace(/\.[a-z]+$/i, "");
+	const imgStem = basenameCardKey(imgRaw);
+	const keys = [
+		card.name,
+		card.key || "",
+		...(Array.isArray(card.aliases) ? card.aliases : []),
+		imgBase,
+		imgStem,
+		basenameNoExt(imgClean),
+		basenameCardKey(imgClean),
+		imgFile,
+		imgRaw,
+		imgClean,
+		`/${imgRaw}`,
+		`/${imgClean}`,
+		...envAliasesForCard(card)
+	];
+	for (const key of keys) {
+		const normalized = normalizeCardId(key);
+		if (normalized && !cardLookup.has(normalized)) cardLookup.set(normalized, card);
+	}
+}
+
+let client: any = null;
+let room: any = null;
+let slot: "p1" | "p2" | null = null;
+let roomId: string | null = null;
+let selfSessionId: string | null = null;
+let selectedHandCardId: string | null = null;
+let selectedInspectorView: InspectorView | null = null;
+let hoveredInspectorView: InspectorView | null = null;
+let selectedAttackerPos: number | null = null;
+let selectedTargetType: "leader" | "ally" = "leader";
+let selectedTargetPos: number | null = null;
+let isJoining = false;
+let currentPhase = "INITIAL";
+let isMyTurn = false;
+let currentMyField: string[] = [];
+let currentMyFieldHp: number[] = [];
+let currentMyFieldAtkTemp: number[] = [];
+let currentMyFieldAtkPerm: number[] = [];
+let currentMyFieldAcPerm: number[] = [];
+let currentMyFieldBlessing: number[] = [];
+let currentMyFieldBloodMarks: number[] = [];
+let currentMyFieldVitalMarks: number[] = [];
+let currentEnemyField: string[] = [];
+let currentEnemyFieldHp: number[] = [];
+let currentEnemyFieldAtkTemp: number[] = [];
+let currentEnemyFieldAtkPerm: number[] = [];
+let currentEnemyFieldAcPerm: number[] = [];
+let currentEnemyFieldBlessing: number[] = [];
+let currentEnemyFieldBloodMarks: number[] = [];
+let currentEnemyFieldVitalMarks: number[] = [];
+let currentMySupport: string[] = [];
+let currentEnemySupport: string[] = [];
+let currentMySupportAttach: number[] = [];
+let currentEnemySupportAttach: number[] = [];
+let currentMySupportCounters: number[] = [];
+let currentEnemySupportCounters: number[] = [];
+let currentMyEnv: string | null = null;
+let currentMyLeader = "";
+let currentEnemyLeader = "";
+let currentMyLeaderTapped = false;
+let currentEnemyLeaderTapped = false;
+let currentMyLeaderHp = 0;
+let currentEnemyLeaderHp = 0;
+let currentMyLeaderBlessing = 0;
+let currentEnemyLeaderBlessing = 0;
+let currentMyLeaderVitalMarks = 0;
+let currentEnemyLeaderVitalMarks = 0;
+let currentMyLeaderSpiderMarks = 0;
+let currentEnemyLeaderSpiderMarks = 0;
+let currentMyFragments = 0;
+let currentEnemyFragments = 0;
+let currentMyDeck: string[] = [];
+let currentEnemyDeck: string[] = [];
+let currentMyGrave: string[] = [];
+let currentEnemyGrave: string[] = [];
+let currentMyBanished: string[] = [];
+let currentEnemyBanished: string[] = [];
+let activeChoiceId: string | null = null;
+let activeChoiceTimer: number | null = null;
+let activeWaitingTimer: number | null = null;
+let activePileSide: BattleSide = "you";
+let activePileWhich: "deck" | "grave" | "banished" = "deck";
+let myTurnCount = 0;
+let enemyTurnCount = 0;
+let lastTurnMarker = "";
+let lastMatchEndSeq = -1;
+let revealHideTimer: number | null = null;
+
+const tappedBySide: Record<BattleSide, Set<number>> = {
+	you: new Set<number>(),
+	ai: new Set<number>()
+};
+
+const tappedLeaderBySide: Record<BattleSide, boolean> = {
+	you: false,
+	ai: false
+};
+
+const untapPulseBySide: Record<BattleSide, boolean> = {
+	you: false,
+	ai: false
+};
+
+const summonedBySide: Record<BattleSide, Set<number>> = {
+	you: new Set<number>(),
+	ai: new Set<number>()
+};
+
+function sideFromServerSlot(serverSlot: "p1" | "p2" | null): BattleSide | null {
+	if (!slot || !serverSlot) return null;
+	if (serverSlot === slot) return "you";
+	return "ai";
+}
+
+function currentBattlePhase(): string {
+	return String(currentPhase || "INITIAL").toUpperCase() === "COMBAT" ? "battle" : "other";
+}
+
+function ownerLabel(serverSlotRaw: string): string {
+	const side = sideFromServerSlot((serverSlotRaw || "") as "p1" | "p2");
+	return side === "you" ? "Você" : "Oponente";
+}
+
+function cardHasFiliation(cardId: string, expected: string): boolean {
+	const card = resolveCard(cardId);
+	const probe = normalizeKind(expected);
+	const source = normalizeKind(`${String(card?.filiacao || "")} ${String(card?.classe || "")}`);
+	return !!probe && source.includes(probe);
+}
+
+function isShadowPenaltyEnvCard(cardId: string | null | undefined): boolean {
+	const card = resolveCard(String(cardId || ""));
+	if (String(card?.effect || "") === "sombra_penalty") return true;
+	const normalized = normalizeCardId(String(card?.name || cardId || ""));
+	return normalized === "caminhodassombras" || normalized === "caminhosdassombras" || normalized === "caminhosperigosos";
+}
+
+function hasShadowPenaltyForPlayer(playerState: any, leaderId: string, ownEnv: string | null, enemyEnv: string | null): boolean {
+	if (!isShadowPenaltyEnvCard(ownEnv) && !isShadowPenaltyEnvCard(enemyEnv)) return false;
+	if (cardHasFiliation(leaderId, "Sombras")) return false;
+	return !normalizeKind(String(playerState?.filiacao || "")).includes("sombras");
+}
+
+type VictoryView = {
+	title: string;
+	text: string;
+	mode: "win" | "lose" | "neutral";
+};
+
+function victoryBannerForLeader(mode: "win" | "lose" | "neutral"): string | null {
+	if (mode === "neutral") return null;
+	const leader = resolveCard(currentMyLeader);
+	const probes = [
+		currentMyLeader,
+		String(leader?.name || ""),
+		String(leader?.img || ""),
+		basenameCardKey(String(leader?.img || ""))
+	]
+		.map((value) => normalizeCardId(value))
+		.filter(Boolean);
+	if (probes.some((value) => value.includes("valbrak"))) {
+		return mode === "win" ? "win_lose/valbrakvitoria.png" : "win_lose/valbrakderrota.png";
+	}
+	if (probes.some((value) => value.includes("katsu"))) {
+		return mode === "win" ? "win_lose/katsuvitoria (1).png" : "win_lose/katsuvitoria (2).png";
+	}
+	if (probes.some((value) => value.includes("leafae"))) {
+		return mode === "win" ? "win_lose/leafaevitoria.png" : "win_lose/leafaederrota.png";
+	}
+	if (probes.some((value) => value.includes("ademais"))) {
+		return mode === "win" ? "win_lose/Ademaisvitoria.png" : "win_lose/ademaisderrota.png";
+	}
+	return null;
+}
+
+function describeMatchEnded(msg: any): VictoryView {
+	const winnerSlot = String(msg?.winner || "");
+	const loserSlot = String(msg?.loser || "");
+	const reason = String(msg?.reason || "hp_zero");
+	const youWon = !!slot && winnerSlot === slot;
+	const youLost = !!slot && loserSlot === slot;
+	const title = youWon ? "Você ganhou" : youLost ? "Você perdeu" : "Fim de jogo";
+	if (reason === "deckout") {
+		if (youWon) return { title, text: "Você ganhou porque o oponente tentou comprar carta com o deck vazio.", mode: "win" };
+		if (youLost) return { title, text: "Você perdeu porque tentou comprar carta com o deck vazio.", mode: "lose" };
+		return { title, text: "A partida terminou por deck vazio.", mode: "neutral" };
+	}
+	if (reason === "inactivity") {
+		if (youWon) return { title, text: "Você ganhou por inatividade do oponente após 80 segundos sem ação.", mode: "win" };
+		if (youLost) return { title, text: "Você perdeu por inatividade após 80 segundos sem ação.", mode: "lose" };
+		return { title, text: "A partida terminou por inatividade.", mode: "neutral" };
+	}
+	if (reason === "opponent_left") {
+		if (youWon) return { title, text: "Você ganhou porque o oponente saiu da sala.", mode: "win" };
+		if (youLost) return { title, text: "Você perdeu porque saiu da sala.", mode: "lose" };
+		return { title, text: "A partida terminou porque um jogador saiu da sala.", mode: "neutral" };
+	}
+	if (youWon) return { title, text: "Você venceu ao reduzir a vida do Escolhido inimigo a zero.", mode: "win" };
+	if (youLost) return { title, text: "Você perdeu porque a vida do seu Escolhido chegou a zero.", mode: "lose" };
+	const winner = ownerLabel(winnerSlot);
+	return { title, text: `${winner} venceu a partida.`, mode: "neutral" };
+}
+
+function showVictory(viewState: VictoryView): void {
+	const modal = document.getElementById("victoryModal") as HTMLElement | null;
+	const titleEl = document.getElementById("victoryTitle");
+	const textEl = document.getElementById("victoryText");
+	const imageWrapEl = document.getElementById("victoryMedia") as HTMLElement | null;
+	const imageEl = document.getElementById("victoryImage") as HTMLImageElement | null;
+	if (!modal || !titleEl || !textEl || !imageWrapEl || !imageEl) return;
+	const bannerSrc = victoryBannerForLeader(viewState.mode);
+	titleEl.textContent = viewState.title;
+	textEl.textContent = viewState.text;
+	if (bannerSrc) {
+		imageEl.src = bannerSrc;
+		imageEl.alt = `${viewState.title} - arte do Escolhido`;
+		imageWrapEl.style.display = "block";
+	}
+	else {
+		imageEl.removeAttribute("src");
+		imageEl.alt = "";
+		imageWrapEl.style.display = "none";
+	}
+	modal.style.display = "flex";
+}
+
+function hideVictory(): void {
+	const modal = document.getElementById("victoryModal") as HTMLElement | null;
+	if (modal) modal.style.display = "none";
+}
+
+function ensureRevealModal(): { modal: HTMLElement; title: HTMLElement; text: HTMLElement; img: HTMLImageElement } | null {
+	let modal = document.getElementById("topRevealModal") as HTMLElement | null;
+	if (!modal) {
+		modal = document.createElement("div");
+		modal.id = "topRevealModal";
+		modal.style.position = "fixed";
+		modal.style.inset = "0";
+		modal.style.display = "none";
+		modal.style.alignItems = "center";
+		modal.style.justifyContent = "center";
+		modal.style.background = "rgba(0,0,0,0.58)";
+		modal.style.zIndex = "1200";
+		const box = document.createElement("div");
+		box.style.width = "min(90vw, 340px)";
+		box.style.background = "#141821";
+		box.style.border = "1px solid rgba(255,255,255,.12)";
+		box.style.borderRadius = "12px";
+		box.style.padding = "16px";
+		box.style.boxShadow = "0 16px 48px rgba(0,0,0,.45)";
+		box.style.display = "grid";
+		box.style.gap = "10px";
+		const title = document.createElement("div");
+		title.id = "topRevealTitle";
+		title.style.fontSize = "16px";
+		title.style.fontWeight = "700";
+		const text = document.createElement("div");
+		text.id = "topRevealText";
+		text.style.fontSize = "13px";
+		text.style.opacity = "0.92";
+		const img = document.createElement("img");
+		img.id = "topRevealImg";
+		img.style.width = "180px";
+		img.style.margin = "0 auto";
+		img.style.borderRadius = "10px";
+		img.style.border = "1px solid rgba(255,255,255,.12)";
+		const close = document.createElement("button");
+		close.type = "button";
+		close.className = "primary";
+		close.textContent = "Fechar";
+		close.onclick = () => hideRevealModal();
+		box.appendChild(title);
+		box.appendChild(text);
+		box.appendChild(img);
+		box.appendChild(close);
+		modal.appendChild(box);
+		document.body.appendChild(modal);
+	}
+	const title = document.getElementById("topRevealTitle") as HTMLElement | null;
+	const text = document.getElementById("topRevealText") as HTMLElement | null;
+	const img = document.getElementById("topRevealImg") as HTMLImageElement | null;
+	if (!modal || !title || !text || !img) return null;
+	return { modal, title, text, img };
+}
+
+function hideRevealModal(): void {
+	const modal = document.getElementById("topRevealModal") as HTMLElement | null;
+	if (modal) modal.style.display = "none";
+	if (revealHideTimer) {
+		window.clearTimeout(revealHideTimer);
+		revealHideTimer = null;
+	}
+}
+
+function showRevealTopCardModal(payload: any): void {
+	const ui = ensureRevealModal();
+	if (!ui) return;
+	const cardId = String(payload?.cardId || "");
+	if (!cardId) return;
+	const card = resolveCard(cardId);
+	const owner = ownerLabel(String(payload?.ownerSlot || ""));
+	const source = String(payload?.sourceCardId || "Carta");
+	ui.title.textContent = `Topo revelado de ${owner}`;
+	ui.text.textContent = `${source} revelou ${card?.name || cardId}.`;
+	ui.img.src = asAssetPath(card?.img || CARD_BACK_ASSET);
+	ui.img.alt = card?.name || cardId;
+	ui.img.onerror = () => {
+		ui.img.src = asAssetPath(CARD_BACK_ASSET);
+	};
+	ui.modal.style.display = "flex";
+	if (revealHideTimer) window.clearTimeout(revealHideTimer);
+	revealHideTimer = window.setTimeout(() => hideRevealModal(), 5000);
+}
+
+function diaryCardPlayed(msg: any): void {
+	const owner = ownerLabel(String(msg?.slot || ""));
+	const cardId = String(msg?.cardId || "");
+	const lane = String(msg?.lane || "");
+	const cardKind = getCardKind(cardId);
+	if (lane === "field") {
+		const pos = Number(msg?.targetPos);
+		const posText = Number.isInteger(pos) && pos >= 0 ? ` no slot ${pos + 1}` : "";
+		logText(`📘 ${owner} invocou aliado ${cardId}${posText}.`);
+		return;
+	}
+	if (lane === "grave" && (cardKind === "spell" || cardKind === "truque")) {
+		const tipo = cardKind === "spell" ? "magia" : "truque";
+		logText(`✨ ${owner} ativou ${tipo} ${cardId}.`);
+		return;
+	}
+	if (lane === "env") {
+		logText(`🌍 ${owner} ativou ambiente ${cardId}.`);
+	}
+}
+
+function diaryAttackResolved(msg: any): void {
+	const owner = ownerLabel(String(msg?.attackerSlot || ""));
+	const attacker = String(msg?.attackerName || msg?.attackerId || "Atacante");
+	const target = String(msg?.targetName || (msg?.target === "leader" ? "Líder" : "Aliado"));
+	const damage = Number(msg?.damage || 0);
+	const hit = !!msg?.hit;
+	if (hit) {
+		logText(`⚔️ ${owner}: ${attacker} atacou ${target} e causou ${damage} de dano.`);
+		return;
+	}
+	logText(`⚔️ ${owner}: ${attacker} atacou ${target}, mas errou.`);
+}
+
+function diaryEffect(msg: any): void {
+	const owner = ownerLabel(String(msg?.slot || ""));
+	const cardId = String(msg?.cardId || "carta");
+	const rawText = String(msg?.text || "").trim();
+	if (rawText) {
+		const prefix = `${cardId}:`;
+		const cleanText = rawText.startsWith(prefix) ? rawText.slice(prefix.length).trim() : rawText;
+		logText(`🧩 ${owner}: ${cleanText}`);
+		return;
+	}
+	logText(`🧩 ${owner} ativou ${cardId}.`);
+}
+
+function diaryTurnStart(msg: any): void {
+	const turnOwner = ownerLabel(String(msg?.turnSlot || ""));
+	const add = Number(msg?.add || 0);
+	const gainText = add > 0 ? ` e recebeu ${add} fragmento${add === 1 ? "" : "s"}` : "";
+	logText(`🔄 Turno de ${turnOwner}${gainText}.`);
+}
+
+function normalizeCardId(value: string): string {
+	return String(value || "")
+		.toLowerCase()
+		.normalize("NFD")
+		.replace(/[\u0300-\u036f]/g, "")
+		.replace(/[^a-z0-9]+/g, "")
+		.trim();
+}
+
+function basenameNoExt(value: string): string {
+	const normalized = String(value || "").replace(/\\/g, "/");
+	const file = normalized.split("/").pop() || "";
+	return file.replace(/\.[a-z0-9]+$/i, "");
+}
+
+function basenameCardKey(value: string): string {
+	return basenameNoExt(basenameNoExt(value));
+}
+
+function pathNoAssetsPrefix(value: string): string {
+	return String(value || "")
+		.replace(/\\/g, "/")
+		.replace(/^\/+/, "")
+		.replace(/^assets\//i, "")
+		.replace(/^public\//i, "");
+}
+
+function resolveCard(cardId: string): CardDef | undefined {
+	const raw = String(cardId || "");
+	const direct = cardLookup.get(normalizeCardId(raw));
+	if (direct) return direct;
+	const clean = pathNoAssetsPrefix(raw);
+	const byClean = cardLookup.get(normalizeCardId(clean));
+	if (byClean) return byClean;
+	const byBase = cardLookup.get(normalizeCardId(basenameNoExt(clean)));
+	if (byBase) return byBase;
+	const byStem = cardLookup.get(normalizeCardId(basenameCardKey(clean)));
+	if (byStem) return byStem;
+	const expected = normalizeCardId(raw);
+	const expectedClean = normalizeCardId(clean);
+	const expectedBase = normalizeCardId(basenameNoExt(clean));
+	const expectedStem = normalizeCardId(basenameCardKey(clean));
+	for (const card of cardDefs) {
+		const nameNorm = normalizeCardId(String(card?.name || ""));
+		const keyNorm = normalizeCardId(String(card?.key || ""));
+		const imgNorm = normalizeCardId(String(card?.img || ""));
+		const imgCleanNorm = normalizeCardId(pathNoAssetsPrefix(String(card?.img || "")));
+		const imgBaseNorm = normalizeCardId(basenameNoExt(String(card?.img || "")));
+		const imgStemNorm = normalizeCardId(basenameCardKey(String(card?.img || "")));
+		if (!expected) continue;
+		if (expectedStem && [nameNorm, keyNorm, imgNorm, imgCleanNorm, imgBaseNorm, imgStemNorm].includes(expectedStem)) {
+			return card;
+		}
+		const candidates = [nameNorm, keyNorm, imgNorm, imgCleanNorm, imgBaseNorm].filter(Boolean);
+		if (candidates.some((value) => value.includes(expected) || expected.includes(value) || value.includes(expectedClean) || expectedClean.includes(value) || value.includes(expectedBase) || expectedBase.includes(value))) {
+			return card;
+		}
+	}
+	return undefined;
+}
+
+function normalizeKind(value: string | undefined): string {
+	return String(value || "")
+		.toLowerCase()
+		.normalize("NFD")
+		.replace(/[\u0300-\u036f]/g, "")
+		.trim();
+}
+
+function getCardKind(cardId: string): string {
+	const card = resolveCard(cardId);
+	const raw = card?.kind || card?.tipo || "";
+	const normalized = normalizeKind(raw);
+	if (normalized === "ally" || normalized === "aliado") return "ally";
+	if (normalized === "equip" || normalized === "equipamento") return "equip";
+	if (normalized === "spell" || normalized === "magia") return "spell";
+	if (normalized === "truque" || normalized === "trick") return "truque";
+	if (normalized === "env" || normalized === "ambiente") return "env";
+	return normalized || "spell";
+}
+
+function laneForCard(cardId: string): "field" | "support" | "env" {
+	const kind = getCardKind(cardId);
+	if (kind === "env") return "env";
+	return kind === "ally" ? "field" : "support";
+}
+
+function appendCostBadge(container: HTMLElement, cost: number | undefined): void {
+	if (!Number.isFinite(cost)) return;
+	const badge = document.createElement("div");
+	badge.className = "costTag";
+	const value = document.createElement("span");
+	value.textContent = String(cost);
+	badge.appendChild(value);
+	container.appendChild(badge);
+}
+
+function isNegativeChoiceOption(option: any): boolean {
+	const id = normalizeKind(String(option?.id || ""));
+	const label = normalizeKind(String(option?.label || ""));
+	return id.includes("-no")
+		|| id.includes("skip")
+		|| id.includes("cancel")
+		|| id.includes("fechar")
+		|| label.startsWith("nao ")
+		|| label === "nao ativar"
+		|| label === "cancelar"
+		|| label === "fechar";
+}
+
+function getChoiceSourceCardId(payload: any): string {
+	const explicit = String(payload?.sourceCardId || "").trim();
+	if (explicit) return explicit;
+	const options = Array.isArray(payload?.options) ? payload.options : [];
+	for (const option of options) {
+		const candidate = String(option?.cardId || option?.label || "").trim();
+		if (candidate && resolveCard(candidate)) return candidate;
+	}
+	return "";
+}
+
+function getChoiceOptionVisual(option: any, payload: any): { cardId: string; muted: boolean } {
+	const explicit = String(option?.cardId || "").trim();
+	if (explicit) return { cardId: explicit, muted: false };
+	const labelCandidate = String(option?.label || "").trim();
+	if (labelCandidate && resolveCard(labelCandidate)) {
+		return { cardId: labelCandidate, muted: false };
+	}
+	const sourceCardId = getChoiceSourceCardId(payload);
+	return { cardId: sourceCardId, muted: !!sourceCardId && isNegativeChoiceOption(option) };
+}
+
+function cardSubclassLine(card: CardDef | undefined): string {
+	const parts = [String(card?.classe || "").trim(), String(card?.tipo || "").trim()].filter(Boolean);
+	return parts.join(" • ");
+}
+
+function getSupportArrayForSide(side: BattleSide): string[] {
+	return side === "you" ? currentMySupport : currentEnemySupport;
+}
+
+function getSupportAttachArrayForSide(side: BattleSide): number[] {
+	return side === "you" ? currentMySupportAttach : currentEnemySupportAttach;
+}
+
+function getFieldAtkTempForSide(side: BattleSide, index: number): number {
+	const source = side === "you" ? currentMyFieldAtkTemp : currentEnemyFieldAtkTemp;
+	const value = Number(source[index] || 0);
+	return Number.isFinite(value) ? value : 0;
+}
+
+function getFieldAtkPermForSide(side: BattleSide, index: number): number {
+	const source = side === "you" ? currentMyFieldAtkPerm : currentEnemyFieldAtkPerm;
+	const value = Number(source[index] || 0);
+	return Number.isFinite(value) ? value : 0;
+}
+
+function getFieldAcPermForSide(side: BattleSide, index: number): number {
+	const source = side === "you" ? currentMyFieldAcPerm : currentEnemyFieldAcPerm;
+	const value = Number(source[index] || 0);
+	return Number.isFinite(value) ? value : 0;
+}
+
+function getFieldBlessingForSide(side: BattleSide, index: number): number {
+	const source = side === "you" ? currentMyFieldBlessing : currentEnemyFieldBlessing;
+	const value = Number(source[index] || 0);
+	return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+function getLeaderBlessingForSide(side: BattleSide): number {
+	return side === "you" ? currentMyLeaderBlessing : currentEnemyLeaderBlessing;
+}
+
+function getAttachedSupportNumericBonusForSide(side: BattleSide, targetPos: number | null, prop: string): number {
+	const supports = getSupportArrayForSide(side);
+	const attach = getSupportAttachArrayForSide(side);
+	const expectedTarget = targetPos == null ? -1 : targetPos;
+	let total = 0;
+	for (let index = 0; index < supports.length; index += 1) {
+		const supportCardId = String(supports[index] || "").trim();
+		if (!supportCardId) continue;
+		if (Number(attach[index] ?? -2) !== expectedTarget) continue;
+		const supportDef = resolveCard(supportCardId) as any;
+		const value = Number(supportDef?.[prop] || 0);
+		if (Number.isFinite(value)) total += value;
+	}
+	return total;
+}
+
+function cardMatchesAuraTarget(cardId: string, auraTarget: any): boolean {
+	if (!auraTarget) return false;
+	const def = resolveCard(cardId) as any;
+	if (!def) return false;
+	if (auraTarget.classe) return normalizeKind(String(def?.classe || "")) === normalizeKind(String(auraTarget.classe || ""));
+	if (auraTarget.tipo) return normalizeKind(String(def?.tipo || "")) === normalizeKind(String(auraTarget.tipo || ""));
+	if (auraTarget.nameIncludes) return normalizeKind(String(def?.name || cardId || "")).includes(normalizeKind(String(auraTarget.nameIncludes || "")));
+	return false;
+}
+
+function getAuraAttackBonusForSide(side: BattleSide, cardId: string): number {
+	let total = 0;
+	const field = side === "you" ? currentMyField : currentEnemyField;
+	for (const sourceCardId of field) {
+		const sourceDef = resolveCard(sourceCardId) as any;
+		if (!sourceCardId || normalizeKind(String(sourceDef?.auraProp || "")) !== "atk") continue;
+		if (!cardMatchesAuraTarget(cardId, sourceDef?.auraTarget)) continue;
+		const value = Number(sourceDef?.effectValue ?? 1);
+		total += Number.isFinite(value) ? value : 1;
+	}
+	return total;
+}
+
+function getAuraHpBonusForSide(side: BattleSide, cardId: string): number {
+	let total = 0;
+	const field = side === "you" ? currentMyField : currentEnemyField;
+	for (const sourceCardId of field) {
+		const sourceDef = resolveCard(sourceCardId) as any;
+		if (!sourceCardId || String(sourceDef?.effect || "") !== "aura_hp") continue;
+		if (!cardMatchesAuraTarget(cardId, sourceDef?.auraTarget)) continue;
+		const value = Number(sourceDef?.effectValue ?? 1);
+		total += Number.isFinite(value) ? value : 1;
+	}
+	return total;
+}
+
+function countMarcialCardsInBattle(): number {
+	let total = 0;
+	for (const cardId of [currentMyLeader, currentEnemyLeader]) if (cardId && cardHasFiliation(cardId, "Marcial")) total += 1;
+	for (const source of [currentMyField, currentEnemyField, currentMySupport, currentEnemySupport]) {
+		for (const cardId of source) if (cardId && cardHasFiliation(cardId, "Marcial")) total += 1;
+	}
+	for (const envId of [currentMyEnv, currentEnemyEnv]) if (envId && cardHasFiliation(envId, "Marcial")) total += 1;
+	return total;
+}
+
+function getCurrentLeaderHp(side: BattleSide): number {
+	const value = side === "you" ? currentMyLeaderHp : currentEnemyLeaderHp;
+	if (Number.isFinite(value) && value > 0) return value;
+	const leaderId = side === "you" ? currentMyLeader : currentEnemyLeader;
+	return Math.max(0, Number(resolveCard(leaderId)?.hp || 0));
+}
+
+function getLeaderAttackValue(side: BattleSide, cardId: string): number {
+	return Math.max(0, Number(resolveCard(cardId)?.atkBonus || 0) + getAttachedSupportNumericBonusForSide(side, null, "atkBonus") + getAttachedSupportNumericBonusForSide(side, null, "dmgBonus"));
+}
+
+function getLeaderResistanceValue(side: BattleSide): number {
+	return Math.max(0, getAttachedSupportNumericBonusForSide(side, null, "acBonus"));
+}
+
+function getLeaderMaxHpValue(side: BattleSide, cardId: string): number {
+	const baseHp = Number(resolveCard(cardId)?.hp || 20);
+	return Math.max(1, baseHp + getAttachedSupportNumericBonusForSide(side, null, "hpBonus") + getLeaderBlessingForSide(side));
+}
+
+function getFieldAttackValue(side: BattleSide, index: number, cardId: string): number {
+	let total = Number(resolveCard(cardId)?.atkBonus || 0);
+	total += getFieldAtkTempForSide(side, index);
+	total += getFieldAtkPermForSide(side, index);
+	total += getAttachedSupportNumericBonusForSide(side, index, "atkBonus");
+	total += getAttachedSupportNumericBonusForSide(side, index, "dmgBonus");
+	total += getFieldVitalMarksForSide(side, index);
+	total += getFieldBloodMarksForSide(side, index);
+	total += getAuraAttackBonusForSide(side, cardId);
+	if (cardEffectIds(cardId).includes("kornex_buff_per_marcial_in_play")) total += Math.max(0, countMarcialCardsInBattle() - 1);
+	return Math.max(0, total);
+}
+
+function getFieldResistanceValue(side: BattleSide, index: number, cardId: string): number {
+	const baseAc = Number(resolveCard(cardId)?.ac ?? 0);
+	return Math.max(0, baseAc + getFieldAcPermForSide(side, index) + getAttachedSupportNumericBonusForSide(side, index, "acBonus") + getFieldBloodMarksForSide(side, index));
+}
+
+function getInspectorStats(view: InspectorView | null): Array<{ label: string; value: string; tone?: "good" | "bad" | "neutral" | "gold" }> {
+	if (!view?.cardId) return [];
+	const card = resolveCard(view.cardId);
+	if (!card) return [];
+	if (view.lane === "leader" && view.side) {
+		const baseHp = Number(card.hp || 20);
+		const currentHp = Math.max(0, getCurrentLeaderHp(view.side));
+		const maxHp = getLeaderMaxHpValue(view.side, view.cardId);
+		const resistance = getLeaderResistanceValue(view.side);
+		return [
+			{ label: "Vida", value: `${currentHp}/${maxHp}`, tone: currentHp < maxHp ? (currentHp / Math.max(1, maxHp) <= 0.5 ? "bad" : "neutral") : (maxHp > baseHp ? "gold" : "neutral") },
+			{ label: "Resistência", value: String(resistance), tone: resistance > 0 ? "good" : "neutral" }
+		];
+	}
+	if (view.lane === "field" && view.side && typeof view.index === "number") {
+		const hpValues = view.side === "you" ? currentMyFieldHp : currentEnemyFieldHp;
+		const currentHp = Math.max(0, Number(hpValues[view.index] ?? 0));
+		const maxHp = getDisplayedFieldMaxHp(view.side, view.index, view.cardId);
+		const attack = getFieldAttackValue(view.side, view.index, view.cardId);
+		const resistance = getFieldResistanceValue(view.side, view.index, view.cardId);
+		const baseAttack = Number(card.atkBonus || 0);
+		const baseResistance = Number(card.ac || 0);
+		const baseHp = Number(card.hp || 1);
+		return [
+			{ label: "Vida", value: `${currentHp}/${maxHp}`, tone: currentHp < maxHp ? (currentHp / Math.max(1, maxHp) <= 0.5 ? "bad" : "neutral") : (maxHp > baseHp ? "good" : "neutral") },
+			{ label: "Ataque", value: String(attack), tone: attack > baseAttack ? "good" : (attack < baseAttack ? "bad" : "neutral") },
+			{ label: "Resistência", value: String(resistance), tone: resistance > baseResistance ? "good" : (resistance < baseResistance ? "bad" : "neutral") }
+		];
+	}
+	if (view.lane === "support") {
+		return [
+			Number((card as any)?.hpBonus || 0) ? { label: "Vida", value: `+${Number((card as any)?.hpBonus || 0)}`, tone: "good" } : null,
+			Number((card as any)?.atkBonus || 0) ? { label: "Ataque", value: `+${Number((card as any)?.atkBonus || 0)}`, tone: "good" } : null,
+			Number((card as any)?.acBonus || 0) ? { label: "Resistência", value: `+${Number((card as any)?.acBonus || 0)}`, tone: "good" } : null,
+			Number((card as any)?.dmgBonus || 0) ? { label: "Dano", value: `+${Number((card as any)?.dmgBonus || 0)}`, tone: "gold" } : null
+		].filter(Boolean) as Array<{ label: string; value: string; tone?: "good" | "bad" | "neutral" | "gold" }>;
+	}
+	if (getCardKind(view.cardId) === "ally") {
+		const baseHp = Number(card.hp || 1);
+		const baseAttack = Number(card.atkBonus || card.damage || 0);
+		const baseResistance = Number(card.ac || 0);
+		return [
+			{ label: "Vida", value: String(baseHp) },
+			{ label: "Ataque", value: String(baseAttack) },
+			{ label: "Resistência", value: String(baseResistance) }
+		];
+	}
+	if (getCardKind(view.cardId) === "chosen") {
+		const baseHp = Number(card.hp || 20);
+		return [{ label: "Vida", value: String(baseHp), tone: "gold" }];
+	}
+	return [];
+}
+
+function cardPreviewDetails(cardId: string, card: CardDef | undefined, includeCost = true, includeFiliation = true, view: InspectorView | null = null): string {
+	const headline = [
+		card?.name || cardId,
+		includeCost && typeof card?.cost === "number" ? `Custo ${card.cost}` : "",
+		includeFiliation && card?.filiacao ? `Filiação ${card.filiacao}` : ""
+	].filter(Boolean).join(" • ");
+	const subclass = cardSubclassLine(card);
+	const text = String(card?.text || "").trim();
+	return [headline, subclass, text].filter(Boolean).join("\n");
+}
+
+function previewFiliationLine(card: CardDef | undefined): string {
+	const parts = [String(card?.filiacao || "").trim(), typeof card?.cost === "number" ? `Custo ${card.cost}` : ""].filter(Boolean);
+	return parts.join(" • ");
+}
+
+function previewTextLine(cardId: string, card: CardDef | undefined): string {
+	const text = String(card?.text || "").trim();
+	return text || String(card?.description || "").trim() || String(card?.tipo || cardId || "").trim();
+}
+
+function asAssetPath(path: string | undefined): string {
+	if (!path) return "";
+	if (/^(https?:|data:|file:|\/\/)/i.test(path)) return path;
+	if (path.startsWith("/")) return path;
+	let normalized = String(path).replace(/\\/g, "/").replace(/^\.\//, "").replace(/^\.\.\//, "");
+	if (normalized.startsWith("assets/")) normalized = normalized.slice("assets/".length);
+	return `/${normalized}`;
+}
+
+function cardKeywords(cardId: string): string[] {
+	const card = resolveCard(cardId);
+	const text = String(card?.text || "").toLowerCase();
+	const keywords: string[] = [];
+	const rawKeywords = Array.isArray((card as any)?.keywords) ? ((card as any).keywords as unknown[]).map((kw) => String(kw || "").toLowerCase()) : [];
+	if (rawKeywords.includes("investida") || text.includes("investida")) keywords.push("investida");
+	if (rawKeywords.includes("provocar") || text.includes("provocar") || text.includes("desafio")) keywords.push("provocar");
+	if (rawKeywords.includes("bloquear") || text.includes("bloquear") || text.includes("interpor")) keywords.push("bloquear");
+	if (text.includes("precis") || text.includes("precisão")) keywords.push("precisao");
+	if (rawKeywords.includes("atropelar") || text.includes("atropelar")) keywords.push("atropelar");
+	return keywords;
+}
+
+function cardEffectIds(cardId: string): string[] {
+	const card = resolveCard(cardId);
+	const raw = [card?.effect, (card as any)?.effectA, (card as any)?.effectB];
+	const seen = new Set<string>();
+	const out: string[] = [];
+	for (const value of raw) {
+		if (typeof value !== "string") continue;
+		const effectId = String(value || "").trim();
+		if (!effectId || seen.has(effectId)) continue;
+		seen.add(effectId);
+		out.push(effectId);
+	}
+	return out;
+}
+
+function leaderHasEffect(cardId: string, effectId: string): boolean {
+	return cardEffectIds(cardId).includes(String(effectId || "").trim());
+}
+
+function hasManualLeaderPower(cardId: string): boolean {
+	return leaderHasEffect(cardId, "valbrak_citizen_boost")
+		|| leaderHasEffect(cardId, "ademais_spider_burst")
+		|| leaderHasEffect(cardId, "leafae_vital_guard");
+}
+
+function canUseLeaderPower(): boolean {
+	if (!room || !isMyTurn || currentPhase !== "PREP" || currentMyLeaderTapped) return false;
+	if (leaderHasEffect(currentMyLeader, "valbrak_citizen_boost")) return currentMyFragments >= 2;
+	if (leaderHasEffect(currentMyLeader, "ademais_spider_burst")) return currentMyLeaderSpiderMarks >= 4;
+	if (leaderHasEffect(currentMyLeader, "leafae_vital_guard")) return currentMyLeaderVitalMarks >= 3;
+	return false;
+}
+
+function toBattleCard(cardId: string, side: BattleSide, index: number): BattleCard | null {
+	const cleanId = String(cardId || "").trim();
+	if (!cleanId) return null;
+	const card = resolveCard(cleanId);
+	return {
+		name: card?.name || cleanId,
+		hp: 1,
+		ac: 1,
+		tapped: tappedBySide[side].has(index),
+		summonedThisTurn: summonedBySide[side].has(index),
+		classe: card?.classe,
+		keywords: cardKeywords(cleanId),
+		atkBonus: 0,
+		atkBonusTemp: 0,
+		damage: 1,
+		damageBonusTemp: 0
+	};
+}
+
+function getBattleRuntime(): BattleRuntime {
+	const youLeaderDef = resolveCard(currentMyLeader);
+	const aiLeaderDef = resolveCard(currentEnemyLeader);
+	return {
+		state: {
+			phase: currentBattlePhase(),
+			turnCount: { you: myTurnCount, ai: enemyTurnCount },
+			you: {
+				leader: currentMyLeader ? { name: youLeaderDef?.name || currentMyLeader, hp: Number(youLeaderDef?.hp || 20), tapped: currentMyLeaderTapped } : null,
+				allies: currentMyField.map((cardId, index) => toBattleCard(cardId, "you", index)),
+				grave: []
+			},
+			ai: {
+				leader: currentEnemyLeader ? { name: aiLeaderDef?.name || currentEnemyLeader, hp: Number(aiLeaderDef?.hp || 20), tapped: currentEnemyLeaderTapped } : null,
+				allies: currentEnemyField.map((cardId, index) => toBattleCard(cardId, "ai", index)),
+				grave: []
+			}
+		},
+		rnd: (sides) => Math.floor(Math.random() * Math.max(1, sides)),
+		hasKw: (card, keyword) => {
+			const expected = normalizeKind(keyword);
+			return (card.keywords || []).some((kw) => normalizeKind(kw) === expected);
+		},
+		leaderIs: (side, idOrName) => {
+			const leaderId = side === "you" ? currentMyLeader : currentEnemyLeader;
+			const leaderDef = resolveCard(leaderId);
+			const probe = normalizeCardId(idOrName);
+			return normalizeCardId(leaderId) === probe
+				|| normalizeCardId(leaderDef?.name || "") === probe
+				|| normalizeCardId(leaderDef?.key || "") === probe
+				|| cardEffectIds(leaderId).some((effectId) => normalizeCardId(effectId) === probe);
+		},
+		getAC: () => 1,
+		log,
+		logEffect: (message) => log("EFFECT", { text: message }),
+		logAttackResult: (hit, message) => log(hit ? "HIT" : "MISS", { text: message }),
+		render: () => {
+			if (view.selectedAttackerEl) {
+				if (selectedAttackerPos === null) view.selectedAttackerEl.textContent = "—";
+				else view.selectedAttackerEl.textContent = `[${selectedAttackerPos}] ${currentMyField[selectedAttackerPos] || "—"}`;
+			}
+		},
+		onAttackResolved: (selection: AttackSelection, target: BattleTarget) => {
+			if (!room) return;
+			if (selection.side !== "you") return;
+			if (selection.leader) return;
+				selectedAttackerPos = selection.idx;
+				// immediate visual: mark attacker as deitado (tapped) locally so player sees it
+				try {
+					const slotId = `${selection.side}-ally-${selection.idx}`;
+					const slotEl = document.getElementById(slotId);
+					const cardBtn = slotEl?.querySelector(":scope > .card") as HTMLElement | null;
+					if (cardBtn) cardBtn.classList.add("tapped");
+					// also mark local tappedBySide so runtime reflects it
+					tappedBySide[selection.side].add(selection.idx);
+				} catch (e) {
+					// ignore
+				}
+			if (target.type === "ally") {
+				selectedTargetType = "ally";
+				selectedTargetPos = target.index;
+				room.send("attack", { attackerPos: selection.idx, target: "ally", targetPos: target.index });
+				return;
+			}
+			selectedTargetType = "leader";
+			selectedTargetPos = null;
+			room.send("attack", { attackerPos: selection.idx, target: "leader" });
+		},
+		serverAuthoritative: true
+	};
+}
+
+function beginBoardAttackFrom(index: number): void {
+	if (!isMyTurn || currentPhase !== "COMBAT") return;
+	const runtime = getBattleRuntime();
+	const card = runtime.state.you.allies[index] ?? null;
+	if (selectedAttackerPos === index) {
+		resetBoardAttackSelection();
+		cancelBoardAttackSelection();
+		return;
+	}
+	if (!canAttackCardQuiet(runtime, "you", card)) {
+		resetBoardAttackSelection();
+		cancelBoardAttackSelection();
+		return;
+	}
+	selectedAttackerPos = index;
+	selectedTargetType = "leader";
+	selectedTargetPos = null;
+	if (view.selectedAttackerEl) view.selectedAttackerEl.textContent = `[${index}] ${currentMyField[index] || "—"}`;
+	if (view.selectedTargetEl) view.selectedTargetEl.textContent = "Líder inimigo";
+	selectAttacker(runtime, "you", index);
+	if (!document.querySelector(".slot.clickable")) {
+		resetBoardAttackSelection();
+		cancelBoardAttackSelection();
+	}
+}
+
+function canSelectCombatAttacker(index: number): boolean {
+	if (!isMyTurn || currentPhase !== "COMBAT") return false;
+	if (selectedAttackerPos === index) return true;
+	const runtime = getBattleRuntime();
+	const card = runtime.state.you.allies[index] ?? null;
+	return canAttackCardQuiet(runtime, "you", card);
+}
+
+function cancelBoardAttackSelection(): void {
+	endAttackCleanup(getBattleRuntime());
+}
+
+function resetBoardAttackSelection(): void {
+	selectedAttackerPos = null;
+	selectedTargetType = "leader";
+	selectedTargetPos = null;
+	if (view.selectedAttackerEl) view.selectedAttackerEl.textContent = "—";
+	if (view.selectedTargetEl) view.selectedTargetEl.textContent = "Líder inimigo";
+}
+
+function resolveSelectedBoardAttack(target: BattleTarget): void {
+	resolveAttackOn(getBattleRuntime(), target);
+	resetBoardAttackSelection();
+}
+
+function sameInspectorView(a: InspectorView | null, b: InspectorView | null): boolean {
+	return a?.cardId === b?.cardId && a?.side === b?.side && a?.lane === b?.lane && a?.index === b?.index;
+}
+
+function normalizedInspectorView(viewState: InspectorView | null): InspectorView | null {
+	if (!viewState?.cardId || !String(viewState.cardId).trim()) return null;
+	return {
+		cardId: String(viewState.cardId).trim(),
+		side: viewState.side,
+		lane: viewState.lane,
+		index: typeof viewState.index === "number" ? viewState.index : undefined
+	};
+}
+
+function renderInspector(target: string | InspectorView | null): void {
+	const img = document.getElementById("bigImg") as HTMLImageElement | null;
+	const meta = document.getElementById("bigMeta");
+	const stats = document.getElementById("bigStats");
+	const titleEl = document.getElementById("bigMetaTitle");
+	const filiationEl = document.getElementById("bigMetaFiliation");
+	const subclassEl = document.getElementById("bigMetaSubclass");
+	const textEl = document.getElementById("bigMetaText");
+	if (!img || !meta || !stats || !titleEl || !filiationEl || !subclassEl || !textEl) return;
+	const nextView = normalizedInspectorView(typeof target === "string" ? { cardId: target } : target);
+	if (!nextView?.cardId) {
+		img.src = "";
+		img.alt = "Carta selecionada";
+		stats.innerHTML = "";
+		titleEl.textContent = "Passe o mouse em uma carta";
+		filiationEl.textContent = "para ver detalhes.";
+		subclassEl.textContent = "";
+		textEl.textContent = "";
+		return;
+	}
+	const card = resolveCard(nextView.cardId);
+	img.src = asAssetPath(card?.img);
+	img.alt = card?.name || nextView.cardId;
+	stats.innerHTML = "";
+	for (const item of getInspectorStats(nextView)) {
+		const pill = document.createElement("div");
+		pill.className = `bigStat${item.tone ? ` bigStat--${item.tone}` : ""}`;
+		pill.textContent = `${item.label}: ${item.value}`;
+		stats.appendChild(pill);
+	}
+	titleEl.textContent = String(card?.name || nextView.cardId || "Carta");
+	filiationEl.textContent = previewFiliationLine(card);
+	subclassEl.textContent = cardSubclassLine(card);
+	textEl.textContent = previewTextLine(nextView.cardId, card);
+}
+
+function setInspector(target: string | InspectorView | null): void {
+	const nextView = normalizedInspectorView(typeof target === "string" ? { cardId: target } : target);
+	selectedInspectorView = nextView;
+	selectedHandCardId = nextView?.lane === "hand" ? nextView.cardId : (nextView?.cardId || selectedHandCardId);
+	renderInspector(nextView);
+}
+
+
+function setHoveredInspector(target: string | InspectorView | null): void {
+	hoveredInspectorView = normalizedInspectorView(typeof target === "string" ? { cardId: target } : target);
+	const fallback = hoveredInspectorView || selectedInspectorView || (selectedHandCardId ? { cardId: selectedHandCardId } : null);
+	renderInspector(fallback);
+}
+
+function buildHandCard(cardId: string, selected: boolean, onClick?: () => void, inspectorView?: InspectorView | null): HTMLButtonElement {
+	const button = document.createElement("button");
+	button.type = "button";
+	button.className = "card handCard slotCard";
+	button.style.cursor = onClick ? "pointer" : "default";
+	button.style.padding = "0";
+	button.draggable = !!onClick;
+	button.dataset.cardId = cardId;
+	button.dataset.cardKind = getCardKind(cardId);
+	if (selected) button.classList.add("is-selected");
+
+	const card = resolveCard(cardId);
+	if (card?.img) {
+		const image = document.createElement("img");
+		image.src = asAssetPath(card.img);
+		image.alt = card.name || cardId;
+		image.className = "slotCardImg";
+		button.appendChild(image);
+	} else {
+		const fallback = document.createElement("div");
+		fallback.className = "slotCardFallback";
+		fallback.textContent = cardId;
+		button.appendChild(fallback);
+	}
+	if (inspectorView?.lane === "hand") appendCostBadge(button, card?.cost);
+
+	button.onmouseenter = () => setHoveredInspector(inspectorView || cardId);
+	button.onfocus = () => setHoveredInspector(inspectorView || cardId);
+	button.onmouseleave = () => setHoveredInspector(null);
+	button.onblur = () => setHoveredInspector(null);
+	button.ondragstart = (event) => {
+		if (!event.dataTransfer || !isMyTurn || currentPhase !== "PREP") return;
+		event.dataTransfer.effectAllowed = "move";
+		event.dataTransfer.setData("text/plain", cardId);
+		event.dataTransfer.setData("application/x-card-kind", getCardKind(cardId));
+	};
+	if (onClick) button.onclick = onClick;
+	return button;
+}
+
+function buildBackCard(): HTMLDivElement {
+	const back = document.createElement("div");
+	back.className = "card handCard slotCard slotCardBack";
+	const image = document.createElement("img");
+	image.className = "slotCardImg";
+	image.src = asAssetPath(CARD_BACK_ASSET);
+	image.alt = "Carta";
+	image.onerror = () => {
+		back.textContent = "Carta";
+	};
+	back.appendChild(image);
+	return back;
+}
+
+function pileCards(side: BattleSide, which: "deck" | "grave" | "banished"): string[] {
+	if (side === "you") {
+		if (which === "deck") return currentMyDeck;
+		if (which === "grave") return currentMyGrave;
+		return currentMyBanished;
+	}
+	if (which === "deck") return currentEnemyDeck;
+	if (which === "grave") return currentEnemyGrave;
+	return currentEnemyBanished;
+}
+
+function attachedEquipCards(side: BattleSide, targetPos: number | null): string[] {
+	const supports = side === "you" ? currentMySupport : currentEnemySupport;
+	const supportAttach = side === "you" ? currentMySupportAttach : currentEnemySupportAttach;
+	const expectedTarget = targetPos == null ? -1 : targetPos;
+	const out: string[] = [];
+	for (let index = 0; index < supports.length; index += 1) {
+		const supportCardId = String(supports[index] || "").trim();
+		if (!supportCardId) continue;
+		if (Number(supportAttach[index] ?? -2) !== expectedTarget) continue;
+		if (getCardKind(supportCardId) !== "equip") continue;
+		out.push(supportCardId);
+	}
+	return out;
+}
+
+function appendEquipAttachTag(cardEl: HTMLElement, side: BattleSide, targetPos: number | null): void {
+	const equips = attachedEquipCards(side, targetPos);
+	if (!equips.length) return;
+	const tag = document.createElement("div");
+	tag.className = "equipAttachTag";
+	tag.textContent = `⚙${equips.length}`;
+	tag.title = `Equipado por: ${equips.join(", ")}`;
+	cardEl.appendChild(tag);
+}
+
+function getSupportCounterForSide(side: BattleSide, index: number): number {
+	const source = side === "you" ? currentMySupportCounters : currentEnemySupportCounters;
+	const value = Number(source[index] || 0);
+	return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+function appendSupportCounterTag(cardEl: HTMLElement, value: number): void {
+	if (!Number.isFinite(value) || value <= 0) return;
+	const tag = document.createElement("div");
+	tag.className = "equipAttachTag";
+	tag.textContent = `✦${value}`;
+	tag.title = `Cartas deslocadas por este efeito: ${value}`;
+	tag.style.left = "6px";
+	tag.style.right = "auto";
+	cardEl.appendChild(tag);
+}
+
+function pileLabel(which: "deck" | "grave" | "banished"): string {
+	if (which === "deck") return "Deck";
+	if (which === "grave") return "Cemitério";
+	return "Deslocadas";
+}
+
+function renderPileModal(): void {
+	const modal = document.getElementById("pileModal") as HTMLElement | null;
+	const title = document.getElementById("pileTitle");
+	const grid = document.getElementById("pileGrid") as HTMLElement | null;
+	if (!modal || !title || !grid) return;
+	const sideLabel = activePileSide === "you" ? "Você" : "Oponente";
+	title.textContent = `${sideLabel} • ${pileLabel(activePileWhich)}`;
+	grid.innerHTML = "";
+	grid.style.display = "grid";
+	grid.style.gridTemplateColumns = "repeat(auto-fill, minmax(63px, 1fr))";
+	grid.style.gap = "8px";
+
+	const box = modal.querySelector(".modalBox") as HTMLElement | null;
+	if (!box) return;
+	let tabs = box.querySelector("#pileTabs") as HTMLElement | null;
+	if (!tabs) {
+		tabs = document.createElement("div");
+		tabs.id = "pileTabs";
+		tabs.style.display = "flex";
+		tabs.style.gap = "8px";
+		tabs.style.margin = "0 0 10px 0";
+		const header = title.parentElement;
+		if (header && header.nextElementSibling) box.insertBefore(tabs, header.nextElementSibling);
+		else box.appendChild(tabs);
+	}
+	tabs.innerHTML = "";
+	for (const which of ["deck", "grave", "banished"] as const) {
+		const tab = document.createElement("button");
+		tab.type = "button";
+		tab.className = "btn";
+		tab.textContent = pileLabel(which);
+		if (which === activePileWhich) tab.classList.add("primary");
+		tab.onclick = () => {
+			activePileWhich = which;
+			renderPileModal();
+		};
+		tabs.appendChild(tab);
+	}
+
+	const cards = pileCards(activePileSide, activePileWhich);
+	if (!cards.length) {
+		const empty = document.createElement("div");
+		empty.style.opacity = "0.75";
+		empty.style.fontSize = "12px";
+		empty.textContent = "Sem cartas nesta pilha.";
+		grid.appendChild(empty);
+		return;
+	}
+
+	for (let index = cards.length - 1; index >= 0; index -= 1) {
+		const cardId = String(cards[index] || "").trim();
+		if (!cardId) continue;
+		const card = resolveCard(cardId);
+		const hideFace = activePileWhich === "deck" && activePileSide === "ai";
+		const button = document.createElement("button");
+		button.type = "button";
+		button.className = "card slotCard";
+		button.style.width = "63px";
+		button.style.height = "88px";
+		button.style.cursor = "default";
+		const image = document.createElement("img");
+		image.className = "slotCardImg";
+		image.src = hideFace ? asAssetPath(CARD_BACK_ASSET) : asAssetPath(card?.img || CARD_BACK_ASSET);
+		image.alt = hideFace ? "Carta virada" : (card?.name || cardId);
+		image.onerror = () => {
+			image.src = asAssetPath(CARD_BACK_ASSET);
+		};
+		button.appendChild(image);
+		button.onmouseenter = () => {
+			if (hideFace) return;
+			setHoveredInspector({ cardId, side: activePileSide, lane: activePileWhich });
+		};
+		button.onmouseleave = () => setHoveredInspector(null);
+		grid.appendChild(button);
+	}
+}
+
+function renderVisiblePileSlot(slotId: string, countId: string, cards: string[], hideFace: boolean): void {
+	const slotEl = document.getElementById(slotId);
+	const countEl = document.getElementById(countId);
+	if (countEl) countEl.textContent = String(cards.length);
+	if (!slotEl) return;
+	for (const old of Array.from(slotEl.querySelectorAll(":scope > .deckVisualCard"))) old.remove();
+	if (!cards.length) return;
+	const topCardId = String(cards[cards.length - 1] || "").trim();
+	const topCard = resolveCard(topCardId);
+	for (let layer = 0; layer < Math.min(3, cards.length); layer += 1) {
+		const cardEl = document.createElement("div");
+		cardEl.className = "card slotCard deckVisualCard";
+		cardEl.style.width = "100%";
+		cardEl.style.height = "100%";
+		cardEl.style.margin = "0";
+		cardEl.style.position = "absolute";
+		cardEl.style.left = `${layer * 2}px`;
+		cardEl.style.top = `${layer * 2}px`;
+		cardEl.style.zIndex = String(10 + layer);
+		const image = document.createElement("img");
+		image.className = "slotCardImg";
+		image.src = hideFace ? asAssetPath(CARD_BACK_ASSET) : asAssetPath(topCard?.img || CARD_BACK_ASSET);
+		image.alt = hideFace ? "Carta virada" : (topCard?.name || topCardId || "Carta");
+		image.onerror = () => {
+			image.src = asAssetPath(CARD_BACK_ASSET);
+		};
+		cardEl.appendChild(image);
+		if (layer === Math.min(3, cards.length) - 1 && !hideFace) {
+			const side = slotId.startsWith("you") ? "you" : "ai";
+			const lane: InspectorLane = slotId.includes("grave") ? "grave" : (slotId.includes("ban") ? "banished" : "deck");
+			cardEl.onmouseenter = () => setHoveredInspector({ cardId: topCardId, side, lane });
+			cardEl.onmouseleave = () => setHoveredInspector(null);
+		}
+		slotEl.appendChild(cardEl);
+	}
+}
+
+function showPile(side: BattleSide, which: "deck" | "grave" | "banished"): void {
+	activePileSide = side;
+	activePileWhich = which;
+	const modal = document.getElementById("pileModal") as HTMLElement | null;
+	if (!modal) return;
+	modal.style.display = "flex";
+	renderPileModal();
+}
+
+function hidePile(): void {
+	const modal = document.getElementById("pileModal") as HTMLElement | null;
+	if (!modal) return;
+	modal.style.display = "none";
+}
+
+function bindPileSlots(): void {
+	for (const side of ["you", "ai"] as const) {
+		const deckSlot = document.getElementById(`${side}-deck`);
+		const graveSlot = document.getElementById(`${side}-grave`);
+		const banSlot = document.getElementById(`${side}-banished`) || document.getElementById(`${side}-ban`);
+		if (deckSlot) deckSlot.onclick = () => showPile(side, "deck");
+		if (graveSlot) graveSlot.onclick = () => showPile(side, "grave");
+		if (banSlot) banSlot.onclick = () => showPile(side, "banished");
+	}
+}
+
+function hideCardChoiceModal(sendCancel: boolean = true) {
+	const modal = document.getElementById("cardChoiceModal") as HTMLElement | null;
+	if (!modal) return;
+	modal.style.display = "none";
+	if (activeChoiceTimer) {
+		window.clearInterval(activeChoiceTimer);
+		activeChoiceTimer = null;
+	}
+	const countdown = document.getElementById("cardChoiceCountdown") as HTMLElement | null;
+	if (countdown) {
+		countdown.style.display = "none";
+		countdown.classList.remove("is-danger");
+	}
+	const grid = document.getElementById("cardChoiceGrid");
+	if (grid) grid.innerHTML = "";
+	if (sendCancel && room && activeChoiceId) {
+		room.send("effect_choice_submit", { choiceId: activeChoiceId, optionId: null });
+	}
+	activeChoiceId = null;
+}
+
+function startCountdown(containerId: string, valueId: string, timeoutMs: number, store: "choice" | "waiting") {
+	const container = document.getElementById(containerId) as HTMLElement | null;
+	const valueEl = document.getElementById(valueId) as HTMLElement | null;
+	if (!container || !valueEl || timeoutMs <= 0) return;
+	container.style.display = "block";
+	const endAt = Date.now() + timeoutMs;
+	const render = () => {
+		const remainingMs = Math.max(0, endAt - Date.now());
+		const remaining = Math.max(0, Math.ceil(remainingMs / 1000));
+		valueEl.textContent = String(remaining);
+		container.classList.toggle("is-danger", remaining <= 5);
+		if (remainingMs <= 0) {
+			if (store === "choice" && activeChoiceTimer) {
+				window.clearInterval(activeChoiceTimer);
+				activeChoiceTimer = null;
+			}
+			if (store === "waiting" && activeWaitingTimer) {
+				window.clearInterval(activeWaitingTimer);
+				activeWaitingTimer = null;
+			}
+		}
+	};
+	render();
+	const intervalId = window.setInterval(render, 250);
+	if (store === "choice") {
+		if (activeChoiceTimer) window.clearInterval(activeChoiceTimer);
+		activeChoiceTimer = intervalId;
+	} else {
+		if (activeWaitingTimer) window.clearInterval(activeWaitingTimer);
+		activeWaitingTimer = intervalId;
+	}
+}
+
+function showChoiceWaitingModal(payload: any) {
+	const modal = document.getElementById("choiceWaitingModal") as HTMLElement | null;
+	const title = document.getElementById("choiceWaitingTitle");
+	const text = document.getElementById("choiceWaitingText");
+	if (!modal || !title || !text) return;
+	title.textContent = "Seu oponente está escolhendo";
+	text.textContent = String(payload?.title || "Aguarde a decisão para a partida continuar.");
+	modal.style.display = "flex";
+	startCountdown("choiceWaitingCountdown", "choiceWaitingCountdownValue", Number(payload?.timeoutMs || 0), "waiting");
+}
+
+function hideChoiceWaitingModal() {
+	const modal = document.getElementById("choiceWaitingModal") as HTMLElement | null;
+	if (modal) modal.style.display = "none";
+	if (activeWaitingTimer) {
+		window.clearInterval(activeWaitingTimer);
+		activeWaitingTimer = null;
+	}
+	const countdown = document.getElementById("choiceWaitingCountdown") as HTMLElement | null;
+	if (countdown) {
+		countdown.style.display = "none";
+		countdown.classList.remove("is-danger");
+	}
+}
+
+function showEffectChoiceModal(payload: any) {
+	const modal = document.getElementById("cardChoiceModal") as HTMLElement | null;
+	const title = document.getElementById("cardChoiceTitle");
+	const grid = document.getElementById("cardChoiceGrid") as HTMLElement | null;
+	if (!modal || !title || !grid) return;
+	activeChoiceId = String(payload?.choiceId || "");
+	title.textContent = String(payload?.title || "Escolha uma opção");
+	hideChoiceWaitingModal();
+	grid.innerHTML = "";
+	grid.style.display = "block";
+
+	const layout = document.createElement("div");
+	layout.style.display = "grid";
+	layout.style.gridTemplateColumns = "1fr minmax(220px, 280px)";
+	layout.style.gap = "12px";
+
+	const choicesWrap = document.createElement("div");
+	choicesWrap.style.display = "grid";
+	choicesWrap.style.gap = "10px";
+
+	const previewWrap = document.createElement("div");
+	previewWrap.style.display = "grid";
+	previewWrap.style.gap = "8px";
+	previewWrap.style.alignContent = "start";
+	const previewImg = document.createElement("img");
+	previewImg.style.width = "100%";
+	previewImg.style.maxWidth = "260px";
+	previewImg.style.borderRadius = "8px";
+	previewImg.style.border = "1px solid rgba(255,255,255,.16)";
+	previewImg.src = asAssetPath(CARD_BACK_ASSET);
+	previewImg.alt = "Prévia";
+	previewImg.style.filter = "none";
+	const previewMeta = document.createElement("div");
+	previewMeta.style.fontSize = "12px";
+	previewMeta.style.opacity = "0.9";
+	previewMeta.style.whiteSpace = "pre-line";
+	previewMeta.textContent = "Passe o mouse em uma opção para pré-visualizar.";
+	const timeoutMs = Number(payload?.timeoutMs || 0);
+	if (timeoutMs > 0) {
+		const seconds = Math.max(1, Math.floor(timeoutMs / 1000));
+		const timeoutInfo = document.createElement("div");
+		timeoutInfo.style.fontSize = "12px";
+		timeoutInfo.style.opacity = "0.95";
+		timeoutInfo.textContent = `⏱ Você tem ${seconds}s para escolher. Após isso, o jogo escolhe aleatoriamente.`;
+		previewWrap.appendChild(timeoutInfo);
+	}
+	startCountdown("cardChoiceCountdown", "cardChoiceCountdownValue", timeoutMs, "choice");
+	previewWrap.appendChild(previewImg);
+	previewWrap.appendChild(previewMeta);
+
+	const options = Array.isArray(payload?.options) ? payload.options : [];
+	const isMultiSelect = payload?.multiSelect === true;
+	const selectedOptionIds = new Set<string>();
+	const minSelections = Math.max(0, Number(payload?.minSelections || 0));
+	const rawMaxSelections = Number(payload?.maxSelections || 0);
+	const hasMaxSelections = Number.isFinite(rawMaxSelections) && rawMaxSelections > 0;
+	let submitButton: HTMLButtonElement | null = null;
+	const updateSubmitState = () => {
+		if (!submitButton) return;
+		const count = selectedOptionIds.size;
+		submitButton.disabled = count < minSelections;
+		submitButton.textContent = `${String(payload?.submitLabel || "Confirmar")} (${count})`;
+	};
+	if (isMultiSelect) {
+		submitButton = document.createElement("button");
+		submitButton.type = "button";
+		submitButton.className = "primary";
+		submitButton.style.marginTop = "8px";
+		submitButton.onclick = () => {
+			if (!room || !activeChoiceId) return;
+			room.send("effect_choice_submit", { choiceId: activeChoiceId, optionId: Array.from(selectedOptionIds).join("|") });
+			hideCardChoiceModal(false);
+		};
+		updateSubmitState();
+		previewWrap.appendChild(submitButton);
+	}
+	const hasSide = options.some((option: any) => option?.side != null);
+	const sideGroups = hasSide
+		? [
+			{ key: "you", label: "Seu", options: options.filter((o: any) => sideFromServerSlot(String(o?.side || "") as "p1" | "p2") === "you") },
+			{ key: "ai", label: "Oponente", options: options.filter((o: any) => sideFromServerSlot(String(o?.side || "") as "p1" | "p2") === "ai") },
+			{ key: "other", label: "Outros", options: options.filter((o: any) => !["you", "ai"].includes(String(sideFromServerSlot(String(o?.side || "") as "p1" | "p2") || ""))) }
+		]
+		: [{ key: "all", label: "Opções", options }];
+
+	for (const group of sideGroups) {
+		if (!group.options.length) continue;
+		const groupTitle = document.createElement("div");
+		groupTitle.textContent = group.label;
+		groupTitle.style.fontSize = "12px";
+		groupTitle.style.fontWeight = "700";
+		groupTitle.style.opacity = "0.9";
+		choicesWrap.appendChild(groupTitle);
+
+		const groupGrid = document.createElement("div");
+		groupGrid.style.display = "grid";
+		groupGrid.style.gridTemplateColumns = "repeat(auto-fill, minmax(63px, 1fr))";
+		groupGrid.style.gap = "8px";
+
+		for (const option of group.options) {
+		const item = document.createElement("div");
+		item.style.display = "grid";
+		item.style.gap = "4px";
+		item.style.alignContent = "start";
+		const button = document.createElement("button");
+		button.type = "button";
+		button.className = "card slotCard";
+		button.style.width = "63px";
+		button.style.height = "88px";
+		const disabled = !!option?.disabled;
+		button.style.cursor = disabled ? "not-allowed" : "pointer";
+		if (disabled) button.style.opacity = "0.45";
+		button.disabled = disabled;
+		const visual = getChoiceOptionVisual(option, payload);
+		const cardId = visual.cardId || String(option?.cardId || option?.label || "");
+		const card = resolveCard(cardId);
+		button.classList.toggle("choiceCardMuted", visual.muted);
+		if (card?.img) {
+			const image = document.createElement("img");
+			image.className = "slotCardImg";
+			image.src = asAssetPath(card.img);
+			image.alt = card.name || cardId;
+			image.onerror = () => {
+				image.src = asAssetPath(CARD_BACK_ASSET);
+			};
+			button.appendChild(image);
+		} else {
+			const fallback = document.createElement("div");
+			fallback.className = "slotCardFallback";
+			fallback.textContent = String(option?.label || "Escolher");
+			button.appendChild(fallback);
+		}
+		button.title = disabled
+			? String(option?.disabledReason || option?.label || "Indisponível")
+			: String(option?.label || cardId || "Escolher");
+		button.onmouseenter = () => {
+			if (!cardId) return;
+			setInspector(cardId);
+			previewImg.src = asAssetPath(card?.img || CARD_BACK_ASSET);
+			previewImg.style.filter = visual.muted ? "grayscale(1) saturate(0.15) contrast(1.05) brightness(0.92)" : "none";
+			previewMeta.textContent = [String(option?.description || option?.label || "").trim(), cardPreviewDetails(cardId, card, false, false)].filter(Boolean).join("\n\n");
+		};
+		button.onclick = () => {
+			if (disabled) return;
+			if (!room || !activeChoiceId) return;
+			if (isMultiSelect) {
+				const currentId = String(option?.id || "");
+				if (!currentId) return;
+				if (selectedOptionIds.has(currentId)) selectedOptionIds.delete(currentId);
+				else {
+					if (hasMaxSelections && selectedOptionIds.size >= rawMaxSelections) return;
+					selectedOptionIds.add(currentId);
+				}
+				const selected = selectedOptionIds.has(currentId);
+				button.classList.toggle("selected", selected);
+				button.style.outline = selected ? "2px solid #ffd54f" : "";
+				button.style.outlineOffset = selected ? "2px" : "";
+				updateSubmitState();
+				return;
+			}
+			room.send("effect_choice_submit", { choiceId: activeChoiceId, optionId: String(option?.id || "") });
+			hideCardChoiceModal(false);
+		};
+		item.appendChild(button);
+		const optionText = document.createElement("div");
+		optionText.style.fontSize = "11px";
+		optionText.style.lineHeight = "1.2";
+		optionText.style.opacity = "0.95";
+		optionText.style.minHeight = "28px";
+		optionText.textContent = String(option?.description || option?.label || "");
+		item.appendChild(optionText);
+		groupGrid.appendChild(item);
+		}
+		choicesWrap.appendChild(groupGrid);
+	}
+
+	layout.appendChild(choicesWrap);
+	layout.appendChild(previewWrap);
+	grid.appendChild(layout);
+	modal.style.display = "flex";
+}
+
+function renderDeckSlot(slotId: "you-deck" | "ai-deck", countId: "youDeckCount" | "aiDeckCount", total: number) {
+	const slotEl = document.getElementById(slotId);
+	const countEl = document.getElementById(countId);
+	if (countEl) countEl.textContent = String(Math.max(0, Number(total || 0)));
+	if (!slotEl) return;
+	for (const old of Array.from(slotEl.querySelectorAll(":scope > .deckVisualCard"))) old.remove();
+	if (Number(total || 0) <= 0) return;
+	const back = document.createElement("div");
+	back.className = "card slotCard slotCardBack deckVisualCard";
+	back.style.width = "100%";
+	back.style.height = "100%";
+	back.style.margin = "0";
+	const image = document.createElement("img");
+	image.className = "slotCardImg";
+	image.src = asAssetPath(CARD_BACK_ASSET);
+	image.alt = "Deck";
+	back.appendChild(image);
+	slotEl.appendChild(back);
+}
+
+function renderPileCounts(prefix: "you" | "ai", data: any) {
+	const graveCards = asStringArray(data?.grave);
+	const banCards = asStringArray((data as any)?.banished || (data as any)?.ban);
+	const deckCards = asStringArray(data?.deck);
+	const graveCount = graveCards.length;
+	const banCount = banCards.length;
+	const deckCount = deckCards.length;
+	const graveEl = document.getElementById(`${prefix}GraveCount`);
+	const banEl = document.getElementById(`${prefix}BanCount`);
+	if (graveEl) graveEl.textContent = String(Math.max(0, graveCount));
+	if (banEl) banEl.textContent = String(Math.max(0, banCount));
+	renderDeckSlot(prefix === "you" ? "you-deck" : "ai-deck", prefix === "you" ? "youDeckCount" : "aiDeckCount", deckCount);
+	renderVisiblePileSlot(`${prefix}-grave`, `${prefix}GraveCount`, graveCards, false);
+	renderVisiblePileSlot(`${prefix}-banished`, `${prefix}BanCount`, banCards, false);
+}
+
+function getFirstEmptyFieldPos(field: string[]): number {
+	for (let index = 0; index < 5; index += 1) {
+		if (!field[index]) return index;
+	}
+	return -1;
+}
+
+function tryPlayCard(cardId: string, targetPos?: number): void {
+	if (!room || !isMyTurn || currentPhase !== "PREP") return;
+	if (!cardId) return;
+	const cardKind = getCardKind(cardId);
+	const lane = laneForCard(cardId);
+	if (lane === "env") {
+		room.send("play_card", { cardId, cardKind });
+		return;
+	}
+	const laneState = lane === "field" ? currentMyField : currentMySupport;
+	if (typeof targetPos === "number") {
+		room.send("play_card", { cardId, targetPos, cardKind });
+		return;
+	}
+	const firstEmpty = getFirstEmptyFieldPos(laneState);
+	if (firstEmpty >= 0) room.send("play_card", { cardId, targetPos: firstEmpty, cardKind });
+}
+
+function renderEnvSlot(slotId: "you-env" | "ai-env", envCardId: string | null, allowDrop: boolean): void {
+	const slotEl = document.getElementById(slotId);
+	if (!slotEl) return;
+	const side: BattleSide = slotId === "you-env" ? "you" : "ai";
+	for (const oldCard of Array.from(slotEl.querySelectorAll(":scope > .card"))) oldCard.remove();
+	slotEl.classList.remove("dropTarget");
+	slotEl.ondragenter = null;
+	slotEl.ondragover = null;
+	slotEl.ondragleave = null;
+	slotEl.ondrop = null;
+	if (allowDrop) {
+		slotEl.ondragenter = (event) => {
+			event.preventDefault();
+			if (!isMyTurn || currentPhase !== "PREP") return;
+			const draggedCardId = event.dataTransfer?.getData("text/plain") || selectedHandCardId || "";
+			if (!draggedCardId || laneForCard(draggedCardId) !== "env") return;
+			slotEl.classList.add("dropTarget");
+		};
+		slotEl.ondragover = (event) => {
+			event.preventDefault();
+			if (!isMyTurn || currentPhase !== "PREP") return;
+			const draggedCardId = event.dataTransfer?.getData("text/plain") || selectedHandCardId || "";
+			if (!draggedCardId || laneForCard(draggedCardId) !== "env") return;
+			slotEl.classList.add("dropTarget");
+		};
+		slotEl.ondragleave = () => slotEl.classList.remove("dropTarget");
+		slotEl.ondrop = (event) => {
+			event.preventDefault();
+			slotEl.classList.remove("dropTarget");
+			if (!isMyTurn || currentPhase !== "PREP") return;
+			const draggedCardId = event.dataTransfer?.getData("text/plain") || selectedHandCardId || "";
+			if (!draggedCardId || laneForCard(draggedCardId) !== "env") return;
+			selectedHandCardId = draggedCardId;
+			if (view.selectedCardEl) view.selectedCardEl.textContent = selectedHandCardId;
+			tryPlayCard(draggedCardId);
+		};
+	}
+	const cardId = String(envCardId || "").trim();
+	if (!cardId) return;
+	const cardEl = buildHandCard(cardId, false, undefined, { cardId, side, lane: "env" });
+	cardEl.className = "card slotCard";
+	cardEl.style.width = "100%";
+	cardEl.style.height = "100%";
+	cardEl.style.margin = "0";
+	slotEl.onmousemove = () => setHoveredInspector({ cardId, side, lane: "env" });
+	slotEl.onmouseleave = () => setHoveredInspector(null);
+	slotEl.appendChild(cardEl);
+}
+
+function renderSideHand(containerId: "youHand" | "aiHand", cards: string[], selectable: boolean): void {
+	const container = document.getElementById(containerId);
+	if (!container) return;
+	container.innerHTML = "";
+	if (!cards.length) {
+		container.innerHTML = `<div style="opacity:.7;font-size:12px;padding:4px">—</div>`;
+		return;
+	}
+	for (const cardId of cards) {
+		if (selectable) {
+			const selected = cardId === selectedHandCardId;
+			container.appendChild(
+				buildHandCard(cardId, selected, () => {
+					selectedHandCardId = cardId;
+					if (view.selectedCardEl) view.selectedCardEl.textContent = selectedHandCardId;
+					if (room && isMyTurn && currentPhase === "PREP") {
+						tryPlayCard(cardId);
+						return;
+					}
+					renderSideHand("youHand", cards, true);
+				}, { cardId, side: "you", lane: "hand" })
+			);
+			continue;
+		}
+		container.appendChild(buildBackCard());
+	}
+}
+
+function renderLane(zoneId: "you-field" | "ai-field" | "you-support" | "ai-support", cards: string[], activeIndex: number | null, onClick?: (index: number) => void, hpValues?: number[]): void {
+	const zone = document.getElementById(zoneId);
+	if (!zone) return;
+	const slots = Array.from(zone.children) as HTMLElement[];
+	for (let index = 0; index < slots.length; index += 1) {
+		const slotEl = slots[index];
+		if (zoneId === "you-field") slotEl.id = `you-ally-${index}`;
+		else if (zoneId === "ai-field") slotEl.id = `ai-ally-${index}`;
+		else if (zoneId === "you-support") slotEl.id = `you-support-${index}`;
+		else if (zoneId === "ai-support") slotEl.id = `ai-support-${index}`;
+		for (const oldCard of Array.from(slotEl.querySelectorAll(":scope > .card"))) oldCard.remove();
+		slotEl.classList.remove("clickable", "selected", "dropTarget");
+		slotEl.onclick = null;
+		slotEl.ondragenter = null;
+		slotEl.ondragover = null;
+		slotEl.ondragleave = null;
+		slotEl.ondrop = null;
+		if (zoneId === "you-field" || zoneId === "you-support") {
+			const dropLane: "field" | "support" = zoneId === "you-field" ? "field" : "support";
+			slotEl.ondragenter = (event) => {
+				event.preventDefault();
+				if (!isMyTurn || currentPhase !== "PREP") return;
+				const draggedCardId = event.dataTransfer?.getData("text/plain") || selectedHandCardId || "";
+				if (!draggedCardId || laneForCard(draggedCardId) !== dropLane) return;
+				slotEl.classList.add("dropTarget");
+			};
+			slotEl.ondragover = (event) => {
+				event.preventDefault();
+				if (!isMyTurn || currentPhase !== "PREP") return;
+				const draggedCardId = event.dataTransfer?.getData("text/plain") || selectedHandCardId || "";
+				if (!draggedCardId || laneForCard(draggedCardId) !== dropLane) return;
+				slotEl.classList.add("dropTarget");
+			};
+			slotEl.ondragleave = () => slotEl.classList.remove("dropTarget");
+			slotEl.ondrop = (event) => {
+				event.preventDefault();
+				slotEl.classList.remove("dropTarget");
+				if (!isMyTurn || currentPhase !== "PREP") return;
+				if (cards[index]) return;
+				const draggedCardId = event.dataTransfer?.getData("text/plain") || selectedHandCardId || "";
+				if (!draggedCardId) return;
+				if (laneForCard(draggedCardId) !== dropLane) return;
+				selectedHandCardId = draggedCardId;
+				if (view.selectedCardEl) view.selectedCardEl.textContent = selectedHandCardId;
+				tryPlayCard(draggedCardId, index);
+			};
+		}
+		const cardId = cards[index];
+		if (!cardId) {
+			slotEl.onmousemove = null;
+			slotEl.onmouseleave = null;
+			continue;
+		}
+		const side: BattleSide = zoneId.startsWith("you") ? "you" : "ai";
+		const lane: InspectorLane = zoneId.endsWith("field") ? "field" : "support";
+		const cardEl = buildHandCard(cardId, false, undefined, { cardId, side, lane, index });
+		cardEl.className = "card slotCard";
+		if (zoneId === "you-field" && tappedBySide.you.has(index)) cardEl.classList.add("tapped");
+		if (zoneId === "ai-field" && tappedBySide.ai.has(index)) cardEl.classList.add("tapped");
+		if (zoneId === "you-field" && canSelectCombatAttacker(index)) cardEl.classList.add("can-attack");
+		const renderSide: BattleSide = side;
+		if ((zoneId === "you-field" || zoneId === "ai-field") && !cardEl.classList.contains("tapped") && untapPulseBySide[renderSide]) {
+			cardEl.classList.add("just-untapped");
+		}
+		cardEl.style.width = "100%";
+		cardEl.style.height = "100%";
+		cardEl.style.margin = "0";
+		if (zoneId === "you-field" || zoneId === "ai-field") {
+			const side = zoneId === "you-field" ? "you" : "ai";
+			const maxHp = getDisplayedFieldMaxHp(side, index, cardId);
+			const currentHp = Math.max(0, Number(hpValues?.[index] ?? maxHp));
+			appendBloodTag(cardEl, getFieldBloodMarksForSide(side, index));
+			appendVitalTag(cardEl, getFieldVitalMarksForSide(side, index));
+			const hpTag = document.createElement("div");
+			hpTag.className = "hpTag";
+			if (maxHp > 0 && currentHp / maxHp <= 0.5) hpTag.classList.add("low");
+			hpTag.textContent = `${currentHp}`;
+			cardEl.appendChild(hpTag);
+			appendEquipAttachTag(cardEl, zoneId === "you-field" ? "you" : "ai", index);
+		}
+		if (zoneId === "you-support" || zoneId === "ai-support") {
+			appendSupportCounterTag(cardEl, getSupportCounterForSide(renderSide, index));
+		}
+		slotEl.onmousemove = () => setHoveredInspector({ cardId, side, lane, index });
+		slotEl.onmouseleave = () => setHoveredInspector(null);
+		slotEl.appendChild(cardEl);
+		if (activeIndex === index) slotEl.classList.add("selected");
+		if (onClick) {
+			const allowClick = zoneId !== "you-field" || currentPhase !== "COMBAT" || canSelectCombatAttacker(index);
+			if (allowClick) {
+				slotEl.classList.add("clickable");
+				slotEl.onclick = () => onClick(index);
+			}
+		}
+	}
+}
+
+function renderLeaderSlot(slotId: "you-leader" | "ai-leader", leaderId: string, currentHpValue?: number): void {
+	const slotEl = document.getElementById(slotId);
+	if (!slotEl) return;
+	for (const oldCard of Array.from(slotEl.querySelectorAll(":scope > .card"))) oldCard.remove();
+	const leader = String(leaderId || "").trim();
+	if (!leader) return;
+	const side: BattleSide = slotId === "you-leader" ? "you" : "ai";
+	const cardEl = buildHandCard(leader, false, undefined, { cardId: leader, side, lane: "leader" });
+	cardEl.className = "card slotCard";
+	const tapped = side === "you" ? currentMyLeaderTapped : currentEnemyLeaderTapped;
+	if (tapped) cardEl.classList.add("tapped");
+	if (!tapped && untapPulseBySide[side]) cardEl.classList.add("just-untapped");
+	cardEl.style.width = "100%";
+	cardEl.style.height = "100%";
+	cardEl.style.margin = "0";
+
+	const baseMaxHp = Number(resolveCard(leader)?.hp || 20);
+	const currentHp = Math.max(0, Number(currentHpValue ?? baseMaxHp));
+	const maxHp = getLeaderMaxHpValue(side, leader);
+	appendVitalTag(cardEl, side === "you" ? currentMyLeaderVitalMarks : currentEnemyLeaderVitalMarks);
+	appendSpiderTag(cardEl, side === "you" ? currentMyLeaderSpiderMarks : currentEnemyLeaderSpiderMarks);
+	const hpTag = document.createElement("div");
+	hpTag.className = "hpTag";
+	if (maxHp > 0 && currentHp / maxHp <= 0.5) hpTag.classList.add("low");
+	hpTag.textContent = `${currentHp}`;
+	cardEl.appendChild(hpTag);
+	appendEquipAttachTag(cardEl, side, null);
+	slotEl.onmousemove = () => setHoveredInspector({ cardId: leader, side, lane: "leader" });
+	slotEl.onmouseleave = () => setHoveredInspector(null);
+
+	slotEl.appendChild(cardEl);
+}
+
+function getFieldVitalMarksForSide(side: BattleSide, index: number): number {
+	const source = side === "you" ? currentMyFieldVitalMarks : currentEnemyFieldVitalMarks;
+	const value = Number(source[index] || 0);
+	return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+function getFieldBloodMarksForSide(side: BattleSide, index: number): number {
+	const source = side === "you" ? currentMyFieldBloodMarks : currentEnemyFieldBloodMarks;
+	const value = Number(source[index] || 0);
+	return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+function getDisplayedFieldMaxHp(side: BattleSide, index: number, cardId: string): number {
+	const baseMaxHp = Number(resolveCard(cardId)?.hp || 1);
+	return Math.max(1, baseMaxHp
+		+ getFieldVitalMarksForSide(side, index)
+		+ getFieldBlessingForSide(side, index)
+		+ getAttachedSupportNumericBonusForSide(side, index, "hpBonus")
+		+ getAuraHpBonusForSide(side, cardId));
+}
+
+function appendVitalTag(cardEl: HTMLElement, marks: number): void {
+	const total = Math.max(0, Number(marks || 0));
+	if (!total) return;
+	const tag = document.createElement("div");
+	tag.textContent = `🍀 ${total}`;
+	tag.style.position = "absolute";
+	tag.style.top = "4px";
+	tag.style.left = "50%";
+	tag.style.transform = "translateX(-50%)";
+	tag.style.padding = "2px 6px";
+	tag.style.borderRadius = "999px";
+	tag.style.background = "rgba(22, 101, 52, 0.92)";
+	tag.style.color = "#f0fdf4";
+	tag.style.fontSize = "11px";
+	tag.style.fontWeight = "700";
+	tag.style.lineHeight = "1";
+	tag.style.zIndex = "4";
+	tag.style.pointerEvents = "none";
+	tag.style.boxShadow = "0 1px 4px rgba(0,0,0,0.35)";
+	cardEl.appendChild(tag);
+}
+
+function appendSpiderTag(cardEl: HTMLElement, marks: number): void {
+	const total = Math.max(0, Number(marks || 0));
+	if (!total) return;
+	const tag = document.createElement("div");
+	tag.textContent = `🕷 ${total}`;
+	tag.style.position = "absolute";
+	tag.style.top = "4px";
+	tag.style.right = "4px";
+	tag.style.padding = "2px 6px";
+	tag.style.borderRadius = "999px";
+	tag.style.background = "rgba(17, 24, 39, 0.94)";
+	tag.style.color = "#f9fafb";
+	tag.style.fontSize = "11px";
+	tag.style.fontWeight = "700";
+	tag.style.lineHeight = "1";
+	tag.style.zIndex = "4";
+	tag.style.pointerEvents = "none";
+	tag.style.boxShadow = "0 1px 4px rgba(0,0,0,0.35)";
+	cardEl.appendChild(tag);
+}
+
+function appendBloodTag(cardEl: HTMLElement, marks: number): void {
+	const total = Math.max(0, Number(marks || 0));
+	if (!total) return;
+	const tag = document.createElement("div");
+	tag.textContent = `🩸 ${total}`;
+	tag.style.position = "absolute";
+	tag.style.top = "4px";
+	tag.style.right = "4px";
+	tag.style.padding = "2px 6px";
+	tag.style.borderRadius = "999px";
+	tag.style.background = "rgba(153, 27, 27, 0.94)";
+	tag.style.color = "#fef2f2";
+	tag.style.fontSize = "11px";
+	tag.style.fontWeight = "700";
+	tag.style.lineHeight = "1";
+	tag.style.zIndex = "4";
+	tag.style.pointerEvents = "none";
+	tag.style.boxShadow = "0 1px 4px rgba(0,0,0,0.35)";
+	cardEl.appendChild(tag);
+}
+
+function getFragImage(playerState: any): string {
+	const leader = resolveCard(String(playerState?.leaderId || ""));
+	const source = String(playerState?.filiacao || leader?.filiacao || leader?.classe || "");
+	const normalized = normalizeKind(source);
+	if (normalized.includes("arcan")) return asAssetPath("fragments/layout-fragmento_arcano.png");
+	if (normalized.includes("marcial")) return asAssetPath("fragments/layout-fragmento_marcial.png");
+	if (normalized.includes("santa") || normalized.includes("relig")) return asAssetPath("fragments/layout-fragmento_religioso.png");
+	if (normalized.includes("sombr")) return asAssetPath("fragments/layout-fragmento_sombras.png");
+	return asAssetPath("fragments/FRAGMENTOS.png");
+}
+
+function renderFragments(containerId: "you-fragsDock" | "ai-fragsDock", total: unknown, maxTotal: unknown, fragImage: string, spentFirst: boolean = false): void {
+	const container = document.getElementById(containerId);
+	if (!container) return;
+	container.innerHTML = "";
+	const cap = Math.max(0, Math.min(10, Number(maxTotal || 10)));
+	const amount = Math.max(0, Math.min(cap, Number(total || 0)));
+	const activeStartIndex = spentFirst ? 1 : 0;
+	for (let index = 0; index < cap; index += 1) {
+		const token = document.createElement("div");
+		token.className = "fragToken ready";
+		token.style.setProperty("--frag-img", `url('${fragImage}')`);
+		if (spentFirst && index === 0) {
+			token.classList.add("spent");
+			token.title = "Fragmento indisponível por Caminhos Perigosos";
+		}
+		if (index >= activeStartIndex && index < activeStartIndex + amount) token.classList.add("on");
+		container.appendChild(token);
+	}
+}
+
+function formatPhaseLabel(phase: unknown): string {
+	const value = String(phase || "—");
+	if (value === "INITIAL") return "Inicial";
+	return value;
+}
+
+function asStringArray(value: any): string[] {
+	if (!value) return [];
+	if (Array.isArray(value)) return value.map((v) => String(v));
+	if (typeof value[Symbol.iterator] === "function") return Array.from(value as Iterable<any>).map((v) => String(v));
+	if (typeof value === "object") return Object.keys(value).filter((k) => /^\d+$/.test(k)).sort((a, b) => Number(a) - Number(b)).map((k) => String(value[k]));
+	return [];
+}
+
+function asNumberArray(value: any): number[] {
+	if (!value) return [];
+	if (Array.isArray(value)) return value.map((v) => Number(v || 0));
+	if (typeof value[Symbol.iterator] === "function") return Array.from(value as Iterable<any>).map((v) => Number(v || 0));
+	if (typeof value === "object") {
+		return Object.keys(value)
+			.filter((k) => /^\d+$/.test(k))
+			.sort((a, b) => Number(a) - Number(b))
+			.map((k) => Number(value[k] || 0));
+	}
+	return [];
+}
+
+function asBoolArray(value: any): boolean[] {
+	if (!value) return [];
+	if (Array.isArray(value)) return value.map((v) => !!v);
+	if (typeof value[Symbol.iterator] === "function") return Array.from(value as Iterable<any>).map((v) => !!v);
+	if (typeof value === "object") {
+		return Object.keys(value)
+			.filter((k) => /^\d+$/.test(k))
+			.sort((a, b) => Number(a) - Number(b))
+			.map((k) => !!value[k]);
+	}
+	return [];
+}
+
+function inferSlotFromState(state: any): "p1" | "p2" | null {
+	if (!selfSessionId) return null;
+	const players = state?.players;
+	if (!players) return null;
+	if (typeof players.get === "function") {
+		const p = players.get(selfSessionId);
+		if (p?.slot === "p1" || p?.slot === "p2") return p.slot;
+	}
+	const byKey = players[selfSessionId];
+	if (byKey?.slot === "p1" || byKey?.slot === "p2") return byKey.slot;
+	for (const key of Object.keys(players)) {
+		const p = players[key];
+		if (p?.sessionId === selfSessionId && (p?.slot === "p1" || p?.slot === "p2")) return p.slot;
+	}
+	return null;
+}
+
+function goLobby() {
+	const endpoint = view.endpointEl?.value?.trim() || defaultWsEndpoint();
+	window.location.href = `./lobby.html?endpoint=${encodeURIComponent(endpoint)}`;
+}
+
+function renderHand(hand: string[]) {
+	renderButtonRow("hand", hand.map((c) => `${c} (Custo 1)`), hand.findIndex((c) => c === selectedHandCardId), "outline:2px solid #f8d46d;", (index) => {
+		selectedHandCardId = hand[index] || null;
+		if (view.selectedCardEl) view.selectedCardEl.textContent = selectedHandCardId || "—";
+	});
+	renderSideHand("youHand", hand, true);
+}
+
+function renderMyField(field: string[], hpValues: number[]) {
+	renderButtonRow("myField", field.map((c, i) => `[${i}] ${c} (ATK 1)`), selectedAttackerPos, "outline:2px solid #2dd4bf;", (index) => {
+		if (isMyTurn && currentPhase === "COMBAT") {
+			beginBoardAttackFrom(index);
+			return;
+		}
+			setInspector(field[index] ? { cardId: field[index], side: "you", lane: "field", index } : null);
+	});
+	renderLane("you-field", field, selectedAttackerPos, (index) => {
+		if (isMyTurn && currentPhase === "COMBAT") {
+			beginBoardAttackFrom(index);
+			return;
+		}
+			setInspector(field[index] ? { cardId: field[index], side: "you", lane: "field", index } : null);
+	}, hpValues);
+}
+
+function renderEnemyField(field: string[], hpValues: number[]) {
+	const active = selectedTargetType === "ally" ? selectedTargetPos : null;
+	renderButtonRow("enemyField", field.map((c, i) => `[${i}] ${c}`), active ?? null, "outline:2px solid #f87171;", (index) => {
+		if (isMyTurn && currentPhase === "COMBAT" && selectedAttackerPos !== null) {
+			resolveSelectedBoardAttack({ type: "ally", side: "ai", index });
+			return;
+		}
+		setInspector(field[index] ? { cardId: field[index], side: "ai", lane: "field", index } : null);
+	});
+	renderLane("ai-field", field, active ?? null, (index) => {
+		if (isMyTurn && currentPhase === "COMBAT" && selectedAttackerPos !== null) {
+			resolveSelectedBoardAttack({ type: "ally", side: "ai", index });
+			return;
+		}
+		setInspector(field[index] ? { cardId: field[index], side: "ai", lane: "field", index } : null);
+	}, hpValues);
+}
+
+function renderMySupport(support: string[]) {
+	renderLane("you-support", support, null);
+}
+
+function renderEnemySupport(support: string[]) {
+	renderLane("ai-support", support, null);
+}
+
+async function joinMatch() {
+	if (isJoining || !view.endpointEl || !view.roomIdEl) return;
+	const targetRoomId = view.roomIdEl.value.trim();
+	if (!targetRoomId) return log("ERROR", { text: "Informe roomId da partida." });
+
+	isJoining = true;
+	try {
+		client = await connectClient(view.endpointEl.value.trim());
+		room = await joinMatchById(client, targetRoomId);
+		roomId = room.id;
+		const displayName = getDisplayName();
+		if (displayName) {
+			room.send("set_name", { name: displayName });
+		}
+		bindMatchHandlers(room, {
+			onAssignSlot: (msg) => {
+				slot = msg?.slot || null;
+				selfSessionId = typeof msg?.sessionId === "string" ? msg.sessionId : null;
+				log("ASSIGN_SLOT", msg);
+			},
+			onCardPlayed: (msg) => {
+				diaryCardPlayed(msg);
+				const side = sideFromServerSlot((msg?.slot || "") as "p1" | "p2");
+				if (!side) return;
+				if (String(msg?.lane || "") !== "field") return;
+				const targetPos = Number(msg?.targetPos);
+				if (!Number.isInteger(targetPos) || targetPos < 0) return;
+				summonedBySide[side].add(targetPos);
+			},
+			onEffectChoice: (msg) => showEffectChoiceModal(msg),
+			onRevealTopCard: (msg) => showRevealTopCardModal(msg),
+			onError: (msg) => log("ERROR", msg),
+			onLeave: (code) => {
+				hideCardChoiceModal(false);
+				hideChoiceWaitingModal();
+				log("DISCONNECTED", { code, text: "Conexão encerrada. Voltando ao lobby..." });
+				setTimeout(() => goLobby(), 900);
+			},
+			onLog: (name, msg) => {
+				if (name === "ATTACK_RESOLVED") diaryAttackResolved(msg);
+				else if (name === "TURN_START") diaryTurnStart(msg);
+				else if (name === "EFFECT") diaryEffect(msg);
+				else if (name === "CHOICE_WAITING") {
+					showChoiceWaitingModal(msg);
+					logText(`⏳ Seu oponente está escolhendo: ${String(msg?.title || "uma opção")}.`);
+				}
+				else if (name === "CHOICE_WAITING_END") {
+					hideChoiceWaitingModal();
+				}
+				else if (name === "MATCH_ENDED") {
+					const winner = ownerLabel(String(msg?.winner || ""));
+					logText(`🏁 Partida encerrada. Vencedor: ${winner}.`);
+					hideCardChoiceModal(false);
+					hideChoiceWaitingModal();
+					const seq = Number(msg?.seq ?? -1);
+					if (seq !== lastMatchEndSeq) {
+						lastMatchEndSeq = seq;
+						const result = describeMatchEnded(msg);
+						showVictory(result);
+					}
+				}
+				if (name === "TURN_START") {
+					const side = sideFromServerSlot((msg?.turnSlot || "") as "p1" | "p2");
+					if (side) {
+						tappedBySide[side].clear();
+						tappedLeaderBySide[side] = false;
+						untapPulseBySide[side] = true;
+						setTimeout(() => { untapPulseBySide[side] = false; }, 260);
+						summonedBySide[side].clear();
+					}
+				}
+				if (name === "ATTACK_RESOLVED") {
+					const side = sideFromServerSlot((msg?.attackerSlot || "") as "p1" | "p2");
+					const attackerPos = Number(msg?.attackerPos);
+					if (!side) return;
+					if (Number.isInteger(attackerPos) && attackerPos >= 0) tappedBySide[side].add(attackerPos);
+					if (msg?.attackerLeader === true || msg?.attacker === "leader" || attackerPos === -1) tappedLeaderBySide[side] = true;
+				}
+			},
+			onStateSync: (state) => {
+				if (view.turnPhaseEl) view.turnPhaseEl.textContent = formatPhaseLabel(state?.game?.phase);
+				if (view.roomIdViewEl) view.roomIdViewEl.textContent = roomId ?? "—";
+				if (view.slotEl) view.slotEl.textContent = slot ?? "—";
+				if (view.turnEl) view.turnEl.textContent = String(state?.game?.turn ?? "—");
+				if (view.turnSlotEl) view.turnSlotEl.textContent = String(state?.game?.turnSlot ?? "—");
+				if (view.p1HpEl) view.p1HpEl.textContent = String(state?.game?.p1?.hp ?? "—");
+				if (view.p2HpEl) view.p2HpEl.textContent = String(state?.game?.p2?.hp ?? "—");
+				if (view.p1FragmentsEl) view.p1FragmentsEl.textContent = String(state?.game?.p1?.fragments ?? "—");
+				if (view.p2FragmentsEl) view.p2FragmentsEl.textContent = String(state?.game?.p2?.fragments ?? "—");
+				if (view.p1HandCountEl) view.p1HandCountEl.textContent = String(state?.game?.p1?.hand?.length ?? "—");
+				if (view.p2HandCountEl) view.p2HandCountEl.textContent = String(state?.game?.p2?.hand?.length ?? "—");
+
+				if (!slot) slot = inferSlotFromState(state);
+				if (!slot) return;
+
+				const my = slot === "p1" ? state?.game?.p1 : state?.game?.p2;
+				const enemy = slot === "p1" ? state?.game?.p2 : state?.game?.p1;
+				currentMyFragments = Number(my?.fragments ?? 0);
+				currentEnemyFragments = Number(enemy?.fragments ?? 0);
+				const turnMarker = `${String(state?.game?.turn || "")}::${String(state?.game?.turnSlot || "")}`;
+				if (turnMarker !== lastTurnMarker) {
+					lastTurnMarker = turnMarker;
+					const startedSide = sideFromServerSlot((state?.game?.turnSlot || "") as "p1" | "p2");
+					if (startedSide === "you") myTurnCount += 1;
+					if (startedSide === "ai") enemyTurnCount += 1;
+				}
+				const hand = asStringArray(my?.hand);
+				currentMyDeck = asStringArray(my?.deck);
+				currentMyGrave = asStringArray(my?.grave);
+				currentMyBanished = asStringArray((my as any)?.banished || (my as any)?.ban);
+				const myField = asStringArray(my?.field);
+				const myFieldHp = asNumberArray(my?.fieldHp);
+				const myFieldAtkTemp = asNumberArray((my as any)?.fieldAtkTemp);
+				const myFieldAtkPerm = asNumberArray((my as any)?.fieldAtkPerm);
+				const myFieldAcPerm = asNumberArray((my as any)?.fieldAcPerm);
+				const myFieldBlessing = asNumberArray((my as any)?.fieldBlessing);
+				const myFieldBlood = asNumberArray((my as any)?.fieldBloodMarks);
+				const myFieldVital = asNumberArray((my as any)?.fieldVitalMarks);
+				const myFieldTapped = asBoolArray((my as any)?.fieldTapped);
+				tappedBySide.you.clear();
+				for (let i = 0; i < myFieldTapped.length; i += 1) if (myFieldTapped[i]) tappedBySide.you.add(i);
+				currentMyField = myField;
+				currentMyFieldHp = myFieldHp;
+				currentMyFieldAtkTemp = myFieldAtkTemp;
+				currentMyFieldAtkPerm = myFieldAtkPerm;
+				currentMyFieldAcPerm = myFieldAcPerm;
+				currentMyFieldBlessing = myFieldBlessing;
+				currentMyFieldBloodMarks = myFieldBlood;
+				currentMyFieldVitalMarks = myFieldVital;
+				const mySupport = asStringArray(my?.support);
+				currentMySupport = mySupport;
+				currentMySupportAttach = asNumberArray((my as any)?.supportAttachTo);
+				currentMySupportCounters = asNumberArray((my as any)?.supportCounters);
+				currentMyEnv = String(my?.env || "") || null;
+				currentMyLeader = String(my?.leaderId || "");
+				currentMyLeaderHp = Number(my?.hp ?? 0);
+				currentMyLeaderTapped = !!(my as any)?.leaderTapped;
+				currentMyLeaderBlessing = Number((my as any)?.leaderBlessing || 0);
+				currentMyLeaderVitalMarks = Number((my as any)?.leaderVitalMarks || 0);
+				currentMyLeaderSpiderMarks = Number((my as any)?.leaderSpiderMarks || 0);
+				const enemyField = asStringArray(enemy?.field);
+				currentEnemyDeck = asStringArray(enemy?.deck);
+				currentEnemyGrave = asStringArray(enemy?.grave);
+				currentEnemyBanished = asStringArray((enemy as any)?.banished || (enemy as any)?.ban);
+				const enemyFieldHp = asNumberArray(enemy?.fieldHp);
+				const enemyFieldAtkTemp = asNumberArray((enemy as any)?.fieldAtkTemp);
+				const enemyFieldAtkPerm = asNumberArray((enemy as any)?.fieldAtkPerm);
+				const enemyFieldAcPerm = asNumberArray((enemy as any)?.fieldAcPerm);
+				const enemyFieldBlessing = asNumberArray((enemy as any)?.fieldBlessing);
+				const enemyFieldBlood = asNumberArray((enemy as any)?.fieldBloodMarks);
+				const enemyFieldVital = asNumberArray((enemy as any)?.fieldVitalMarks);
+				const enemyFieldTapped = asBoolArray((enemy as any)?.fieldTapped);
+				tappedBySide.ai.clear();
+				for (let i = 0; i < enemyFieldTapped.length; i += 1) if (enemyFieldTapped[i]) tappedBySide.ai.add(i);
+				currentEnemyField = enemyField;
+				currentEnemyFieldHp = enemyFieldHp;
+				currentEnemyFieldAtkTemp = enemyFieldAtkTemp;
+				currentEnemyFieldAtkPerm = enemyFieldAtkPerm;
+				currentEnemyFieldAcPerm = enemyFieldAcPerm;
+				currentEnemyFieldBlessing = enemyFieldBlessing;
+				currentEnemyFieldBloodMarks = enemyFieldBlood;
+				currentEnemyFieldVitalMarks = enemyFieldVital;
+				const enemySupport = asStringArray(enemy?.support);
+				currentEnemySupport = enemySupport;
+				currentEnemySupportAttach = asNumberArray((enemy as any)?.supportAttachTo);
+				currentEnemySupportCounters = asNumberArray((enemy as any)?.supportCounters);
+				const enemyEnv = String(enemy?.env || "") || null;
+				currentEnemyLeader = String(enemy?.leaderId || "");
+				currentEnemyLeaderHp = Number(enemy?.hp ?? 0);
+				currentEnemyLeaderTapped = !!(enemy as any)?.leaderTapped;
+				currentEnemyLeaderBlessing = Number((enemy as any)?.leaderBlessing || 0);
+				currentEnemyLeaderVitalMarks = Number((enemy as any)?.leaderVitalMarks || 0);
+				currentEnemyLeaderSpiderMarks = Number((enemy as any)?.leaderSpiderMarks || 0);
+				const myShadowPenalty = hasShadowPenaltyForPlayer(my, currentMyLeader, currentMyEnv, enemyEnv);
+				const enemyShadowPenalty = hasShadowPenaltyForPlayer(enemy, currentEnemyLeader, enemyEnv, currentMyEnv);
+				const enemyHandCount = Number(enemy?.hand?.length ?? 0);
+				const myTurn = String(state?.game?.turnSlot || "") === slot;
+				const phase = String(state?.game?.phase || "");
+				if (phase !== currentPhase) {
+					resetBoardAttackSelection();
+					cancelBoardAttackSelection();
+				}
+				isMyTurn = myTurn;
+				currentPhase = phase;
+				if (!myTurn || phase !== "COMBAT") {
+					resetBoardAttackSelection();
+					cancelBoardAttackSelection();
+				}
+				renderFragments("you-fragsDock", my?.fragments, my?.fragmentMax, getFragImage(my), myShadowPenalty);
+				renderFragments("ai-fragsDock", enemy?.fragments, enemy?.fragmentMax, getFragImage(enemy), enemyShadowPenalty);
+				renderLeaderSlot("you-leader", String(my?.leaderId || ""), Number(my?.hp ?? 0));
+				renderLeaderSlot("ai-leader", String(enemy?.leaderId || ""), Number(enemy?.hp ?? 0));
+				const myLeaderSlot = document.getElementById("you-leader");
+				if (myLeaderSlot) myLeaderSlot.onclick = null;
+				const enemyLeaderSlot = document.getElementById("ai-leader");
+				if (enemyLeaderSlot) {
+					enemyLeaderSlot.onclick = () => {
+						if (!isMyTurn || currentPhase !== "COMBAT" || selectedAttackerPos === null) return;
+						resolveSelectedBoardAttack({ type: "leader", side: "ai" });
+					};
+				}
+				renderEnvSlot("you-env", currentMyEnv, true);
+				renderEnvSlot("ai-env", enemyEnv, false);
+				renderPileCounts("you", my);
+				renderPileCounts("ai", enemy);
+				const pileModal = document.getElementById("pileModal") as HTMLElement | null;
+				if (pileModal && pileModal.style.display === "flex") renderPileModal();
+				renderSideHand("aiHand", Array.from({ length: enemyHandCount }, (_, index) => `opp-${index}`), false);
+				if (selectedHandCardId && !hand.includes(selectedHandCardId)) selectedHandCardId = null;
+				if (selectedAttackerPos !== null && (selectedAttackerPos < 0 || selectedAttackerPos >= myField.length)) selectedAttackerPos = null;
+				if (selectedTargetType === "ally" && (selectedTargetPos === null || selectedTargetPos >= enemyField.length)) {
+					selectedTargetType = "leader";
+					selectedTargetPos = null;
+					if (view.selectedTargetEl) view.selectedTargetEl.textContent = "Líder inimigo";
+				}
+				renderHand(hand);
+				renderMyField(myField, myFieldHp);
+				renderMySupport(mySupport);
+				renderEnemyField(enemyField, enemyFieldHp);
+				renderEnemySupport(enemySupport);
+				setInspector(hoveredInspectorView || selectedInspectorView || (selectedHandCardId ? { cardId: selectedHandCardId, side: "you", lane: "hand" } : null));
+				if (view.btnPlay) view.btnPlay.disabled = !(myTurn && phase === "PREP" && !!selectedHandCardId);
+				if (view.btnLeaderPower) {
+					const showLeaderPower = hasManualLeaderPower(currentMyLeader);
+					const leaderPowerReady = showLeaderPower && canUseLeaderPower();
+					view.btnLeaderPower.style.display = showLeaderPower ? "" : "none";
+					view.btnLeaderPower.disabled = !leaderPowerReady;
+					view.btnLeaderPower.classList.toggle("is-ready", leaderPowerReady);
+				}
+				if (view.btnAttack) view.btnAttack.disabled = !(myTurn && phase === "COMBAT" && selectedAttackerPos !== null);
+				if (view.btnTargetLeader) view.btnTargetLeader.disabled = !(myTurn && phase === "COMBAT");
+				if (view.btnNextPhase) view.btnNextPhase.disabled = !myTurn;
+				if (view.btnEndTurn) view.btnEndTurn.disabled = !(myTurn && phase === "END");
+			}
+		});
+		log("JOINED", { roomId });
+	} finally {
+		isJoining = false;
+	}
+}
+
+if (view.btnJoin) view.btnJoin.onclick = () => void joinMatch();
+if (view.btnPlay) view.btnPlay.onclick = () => selectedHandCardId && tryPlayCard(selectedHandCardId);
+if (view.btnLeaderPower) view.btnLeaderPower.onclick = () => {
+	if (!canUseLeaderPower()) return;
+	room?.send("leader_power");
+};
+if (view.btnAttack) view.btnAttack.onclick = () => {
+	if (!isMyTurn || currentPhase !== "COMBAT") return;
+	if (selectedAttackerPos === null) return;
+	if (selectedTargetType === "ally" && selectedTargetPos !== null) return resolveSelectedBoardAttack({ type: "ally", side: "ai", index: selectedTargetPos });
+	resolveSelectedBoardAttack({ type: "leader", side: "ai" });
+};
+if (view.btnTargetLeader) view.btnTargetLeader.onclick = () => {
+	if (!isMyTurn || currentPhase !== "COMBAT") return;
+	selectedTargetType = "leader";
+	selectedTargetPos = null;
+	if (view.selectedTargetEl) view.selectedTargetEl.textContent = "Líder inimigo";
+};
+if (view.btnNextPhase) view.btnNextPhase.onclick = () => room?.send("next_phase");
+if (view.btnEndTurn) view.btnEndTurn.onclick = () => room?.send("end_turn");
+if (view.btnBackLobby) view.btnBackLobby.onclick = goLobby;
+
+(window as any).hideCardChoice = () => hideCardChoiceModal(true);
+(window as any).hidePile = () => hidePile();
+(window as any).hideVictory = hideVictory;
+bindPileSlots();
+
+const params = new URLSearchParams(window.location.search);
+if (view.endpointEl) view.endpointEl.value = resolveServerEndpoint(window.location.search);
+if (view.roomIdEl) view.roomIdEl.value = params.get("roomId")?.trim() || "";
+if (view.roomIdEl?.value) void joinMatch();

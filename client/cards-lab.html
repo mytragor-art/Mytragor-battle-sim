@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mytragor — Cartas (Lab Isolado)</title>
+  <link rel="stylesheet" href="./gameplay.css" />
+  <style>
+    .cardsLab {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      gap: 10px;
+      padding: 12px;
+    }
+
+    .cardsLabHead,
+    .cardsLabControls,
+    .cardsLabPanel {
+      padding: 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(0, 0, 0, 0.25);
+    }
+
+    .cardsLabHead {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .cardsLabControls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .cardsLabControls input,
+    .cardsLabControls select {
+      min-height: 36px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(0, 0, 0, 0.2);
+      color: inherit;
+      padding: 0 10px;
+    }
+
+    .cardsLabGrid {
+      display: grid;
+      grid-template-columns: 2.2fr 1fr;
+      gap: 10px;
+      min-height: 0;
+    }
+
+    .cardsLabStacks {
+      display: grid;
+      grid-template-rows: 1fr auto auto;
+      gap: 10px;
+      min-height: 0;
+    }
+
+    .cardsRow {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(144px, 1fr));
+      gap: 8px;
+      align-content: start;
+      overflow: auto;
+      min-height: 0;
+      max-height: 100%;
+    }
+
+    .cardsLabCard {
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 10px;
+      background: rgba(0, 0, 0, 0.2);
+      padding: 6px;
+      cursor: pointer;
+      text-align: left;
+      color: inherit;
+    }
+
+    .cardsLabCard img {
+      width: 100%;
+      aspect-ratio: 63 / 88;
+      object-fit: cover;
+      border-radius: 6px;
+      display: block;
+      margin-bottom: 6px;
+      background: rgba(0, 0, 0, 0.2);
+    }
+
+    .cardsLabCardName {
+      display: block;
+      font-size: 12px;
+      line-height: 1.2;
+      margin-bottom: 4px;
+      font-weight: 700;
+    }
+
+    .cardsLabCardMeta {
+      font-size: 11px;
+      opacity: 0.9;
+      display: block;
+    }
+
+    .cardsLabPreview img {
+      width: 100%;
+      max-height: 45vh;
+      object-fit: contain;
+      border-radius: 8px;
+      display: block;
+      margin-bottom: 8px;
+      background: rgba(0, 0, 0, 0.2);
+    }
+
+    .cardsLabEmpty {
+      opacity: 0.8;
+      font-size: 13px;
+      padding: 6px 2px;
+    }
+
+    .cardsLabStatus {
+      margin-left: auto;
+      font-size: 13px;
+      opacity: 0.95;
+    }
+
+    .cardsLabStatus.ok {
+      color: #86efac;
+    }
+
+    .cardsLabStatus.error {
+      color: #fca5a5;
+    }
+
+    @media (max-width: 980px) {
+      .cardsLabGrid {
+        grid-template-columns: 1fr;
+      }
+
+      .cardsLabStatus {
+        width: 100%;
+        margin-left: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="cardsLab">
+    <section class="cardsLabHead">
+      <div>
+        <h2 style="margin:0">Laboratório de Cartas (Isolado)</h2>
+        <div style="font-size:13px;opacity:.9">Aqui você monta e testa cartas sem afetar o tabuleiro da partida.</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" type="button" onclick="location.href='index.html'">Menu</button>
+        <button class="btn" type="button" onclick="location.href='game.html'">Voltar para jogo</button>
+      </div>
+    </section>
+
+    <section class="cardsLabControls">
+      <input id="searchInput" type="search" placeholder="Buscar carta por nome..." />
+      <select id="kindFilter"></select>
+      <button class="btn" id="btnRefillHand" type="button">Gerar mão aleatória</button>
+      <button class="btn" id="btnClearField" type="button">Limpar campo</button>
+      <button class="btn primary" id="btnNextTurn" type="button">Passar turno</button>
+      <button class="btn" id="btnResetFragments" type="button">Reset fragmentos</button>
+      <span class="pill">Turno: <b id="turnCount">1</b></span>
+      <span class="pill">Jogador da vez: <b id="activePlayer">1</b></span>
+      <span class="pill">Mão: <b id="handCount">0</b></span>
+      <span class="pill">Campo: <b id="fieldCount">0</b>/5</span>
+      <span class="pill">J1 Fragmentos: <b id="p1FragmentCount">0</b>/<b id="fragmentMax">10</b></span>
+      <span class="pill">J2 Fragmentos: <b id="p2FragmentCount">0</b>/<b id="fragmentMax2">10</b></span>
+      <span class="pill">Catálogo: <b id="catalogCount">0</b></span>
+      <span id="labStatus" class="cardsLabStatus"></span>
+    </section>
+
+    <section class="cardsLabGrid">
+      <div class="cardsLabStacks">
+        <section class="cardsLabPanel" style="min-height: 300px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;">
+            <h3 style="margin:0">Catálogo</h3>
+            <small>Clique para adicionar à mão</small>
+          </div>
+          <div id="catalogGrid" class="cardsRow" aria-label="Catálogo de cartas"></div>
+        </section>
+
+        <section class="cardsLabPanel">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;">
+            <h3 style="margin:0">Mão</h3>
+            <small>Clique para jogar no campo</small>
+          </div>
+          <div id="handGrid" class="cardsRow" aria-label="Mão"></div>
+        </section>
+
+        <section class="cardsLabPanel">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;">
+            <h3 style="margin:0">Campo</h3>
+            <small>Clique para devolver à mão</small>
+          </div>
+          <div id="fieldGrid" class="cardsRow" aria-label="Campo"></div>
+        </section>
+      </div>
+
+      <aside class="cardsLabPanel cardsLabPreview">
+        <h3 style="margin-top:0">Prévia</h3>
+        <img id="previewImg" src="" alt="Prévia da carta" />
+        <div id="previewName" style="font-weight:700;margin-bottom:6px;">Passe o mouse em uma carta</div>
+        <div id="previewMeta" style="font-size:13px;opacity:0.9;"></div>
+        <p id="previewText" style="font-size:13px;opacity:0.9;"></p>
+      </aside>
+    </section>
+  </main>
+
+  <script src="/cards/cartas.js"></script>
+  <script type="module" src="/src/pages/cardsLab.ts"></script>
+</body>
+</html>

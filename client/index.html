@@ -1,0 +1,631 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mytragor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg1:#07080b;
+      --bg2:#0f1219;
+      --bg3:#1c1f2a;
+      --card:rgba(13, 16, 24, 0.76);
+      --stroke:rgba(255,255,255,0.10);
+      --stroke-strong:rgba(255,255,255,0.18);
+      --text:#f3f0e8;
+      --muted:#b8b1a3;
+      --gold1:#f5c96a;
+      --gold2:#d89c2b;
+      --shadow-gold:rgba(255, 200, 80, 0.5);
+	      --gold3:#7a5520;
+	      --ivory:#f3ead7;
+	      --shadow-dark:rgba(0, 0, 0, 0.45);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: "Segoe UI Variable", "Trebuchet MS", Verdana, sans-serif;
+      color:var(--text);
+      min-height:100vh;
+      overflow:hidden;
+      background:
+	        radial-gradient(circle at center, rgba(10,10,15,0.14) 0%, rgba(10,10,15,0.58) 72%),
+	        linear-gradient(rgba(10,10,15,0.28), rgba(10,10,15,0.28)),
+	        url("/bgambientes/fundostartdeck.png") center 12% / cover no-repeat fixed;
+      position:relative;
+      background-color:#0a0a0f;
+    }
+
+    body::before,
+    body::after{
+      content:"";
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      z-index:0;
+    }
+
+    body::before{
+      background:
+        radial-gradient(540px 320px at 50% 42%, rgba(245, 201, 106, 0.12), rgba(245, 201, 106, 0.02) 42%, transparent 72%),
+        radial-gradient(1000px 600px at 50% 10%, rgba(86, 126, 188, 0.10), transparent 65%),
+        radial-gradient(700px 500px at 50% 78%, rgba(12, 16, 25, 0.08), transparent 72%);
+      filter: blur(2px);
+      animation:arcanePulse 6.8s ease-in-out infinite;
+    }
+
+    body::after{
+      background-image:
+        radial-gradient(circle at 18% 22%, rgba(255,255,255,0.08) 0 1px, transparent 1.8px),
+        radial-gradient(circle at 74% 31%, rgba(255,214,150,0.08) 0 1.2px, transparent 2px),
+        radial-gradient(circle at 42% 72%, rgba(160,196,255,0.06) 0 1.1px, transparent 2px),
+        radial-gradient(circle at 63% 86%, rgba(255,255,255,0.06) 0 1px, transparent 2px),
+        radial-gradient(circle at 30% 58%, rgba(255,214,150,0.05) 0 1px, transparent 2px);
+      opacity:.7;
+      animation:magicDust 20s linear infinite;
+    }
+
+    .ambientParticles{
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      overflow:hidden;
+      z-index:0;
+    }
+
+    .adReserveRail{
+      position:fixed;
+      top:max(18px, calc(var(--bg-top-gutter, 0px) + 18px));
+      bottom:max(18px, calc(var(--bg-top-gutter, 0px) + 18px));
+      width:min(240px, max(0px, calc(var(--bg-side-gutter, 0px) - 24px)));
+      pointer-events:none;
+      z-index:1;
+      display:flex;
+      align-items:stretch;
+      justify-content:center;
+      opacity:0;
+    }
+
+    .adReserveRail.left{ left:12px; }
+    .adReserveRail.right{ right:12px; }
+
+    .adReserveInner{
+      width:100%;
+      border:none;
+      border-radius:20px;
+      background:transparent;
+      box-shadow:none;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:14px 10px;
+    }
+
+    .adReserveLabel{
+      display:none;
+      writing-mode:vertical-rl;
+      transform:rotate(180deg);
+      letter-spacing:2px;
+      text-transform:uppercase;
+      font-size:11px;
+      color:rgba(255, 235, 190, 0.56);
+      text-shadow:0 0 14px rgba(255, 200, 80, 0.12);
+      user-select:none;
+    }
+
+    .ambientParticle{
+      position:absolute;
+      left:var(--x);
+      bottom:-14vh;
+      width:var(--size);
+      height:var(--size);
+      border-radius:999px;
+      background:radial-gradient(circle, rgba(255, 241, 192, 0.95) 0%, rgba(245, 201, 106, 0.52) 38%, rgba(160, 196, 255, 0.08) 100%);
+      box-shadow:0 0 10px rgba(255, 220, 140, 0.28), 0 0 22px rgba(160, 196, 255, 0.10);
+      opacity:0;
+      filter:blur(0.2px);
+      animation:riseParticle var(--duration) linear infinite;
+      animation-delay:var(--delay);
+    }
+
+    .ambientParticle::after{
+      content:"";
+      position:absolute;
+      inset:-24px -10px 22px -10px;
+      background:linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0));
+      opacity:.28;
+      filter:blur(10px);
+      border-radius:999px;
+      transform:translateY(16px);
+    }
+
+    .wrap{
+      width:min(1100px, 92vw);
+      margin:0 auto;
+      padding:28px 0 60px;
+      min-height:100vh;
+      display:flex;
+      flex-direction:column;
+      position:relative;
+      z-index:1;
+    }
+
+    .home{
+      flex:1;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:26px;
+      text-align:center;
+    }
+
+    .brand{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:14px;
+    }
+
+    .brand h1{
+      margin:0;
+      font-size:18px;
+      letter-spacing:2px;
+      text-transform:uppercase;
+      opacity:.72;
+      font-weight:600;
+    }
+    .logoWrap{
+      position:relative;
+      display:inline-block;
+      line-height:0;
+      isolation:isolate;
+    }
+    .logoWrap::after{
+      content:"";
+      position:absolute;
+      inset:8% -3% 6% -3%;
+      pointer-events:none;
+      z-index:0;
+      background: radial-gradient(ellipse at 50% 50%, rgba(245, 201, 106, 0.52) 0%, rgba(216, 156, 43, 0.22) 44%, transparent 74%);
+      filter: blur(10px);
+      animation:logoGoldAura 3.2s ease-in-out infinite;
+    }
+    .brandLogo{
+      display:block;
+      height:206px;
+      width:auto;
+      margin:0;
+      object-fit:contain;
+      position:relative;
+      z-index:1;
+      filter:
+        sepia(1)
+        saturate(3.4)
+        hue-rotate(350deg)
+        brightness(1.1)
+        contrast(1.1)
+        drop-shadow(0 0 4px #ffe7a8)
+        drop-shadow(0 0 14px rgba(255, 200, 80, 0.6))
+        drop-shadow(0 2px 0 #6e531e)
+        drop-shadow(0 8px 20px #00000066);
+      animation:logoGoldPulse 3.2s ease-in-out infinite;
+    }
+    @keyframes logoGoldPulse{
+      0%, 100%{
+        filter:
+          sepia(1)
+          saturate(3.4)
+          hue-rotate(350deg)
+          brightness(1.08)
+          contrast(1.08)
+          drop-shadow(0 0 3px #ffe7a8)
+          drop-shadow(0 0 14px rgba(255, 200, 80, 0.52))
+          drop-shadow(0 2px 0 #6e531e)
+          drop-shadow(0 8px 20px #00000066);
+      }
+      50%{
+        filter:
+          sepia(1)
+          saturate(3.6)
+          hue-rotate(350deg)
+          brightness(1.16)
+          contrast(1.14)
+          drop-shadow(0 0 5px #fff1c0)
+          drop-shadow(0 0 20px rgba(255, 200, 80, 0.72))
+          drop-shadow(0 2px 0 #7d5d22)
+          drop-shadow(0 10px 22px #00000066);
+      }
+    }
+    @keyframes logoGoldAura{
+      0%, 100%{
+        background: radial-gradient(ellipse at 50% 50%, rgba(245, 201, 106, 0.44) 0%, rgba(216, 156, 43, 0.18) 42%, transparent 72%);
+        opacity:.64;
+      }
+      50%{
+        background: radial-gradient(ellipse at 50% 50%, rgba(247, 210, 106, 0.72) 0%, rgba(216, 156, 43, 0.28) 42%, transparent 72%);
+        opacity:1;
+      }
+    }
+    @keyframes arcanePulse{
+      0%, 100%{ transform:scale(1); opacity:.92; }
+      50%{ transform:scale(1.03); opacity:1; }
+    }
+    @keyframes magicDust{
+      0%{ transform:translateY(0); opacity:.35; }
+      50%{ opacity:.7; }
+      100%{ transform:translateY(-26px); opacity:.28; }
+    }
+
+    @keyframes riseParticle{
+      0%{
+        transform:translate3d(0, 0, 0) scale(.72);
+        opacity:0;
+      }
+      12%{
+        opacity:.42;
+      }
+      50%{
+        transform:translate3d(var(--drift), -48vh, 0) scale(1);
+        opacity:.68;
+      }
+      100%{
+        transform:translate3d(calc(var(--drift) * 1.5), -114vh, 0) scale(1.12);
+        opacity:0;
+      }
+    }
+
+    .title{
+      margin:0;
+      font-size:34px;
+      letter-spacing:2px;
+      line-height:1.05;
+      color:#f2d48a;
+	      text-shadow: 0 0 20px rgba(255, 200, 80, 0.6), 0 1px 0 rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.75);
+    }
+
+    .gold-btn{
+      position:relative;
+      min-width:240px;
+      padding:14px 28px;
+      border:1px solid rgba(255,255,255,0.08);
+      border-radius:12px;
+      background:
+        linear-gradient(to bottom, rgba(255,255,255,0.04), rgba(0,0,0,0.10)),
+        linear-gradient(180deg, #2f3139 0%, #1d1f26 100%);
+      color:var(--ivory);
+      font-family:"Cinzel", Georgia, serif;
+      font-size:18px;
+      font-weight:700;
+      letter-spacing:0.6px;
+      text-transform:uppercase;
+      cursor:pointer;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.08),
+        inset 0 -1px 0 rgba(0,0,0,0.35),
+        0 6px 18px var(--shadow-dark);
+      transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease, filter .18s ease;
+      overflow:hidden;
+    }
+    .gold-btn::before{
+      content:"";
+      position:absolute;
+      inset:3px;
+      border-radius:9px;
+      border:1px solid rgba(240, 220, 180, 0.10);
+      pointer-events:none;
+    }
+    .gold-btn::after{
+      content:"";
+      position:absolute;
+      top:0;
+      left:-30%;
+      width:40%;
+      height:100%;
+      background:linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+      transform:skewX(-20deg);
+      opacity:0;
+      transition:opacity .2s ease;
+      pointer-events:none;
+    }
+    .gold-btn:hover{
+      transform:translateY(-2px) scale(1.01);
+      border-color:rgba(241, 209, 138, 0.24);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.08),
+        inset 0 -1px 0 rgba(0,0,0,0.35),
+        0 10px 22px rgba(0,0,0,0.5),
+        0 0 18px rgba(241, 209, 138, 0.08);
+    }
+    .gold-btn:hover::after{ opacity:1; }
+    .gold-btn:active{
+      transform:translateY(1px) scale(0.995);
+      box-shadow:
+        inset 0 2px 6px rgba(0,0,0,0.35),
+        0 3px 10px rgba(0,0,0,0.35);
+    }
+
+    .gold-btn.primary{
+      background:
+        linear-gradient(to bottom, rgba(255,255,255,0.08), rgba(0,0,0,0.10)),
+        linear-gradient(180deg, var(--gold1) 0%, var(--gold2) 58%, var(--gold3) 100%);
+      color:#24180b;
+      border:1px solid rgba(255, 224, 160, 0.38);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.25),
+        inset 0 -1px 0 rgba(70,40,10,0.35),
+        0 8px 22px rgba(0,0,0,0.45),
+        0 0 18px var(--shadow-gold);
+    }
+    .gold-btn.primary::before{ border:1px solid rgba(255, 244, 210, 0.32); }
+    .gold-btn.primary:hover{
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.28),
+        inset 0 -1px 0 rgba(70,40,10,0.35),
+        0 10px 26px rgba(0,0,0,0.5),
+        0 0 26px rgba(241, 209, 138, 0.25);
+      filter:brightness(1.03);
+    }
+
+    .gold-btn.secondary{
+      background:
+        linear-gradient(to bottom, rgba(255,255,255,0.03), rgba(0,0,0,0.10)),
+        linear-gradient(180deg, #353842 0%, #22242b 100%);
+      color:var(--ivory);
+    }
+
+    .actions{
+      display:flex;
+      flex-direction:column;
+      gap:16px;
+      align-items:center;
+      justify-content:center;
+      flex-wrap:wrap;
+    }
+
+    .startStack{
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+      align-items:center;
+      justify-content:center;
+      padding:20px 20px 18px;
+      border:1px solid rgba(255,255,255,0.08);
+      border-radius:28px;
+      background:linear-gradient(180deg, rgba(17, 20, 30, 0.64), rgba(8, 10, 16, 0.52));
+      box-shadow:0 20px 60px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04);
+    }
+
+    #btnProfile{
+      min-width:240px;
+      text-align:center;
+    }
+
+    .modalBackdrop{
+      position:fixed;
+      inset:0;
+      background:rgba(3, 5, 10, 0.82);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+      z-index:20;
+    }
+    .modalBackdrop.show{ display:flex; }
+
+    .modal{
+      width:min(460px, 96vw);
+      background:var(--card);
+      border:1px solid var(--stroke-strong);
+      border-radius:18px;
+      box-shadow: 0 16px 60px #00000066;
+      padding:18px;
+      text-align:left;
+      backdrop-filter: blur(14px);
+    }
+
+    .modal h2{
+      margin:0 0 8px;
+      font-size:20px;
+    }
+
+    .modal p{
+      margin:0 0 14px;
+      color:var(--muted);
+      font-size:14px;
+    }
+
+    .nameInput{
+      width:100%;
+      background:rgba(0,0,0,0.4);
+      border:1px solid rgba(255,255,255,0.2);
+      color:var(--text);
+      border-radius:12px;
+      padding:13px 14px;
+      font-size:15px;
+      outline:none;
+      text-align:center;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+    }
+    .nameInput:focus{ border-color:rgba(245, 201, 106, 0.55); box-shadow: 0 0 0 4px rgba(245, 201, 106, 0.10); }
+
+    .modalActions{
+      margin-top:14px;
+      display:flex;
+      gap:10px;
+      justify-content:flex-end;
+      flex-wrap:wrap;
+    }
+
+    footer{
+      margin-top:18px;
+      color:#7f8aa4;
+      font-size:12px;
+      text-align:center;
+      opacity:.72;
+      letter-spacing:1px;
+	      text-shadow: 0 1px 0 rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.72);
+    }
+
+    @media (max-width: 640px){
+      .brandLogo{ height:168px; }
+      .gold-btn{ min-width:210px; padding:12px 22px; font-size:16px; }
+      .startStack{ width:min(100%, 320px); }
+    }
+  </style>
+</head>
+
+<body>
+  <aside class="adReserveRail left" aria-hidden="true"><div class="adReserveInner"><div class="adReserveLabel">Reserva lateral</div></div></aside>
+  <aside class="adReserveRail right" aria-hidden="true"><div class="adReserveInner"><div class="adReserveLabel">Reserva lateral</div></div></aside>
+  <div class="ambientParticles" aria-hidden="true">
+    <span class="ambientParticle" style="--x:8%; --size:4px; --duration:14s; --delay:-2s; --drift:18px;"></span>
+    <span class="ambientParticle" style="--x:16%; --size:6px; --duration:18s; --delay:-7s; --drift:-14px;"></span>
+    <span class="ambientParticle" style="--x:27%; --size:5px; --duration:15s; --delay:-4s; --drift:22px;"></span>
+    <span class="ambientParticle" style="--x:39%; --size:3px; --duration:13s; --delay:-9s; --drift:-10px;"></span>
+    <span class="ambientParticle" style="--x:52%; --size:7px; --duration:19s; --delay:-6s; --drift:16px;"></span>
+    <span class="ambientParticle" style="--x:64%; --size:4px; --duration:16s; --delay:-11s; --drift:-18px;"></span>
+    <span class="ambientParticle" style="--x:76%; --size:6px; --duration:17s; --delay:-5s; --drift:14px;"></span>
+    <span class="ambientParticle" style="--x:88%; --size:4px; --duration:15s; --delay:-13s; --drift:-12px;"></span>
+  </div>
+  <div class="wrap">
+    <main class="home">
+      <div class="brand">
+        <div>
+          <div class="logoWrap">
+            <img class="brandLogo" src="/logo/logomytragor.png" alt="Mytragor" />
+          </div>
+            <h1 class="title">Comece a batalha.</h1>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="gold-btn secondary" id="btnProfile" type="button">Meu nome</button>
+        <div class="startStack">
+  	          <button class="gold-btn primary" onclick="location.href='lobby.html'">INICIAR PARTIDA</button>
+          <button class="gold-btn secondary" onclick="location.href='ui/deckbuilder.html'">Montar deck</button>
+        </div>
+      </div>
+    </main>
+
+    <footer>Mytragor • MVP • Build local</footer>
+  </div>
+
+  <div class="modalBackdrop" id="profileModal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="profileTitle">
+      <h2 id="profileTitle">Meu nome</h2>
+      <p>Esse nome aparece no lobby neste navegador.</p>
+      <input id="displayNameInput" class="nameInput" type="text" maxlength="18" placeholder="Digite seu nome" />
+      <div class="modalActions">
+        <button class="gold-btn secondary" id="btnCancelName" type="button">Fechar</button>
+        <button class="gold-btn secondary" id="btnClearName" type="button">Limpar</button>
+        <button class="gold-btn primary" id="btnSaveName" type="button">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const DISPLAY_NAME_KEY = "mytragor.displayName";
+    const modal = document.getElementById("profileModal");
+    const input = document.getElementById("displayNameInput");
+    const btnProfile = document.getElementById("btnProfile");
+    const btnCancel = document.getElementById("btnCancelName");
+    const btnClear = document.getElementById("btnClearName");
+    const btnSave = document.getElementById("btnSaveName");
+
+    function getName() {
+      return localStorage.getItem(DISPLAY_NAME_KEY) || "";
+    }
+
+    function setName(value) {
+      localStorage.setItem(DISPLAY_NAME_KEY, String(value || "").trim());
+    }
+
+    function clearName() {
+      localStorage.removeItem(DISPLAY_NAME_KEY);
+    }
+
+    function syncProfileButtonLabel() {
+      if (!btnProfile) return;
+      const savedName = getName().trim();
+      btnProfile.textContent = savedName || "Meu nome";
+    }
+
+    function openModal() {
+      if (!modal || !input) return;
+      modal.classList.add("show");
+      modal.setAttribute("aria-hidden", "false");
+      input.value = getName();
+      input.focus();
+      input.select();
+    }
+
+    function closeModal() {
+      if (!modal) return;
+      modal.classList.remove("show");
+      modal.setAttribute("aria-hidden", "true");
+    }
+
+    btnProfile && (btnProfile.onclick = openModal);
+    btnCancel && (btnCancel.onclick = closeModal);
+    btnSave && (btnSave.onclick = () => {
+      if (!input) return;
+      setName(input.value);
+      syncProfileButtonLabel();
+      closeModal();
+    });
+    btnClear && (btnClear.onclick = () => {
+      if (input) input.value = "";
+      clearName();
+      syncProfileButtonLabel();
+    });
+
+    function updateBackgroundMetrics() {
+      const imageWidth = 1536;
+      const imageHeight = 1024;
+      const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+      const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+      const imageAspect = imageWidth / imageHeight;
+      const viewportAspect = viewportHeight > 0 ? viewportWidth / viewportHeight : imageAspect;
+      const renderedWidth = viewportAspect > imageAspect ? viewportHeight * imageAspect : viewportWidth;
+      const renderedHeight = viewportAspect > imageAspect ? viewportHeight : (imageAspect > 0 ? viewportWidth / imageAspect : viewportHeight);
+      const sideGutter = Math.max(0, (viewportWidth - renderedWidth) / 2);
+      const topGutter = Math.max(0, (viewportHeight - renderedHeight) / 2);
+      const metrics = {
+        imageWidth,
+        imageHeight,
+        viewportWidth,
+        viewportHeight,
+        renderedWidth,
+        renderedHeight,
+        sideGutter,
+        topGutter
+      };
+
+      document.documentElement.style.setProperty("--bg-side-gutter", `${sideGutter}px`);
+      document.documentElement.style.setProperty("--bg-top-gutter", `${topGutter}px`);
+      document.body.dataset.bgSideGutter = sideGutter.toFixed(1);
+      document.body.dataset.bgTopGutter = topGutter.toFixed(1);
+      window.__mytragorBackgroundMetrics = metrics;
+      window.dispatchEvent(new CustomEvent("mytragor:bg-metrics", { detail: metrics }));
+    }
+
+    modal && (modal.onclick = (event) => {
+      if (event.target === modal) closeModal();
+    });
+    window.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") closeModal();
+      if (event.key === "Enter" && modal && modal.classList.contains("show")) {
+        btnSave && btnSave.click();
+      }
+    });
+    window.addEventListener("resize", updateBackgroundMetrics);
+    window.addEventListener("load", updateBackgroundMetrics);
+    syncProfileButtonLabel();
+    updateBackgroundMetrics();
+  </script>
+</body>
+</html>

@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mytragor — Gameplay</title>
+
+  <link rel="stylesheet" href="./gameplay.css" />
+</head>
+
+<body>
+
+<div class="app">
+  <div class="col" id="logCol">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
+      <h3 style="margin:0">Diário de Batalha</h3>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button id="btnToggleLog" class="panelToggle" title="Colapsar/Expandir log" aria-expanded="true">▸</button>
+        <button id="btnToggleLogMobile" class="panelToggle" title="Abrir/Fechar log" aria-expanded="false" style="display:none">≡</button>
+      </div>
+    </div>
+
+    <div class="panel" id="logPanel">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-end;margin-bottom:8px">
+        <button id="btnBackLobby" class="btn">Sair</button>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="pillRow" style="gap:6px;flex-wrap:wrap">
+        <div class="pill">Turno: <b id="turn">—</b></div>
+        <div class="pill">Fase: <b id="turnPhase">—</b></div>
+        <div class="pill">Vez: <b id="turnSlot">—</b></div>
+      </div>
+
+      <div class="hr"></div>
+
+      <pre class="log" id="log" aria-live="polite"></pre>
+    </div>
+  </div>
+
+  <div class="col" id="handsCol" aria-label="Mãos dos jogadores">
+    <div class="handDock" id="enemyHandDock">
+      <div class="handDockTitle">Mão do Oponente</div>
+      <div class="hand" id="aiHand" aria-label="Mão do oponente"></div>
+    </div>
+    <div class="handDock" id="youHandDock">
+      <div class="handDockTitle">Sua Mão</div>
+      <div class="hand" id="youHand" aria-label="Sua mão"></div>
+    </div>
+  </div>
+
+  <div class="col" id="arenaCol">
+    <div class="boardWrap">
+      <div class="scaler" id="boardScaler">
+        <div class="boardStage" id="boardStage">
+          <div class="board boardZoom" id="board">
+
+            <div class="arena" id="opArena">
+              <div class="fragDock" id="ai-fragsDock" aria-label="Fragmentos do oponente"></div>
+
+              <div class="sideTitle">
+                <div class="nameLine">
+                  <b id="aiName">Oponente</b>
+                  <span class="tag" id="aiDeckTag">—</span>
+                </div>
+                <div class="miniLine">
+                  <span class="pill">HP: <b id="aiHP">—</b></span>
+                  <span class="pill">CA: <b id="aiCA">—</b></span>
+                </div>
+              </div>
+
+              <div class="arenaGrid">
+                <div class="mainArea">
+                  <div class="lane" id="ai-support"></div>
+                  <div class="lane" id="ai-field"></div>
+
+                  <div class="leaderBar">
+                    <div class="slot" id="ai-leader"></div>
+                    <div class="slot" id="ai-env">
+                      <span class="slotLabel">Amb</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="pilesCol">
+                  <div class="slot" id="ai-banished">
+                    <span class="slotLabel">Deslocadas</span>
+                    <span class="slotCount" id="aiBanCount">0</span>
+                  </div>
+
+                  <div class="slot" id="ai-grave">
+                    <span class="slotLabel">Cemitério</span>
+                    <span class="slotCount" id="aiGraveCount">0</span>
+                  </div>
+
+                  <div class="slot" id="ai-deck">
+                    <span class="slotLabel">Deck</span>
+                    <span class="slotCount" id="aiDeckCount">0</span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <div class="centerBar">
+              <div class="phaseBar" id="phaseBar">
+                <div class="phaseItem" data-phase="INITIAL">Inicial</div>
+                <div class="phaseItem" data-phase="PREP">Preparação</div>
+                <div class="phaseItem" data-phase="COMBAT">Combate</div>
+                <div class="phaseItem" data-phase="END">Fim</div>
+              </div>
+
+              <div class="phaseActions">
+                <button id="btnLeaderPower" class="btn">Poder do Escolhido</button>
+                <button id="phaseActionBtn" class="btn primary">Continuar</button>
+              </div>
+            </div>
+
+            <div class="arena" id="youArena">
+              <div class="fragDock" id="you-fragsDock" aria-label="Seus fragmentos"></div>
+
+              <div class="sideTitle bottom">
+                <div class="nameLine">
+                  <b id="youName">Você</b>
+                  <span class="tag" id="youDeckTag">—</span>
+                </div>
+                <div class="miniLine">
+                  <span class="pill">HP: <b id="youHP">—</b></span>
+                  <span class="pill">CA: <b id="youCA">—</b></span>
+                </div>
+              </div>
+
+              <div class="arenaGrid">
+                <div class="mainArea">
+                  <div class="leaderBar">
+                    <div class="slot" id="you-leader"></div>
+                    <div class="slot" id="you-env">
+                      <span class="slotLabel">Amb</span>
+                    </div>
+                  </div>
+
+                  <div class="lane" id="you-field"></div>
+                  <div class="lane" id="you-support"></div>
+                </div>
+
+                <div class="pilesCol">
+                  <div class="slot" id="you-banished">
+                    <span class="slotLabel">Deslocadas</span>
+                    <span class="slotCount" id="youBanCount">0</span>
+                  </div>
+
+                  <div class="slot" id="you-grave">
+                    <span class="slotLabel">Cemitério</span>
+                    <span class="slotCount" id="youGraveCount">0</span>
+                  </div>
+
+                  <div class="slot" id="you-deck">
+                    <span class="slotLabel">Deck</span>
+                    <span class="slotCount" id="youDeckCount">0</span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col" id="previewCol">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
+      <h3 style="margin:0">Carta</h3>
+      <button class="btn" id="btnTogglePreview">Voltar</button>
+    </div>
+
+    <div class="inspector">
+      <div class="big">
+        <img id="bigImg" src="" alt="Carta selecionada" />
+        <div class="bigStats" id="bigStats"></div>
+      </div>
+      <div class="bigMeta" id="bigMeta">
+        <div class="bigMetaTitle" id="bigMetaTitle">Passe o mouse em uma carta</div>
+        <div class="bigMetaLine bigMetaFiliation" id="bigMetaFiliation">para ver detalhes.</div>
+        <div class="bigMetaLine bigMetaSubclass" id="bigMetaSubclass"></div>
+        <div class="bigMetaText" id="bigMetaText"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="pileModal">
+  <div class="modalBox">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <h3 id="pileTitle" style="margin:0">—</h3>
+      <button class="btn" onclick="hidePile()">Fechar</button>
+    </div>
+    <div class="gridMini" id="pileGrid"></div>
+  </div>
+</div>
+
+<div id="cardChoiceModal" class="modal" style="display:none;align-items:center;justify-content:center;z-index:10000;">
+  <div class="modalBox" style="max-width: 1000px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div>
+        <h3 id="cardChoiceTitle" style="margin:0">Escolha uma carta</h3>
+        <div id="cardChoiceCountdown" class="choiceCountdown" style="display:none;">Tempo restante: <span id="cardChoiceCountdownValue">20</span>s</div>
+      </div>
+      <button class="btn" onclick="hideCardChoice()">Fechar</button>
+    </div>
+    <div class="gridMini" id="cardChoiceGrid"></div>
+  </div>
+</div>
+
+<div id="choiceWaitingModal" class="modal" style="display:none;align-items:center;justify-content:center;z-index:10001;">
+  <div class="modalBox waitingChoiceBox">
+    <div class="waitingChoiceIcon">⏳</div>
+    <h2 id="choiceWaitingTitle" class="waitingChoiceTitle">Seu oponente está escolhendo</h2>
+    <p id="choiceWaitingText" class="waitingChoiceText">Aguarde a decisão para a partida continuar.</p>
+    <div id="choiceWaitingCountdown" class="choiceCountdown" style="display:none;">Tempo restante: <span id="choiceWaitingCountdownValue">20</span>s</div>
+  </div>
+</div>
+
+<div class="modal" id="victoryModal">
+  <div class="modalBox victoryBox">
+    <h2 id="victoryTitle" style="margin-top:0">Fim de jogo</h2>
+    <div id="victoryMedia" class="victoryMedia" style="display:none;">
+      <img id="victoryImage" class="victoryImage" alt="" />
+    </div>
+    <p id="victoryText" style="margin:10px 0 14px 0">—</p>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn primary" onclick="hideVictory()">Ok</button>
+    </div>
+  </div>
+</div>
+
+<div style="display:none;">
+  <b id="slot">—</b>
+  <input id="endpoint" value="ws://localhost:2567" />
+  <input id="roomId" />
+  <button id="btnJoin" type="button"></button>
+  <button id="btnPlay" type="button"></button>
+  <button id="btnAttack" type="button"></button>
+  <button id="btnTargetLeader" type="button"></button>
+  <button id="btnNextPhase" type="button"></button>
+  <button id="btnEndTurn" type="button"></button>
+  <div id="hand"></div>
+  <div id="myField"></div>
+  <div id="enemyField"></div>
+  <b id="selectedCard">—</b>
+  <b id="selectedAttacker">—</b>
+  <b id="selectedTarget">Líder inimigo</b>
+  <b id="p1Hp">—</b>
+  <b id="p2Hp">—</b>
+  <b id="p1Fragments">—</b>
+  <b id="p2Fragments">—</b>
+  <b id="p1HandCount">—</b>
+  <b id="p2HandCount">—</b>
+</div>
+
+<script>
+  (function () {
+    const PHASE_ORDER = ["INITIAL", "PREP", "COMBAT", "END"];
+    const phaseItems = Array.from(document.querySelectorAll("#phaseBar .phaseItem"));
+    const phaseActionBtn = document.getElementById("phaseActionBtn");
+    const phaseTextEl = document.getElementById("turnPhase") || document.getElementById("phaseName");
+    const btnNextPhase = document.getElementById("btnNextPhase");
+    const btnEndTurn = document.getElementById("btnEndTurn");
+
+    if (!phaseItems.length || !phaseActionBtn || !phaseTextEl || !btnNextPhase || !btnEndTurn) return;
+
+    const normalizePhase = (value) => {
+      const raw = String(value || "").trim().toUpperCase();
+      if (!raw || raw === "—") return "INITIAL";
+      if (raw === "INICIAL") return "INITIAL";
+      if (raw === "PREPARAÇÃO" || raw === "PREPARACAO") return "PREP";
+      if (raw === "COMBATE") return "COMBAT";
+      if (raw === "FIM") return "END";
+      return PHASE_ORDER.includes(raw) ? raw : "INITIAL";
+    };
+
+    const refreshPhaseUI = () => {
+      const current = normalizePhase(phaseTextEl.textContent);
+      const currentIndex = PHASE_ORDER.indexOf(current);
+
+      for (const item of phaseItems) {
+        const itemPhase = normalizePhase(item.getAttribute("data-phase"));
+        const itemIndex = PHASE_ORDER.indexOf(itemPhase);
+        item.classList.toggle("is-active", itemPhase === current);
+        item.classList.toggle("is-done", itemIndex > -1 && itemIndex < currentIndex);
+      }
+
+      const onEndPhase = current === "END";
+      const canProceed = onEndPhase ? !btnEndTurn.disabled : !btnNextPhase.disabled;
+      phaseActionBtn.disabled = !canProceed;
+      phaseActionBtn.textContent = onEndPhase ? "Encerrar turno" : "Continuar";
+    };
+
+    phaseActionBtn.addEventListener("click", () => {
+      const current = normalizePhase(phaseTextEl.textContent);
+      if (current === "END") {
+        if (!btnEndTurn.disabled) btnEndTurn.click();
+        return;
+      }
+      if (!btnNextPhase.disabled) btnNextPhase.click();
+    });
+
+    const observer = new MutationObserver(refreshPhaseUI);
+    observer.observe(phaseTextEl, { childList: true, characterData: true, subtree: true });
+    refreshPhaseUI();
+    window.addEventListener("load", refreshPhaseUI);
+  })();
+</script>
+
+<script src="/cards/cartas.js"></script>
+<script type="module" src="/src/game.ts"></script>
+</body>
+</html>

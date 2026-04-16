@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mytragor — Cartas</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&display=swap');
+    :root{ --bg:#071025; --card:#0f1724; --gold1:#facc15; --gold2:#f59e0b; --muted:#9ca3af }
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;color:#e6eef8;background:linear-gradient(180deg,#071025 0%,#04101a 100%)}
+    .wrap{max-width:1100px;margin:28px auto;padding:26px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(0,0,0,0.06));box-shadow:0 18px 40px rgba(0,0,0,0.6)}
+    .brand{font-family:'Cinzel', Georgia, 'Times New Roman', serif;color:var(--gold1);font-weight:900;font-size:30px}
+    .subtitle{color:var(--gold1);font-size:12px;margin-top:6px}
+    .lead{color:var(--muted);margin-top:8px}
+    .toolbar{display:flex;gap:12px;flex-wrap:wrap;margin-top:18px}
+    .gold-btn{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;font-weight:800;background:linear-gradient(180deg,var(--gold1),var(--gold2));color:#111;text-decoration:none;border:1px solid rgba(250,170,25,0.9);box-shadow:0 8px 22px rgba(250,170,25,0.08);cursor:pointer}
+    .gold-btn.ghost{background:transparent;color:var(--gold1);border:1px solid rgba(250,204,21,0.12)}
+    .collectionList{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;margin-top:18px}
+  .cardItem{background:linear-gradient(180deg, rgba(12,14,18,0.8), rgba(6,7,10,0.55));border:1px solid rgba(255,255,255,0.03);padding:10px;border-radius:10px;display:flex;flex-direction:column;align-items:center;gap:8px;position:relative;overflow:hidden}
+    .cardItem img{
+      width:100%;
+      height:auto;
+      max-height:220px;
+      object-fit:contain;
+      border-radius:6px;
+      border:1px solid rgba(0,0,0,0.2);
+      background:#02050a;
+    }
+  .cardItem .meta{color:var(--muted);font-size:12px}
+  /* watermark overlay */
+  .cardItem .wm{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-45deg);font-weight:900;color:rgba(250,204,21,0.18);pointer-events:none;user-select:none;letter-spacing:6px;font-family:Cinzel,serif;mix-blend-mode:screen}
+    .empty{color:var(--muted);padding:26px;text-align:center;border-radius:8px;border:1px dashed rgba(255,255,255,0.03);margin-top:16px}
+    a.back{color:var(--muted);text-decoration:none;font-size:13px}
+  /* Ensure only the new header back button shows (hide any legacy duplicate anchors) */
+  header a.back:not(#btnBackHeader){ display: none !important; }
+    /* modal */
+    .lightbox{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,0.7);z-index:12000;padding:20px}
+  .lightbox .panel{max-width:920px;width:100%;background:linear-gradient(180deg,rgba(12,14,18,0.9),rgba(6,7,10,0.7));padding:18px;border-radius:12px;border:1px solid rgba(250,204,21,0.08);display:flex;gap:14px;align-items:flex-start}
+  .lightbox .imageWrap{position:relative}
+  .lightbox img{max-width:380px;max-height:64vh;border-radius:8px;display:block}
+  .lightbox .imageWrap .wm{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-45deg);font-weight:900;color:rgba(250,204,21,0.18);pointer-events:none;user-select:none;letter-spacing:8px;font-size:56px;font-family:Cinzel,serif}
+    .lightbox .desc{color:var(--muted)}
+    .closeBtn{margin-left:auto}
+  @media(max-width:720px){ .grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))} .cardItem img{max-height:160px} .lightbox .panel{flex-direction:column;align-items:center} }
+  </style>
+  <link rel="stylesheet" href="../mobile.css" media="(max-width:880px)">
+</head>
+<body>
+  <div class="wrap">
+    <header style="display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div class="brand">Mytragor</div>
+        <div class="subtitle">Galeria — Cartas</div>
+        <div class="lead">Escolha uma coleção para ver suas cartas.</div>
+      </div>
+    </header>
+
+    <section>
+      <div class="toolbar">
+        <button class="gold-btn ghost" id="btnCollection1">Baralhos iniciais 1</button>
+        <!-- future collections could be added here -->
+      </div>
+
+      <div id="collectionArea">
+        <div class="empty">Selecione uma coleção acima para visualizar as cartas.</div>
+      </div>
+    </section>
+    <div style="margin-top:18px;display:flex;gap:10px;justify-content:flex-end">
+      <button id="btnBackFooter" class="gold-btn ghost" style="background:transparent;border:1px solid rgba(250,204,21,0.12)">Voltar</button>
+      <a id="btnMenu" class="gold-btn ghost" href="#" style="margin-left:8px">Voltar ao menu</a>
+    </div>
+  </div>
+
+  <div id="lightbox" class="lightbox" role="dialog" aria-hidden="true">
+    <div class="panel">
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="imageWrap">
+            <img id="lbImg" src="" alt="" />
+            <div class="wm">Mytragor</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button id="lbClose" class="gold-btn ghost">Fechar</button>
+            <a id="openFull" class="gold-btn" href="#" target="_blank">Abrir em nova aba</a>
+          </div>
+        </div>
+      <div class="desc">
+        <div id="lbTitle" style="font-weight:800;color:var(--gold1)"></div>
+        <div id="lbMeta" style="margin-top:8px;color:var(--muted)"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Files in the collection (hard-coded from assets/allies)
+    const ALLIES = [
+      "layout-aerynnieloy.ai.png",
+      "layout-agiota.ai.png",
+      "layout-aprendizmagia.ai.png",
+      "layout-aranhasexecutor.ai.png",
+      "layout-aranhasinformante.ai.png",
+      "layout-aranhasmascote.ai.png",
+      "layout-aranhasnovato.ai.png",
+      "layout-aranhasobservadora.ai.png",
+      "layout-Arnoldescudeiro.ai.png",
+      "layout-bartolomeuinspirador.ai.png",
+      "layout-batedorkobold.ai.png",
+      "layout-caocacaferoz.ai.png",
+      "layout-cervogalhosbrancos.ai.png",
+      "layout-charlataovila.ai.png",
+      "layout-estudantearcano.ai.png",
+      "layout-gamboacacadora.ai.png",
+      "layout-gladiadoraposentado.ai.png",
+      "layout-gladiadorimpenetravel.ai.png",
+      "layout-gladiadorimplacavel.ai.png",
+      "layout-gladiadorousado.ai.png",
+      "layout-gladiadorveloz.ai.png",
+      "layout-goblinsabotador.ai.png",
+      "layout-hienacarniceira.ai.png",
+      "layout-informantebeco.ai.png",
+      "layout-jabutibarreira.ai.png",
+      "layout-leaoreisagrado.ai.png",
+      "layout-milicianovila.ai.png",
+      "layout-oprotetor.ai.png",
+      "layout-picapauagulheiro.ai.png",
+      "layout-porcoespinhofurioso.ai.png",
+      "layout-tamanduaguardiao.ai.png",
+      "layout-thornmartelomontanha.ai.png",
+      "layout-toupeiraescavadora.ai.png",
+      "layout-ursonegro.ai.png",
+      "layout-xamakobold.ai.png",
+      "layout-yohanronin.ai.png"
+    ];
+
+    // Additional starter collections
+    const CHOSENS = [
+      "layout-ademais.ai.png",
+      "layout-katsuvingador.ai.png",
+      "layout-leafaefloresta.ai.png",
+      "layout-valbrak.ai.png"
+    ];
+
+    const ENVS = [
+      "layout-tempestadearcana.ai.png",
+      "layout-catedralensolarada.ai.png",
+      "layout-camposensanguentados.ai.png",
+      "layout-caminhosperigosos.ai.png"
+    ];
+
+    // Equip, fragments, spells and tricks
+    const EQUIP = [
+      "layout-redomasanta.ai.png",
+      "layout-orbeabsorcao.ai.png",
+      "layout-mantocouro.ai.png",
+      "layout-livroinstavel.ai.png",
+      "layout-laminaserrilhada.ai.png",
+      "layout-aranhasqueliceras.ai.png"
+    ];
+
+    
+
+    const SPELL = [
+      "layout-ajudapovo.ai.png",
+      "layout-alertafuga.ai.png",
+      "layout-aranhasmilicia.ai.png",
+      "layout-bemtreinado.ai.png",
+      "layout-bomfruto.ai.png",
+      "layout-controlecorrenteza.ai.png",
+      "layout-espionagemsorrateira.ai.png",
+      "layout-frutoabencoado.ai.png",
+      "layout-invasaocativeiro.ai.png",
+      "layout-maosflamejantes.ai.png",
+      "layout-profanacaoterreno.ai.png",
+      "layout-quebraaco.ai.png",
+      "layout-sedevinganca.ai.png",
+      "layout-tonicorevigorante.ai.png",
+      "layout-trocaenergia.ai.png"
+    ];
+
+    const TRICK = [
+      "layout-aranhasemboscada.ai.png",
+      "layout-constricaoll.ai.png",
+      "layout-interrupcaoperfeita.ai.png"
+    ];
+
+    const collectionArea = document.getElementById('collectionArea');
+    const btn1 = document.getElementById('btnCollection1');
+    btn1.addEventListener('click', ()=> {
+      // Build a combined collection that includes allies, chosens and envs
+      const combined = [];
+  ALLIES.forEach(f => combined.push({dir:'../allies/', file:f, type:'ally'}));
+  CHOSENS.forEach(f => combined.push({dir:'../chosens/', file:f, type:'chosen'}));
+  ENVS.forEach(f => combined.push({dir:'../envs/', file:f, type:'env'}));
+  EQUIP.forEach(f => combined.push({dir:'../equip/', file:f, type:'equip'}));
+  // fragments removed from starter collection by request
+  SPELL.forEach(f => combined.push({dir:'../spell/', file:f, type:'spell'}));
+  TRICK.forEach(f => combined.push({dir:'../trick/', file:f, type:'trick'}));
+      showCollection('Baralhos iniciais 1', combined);
+    });
+
+    function niceName(filename){
+      return filename.replace(/\.png$/i,'').replace(/_/g,' ').replace(/\b(\w)/g, s=>s.toUpperCase());
+    }
+
+    function showCollection(title, files){
+      collectionArea.innerHTML = '';
+      const header = document.createElement('div'); header.style.display='flex'; header.style.justifyContent='space-between'; header.style.alignItems='center';
+      const h = document.createElement('div'); h.innerHTML = `<div style="font-weight:800;color:var(--gold1)">${title}</div><div style="color:var(--muted);font-size:13px;margin-top:6px">${files.length} cartas</div>`;
+      header.appendChild(h);
+      collectionArea.appendChild(header);
+
+      const grid = document.createElement('div'); grid.className='grid';
+      files.forEach(entry=>{
+        // entry can be either a string (legacy) or an object {dir, file, type}
+        const dir = entry.dir || '../allies/';
+        const file = entry.file || entry;
+        const type = entry.type || 'ally';
+
+        const item = document.createElement('div'); item.className='cardItem';
+        const img = document.createElement('img'); img.src = dir + file; img.alt = niceName(file); img.loading = 'lazy'; img.decoding = 'async';
+        const meta = document.createElement('div'); meta.className='meta';
+        meta.textContent = (
+          type === 'env' ? 'Ambiente' :
+          type === 'chosen' ? 'Escolhido' :
+          type === 'equip' ? 'Equipamento' :
+          type === 'fragment' ? 'Fragmento' :
+          type === 'spell' ? 'Feitiço' :
+          type === 'trick' ? 'Truque' :
+          'Ally'
+        );
+  item.appendChild(img); item.appendChild(meta);
+  // add watermark overlay element
+  const wm = document.createElement('div'); wm.className = 'wm'; wm.textContent = 'Mytragor';
+  item.appendChild(wm);
+        // use niceName(file) for the lightbox title (we removed the visible name element)
+        item.addEventListener('click', ()=> openLightbox(img.src, niceName(file)));
+        grid.appendChild(item);
+      });
+      collectionArea.appendChild(grid);
+      window.scrollTo({top:0,behavior:'smooth'});
+    }
+
+    // Lightbox behavior
+    const lightbox = document.getElementById('lightbox');
+    const lbImg = document.getElementById('lbImg');
+    const lbTitle = document.getElementById('lbTitle');
+    const lbMeta = document.getElementById('lbMeta');
+    const openFull = document.getElementById('openFull');
+    document.getElementById('lbClose').addEventListener('click', closeLightbox);
+    lightbox.addEventListener('click', (e)=>{ if(e.target===lightbox) closeLightbox(); });
+    let _currentImgSrc = null; let _currentTitle = '';
+    openFull.addEventListener('click', async (ev)=>{
+      ev.preventDefault();
+      if(!_currentImgSrc) return;
+      const absImg = new URL(_currentImgSrc, window.location.href).href;
+      // try to fetch the image and create an object URL for more reliable loading
+      try{
+        const resp = await fetch(absImg);
+        if(!resp.ok) throw new Error('fetch failed');
+        const blob = await resp.blob();
+        const obj = URL.createObjectURL(blob);
+        const win = window.open();
+        const html = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(_currentTitle)}</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{height:100%;margin:0;background:#071025;display:flex;align-items:center;justify-content:center}img{max-width:95vw;max-height:95vh;display:block} .wm{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-45deg);font-weight:900;color:rgba(250,204,21,0.18);pointer-events:none;user-select:none;letter-spacing:8px;font-size:64px;font-family:Cinzel,serif}</style></head><body><div style="position:relative;display:inline-block"><img src="${obj}" alt="${escapeHtml(_currentTitle)}"><div class="wm">Mytragor</div></div></body></html>`;
+        win.document.open(); win.document.write(html); win.document.close();
+      }catch(e){
+        // fallback: open a page that references the absolute URL directly
+        const win = window.open();
+        const html = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(_currentTitle)}</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{height:100%;margin:0;background:#071025;display:flex;align-items:center;justify-content:center}img{max-width:95vw;max-height:95vh;display:block} .wm{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-45deg);font-weight:900;color:rgba(250,204,21,0.18);pointer-events:none;user-select:none;letter-spacing:8px;font-size:64px;font-family:Cinzel,serif}</style></head><body><div style="position:relative;display:inline-block"><img src="${escapeHtml(absImg)}" alt="${escapeHtml(_currentTitle)}"><div class="wm">Mytragor</div></div></body></html>`;
+        win.document.open(); win.document.write(html); win.document.close();
+      }
+    });
+
+    function openLightbox(src, title){
+      lbImg.src = src; lbTitle.textContent = title; lbMeta.textContent = '';
+      _currentImgSrc = src; _currentTitle = title;
+      // openFull.href = makeWatermarkPageSrc(src, title); (we now handle opening via click handler)
+      lightbox.style.display = 'flex'; lightbox.setAttribute('aria-hidden','false'); document.body.style.overflow='hidden';
+    }
+
+    // create a small standalone page (as a blob URL) that displays the image with the watermark
+    function makeWatermarkPageSrc(imgSrc, title){
+      // Resolve relative image URLs to absolute so the new page can load them
+      const absImg = new URL(imgSrc, window.location.href).href;
+      const html = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{height:100%;margin:0;background:#071025;display:flex;align-items:center;justify-content:center}img{max-width:95vw;max-height:95vh;display:block} .wm{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-45deg);font-weight:900;color:rgba(250,204,21,0.18);pointer-events:none;user-select:none;letter-spacing:8px;font-size:64px;font-family:Cinzel,serif}</style></head><body><div style="position:relative;display:inline-block"><img src="${escapeHtml(absImg)}" alt="${escapeHtml(title)}"><div class="wm">Mytragor</div></div></body></html>`;
+      try{
+        const blob = new Blob([html], {type:'text/html'});
+        return URL.createObjectURL(blob);
+      }catch(e){
+        // Fallback to data URL if Blob creation fails
+        return 'data:text/html;charset=utf-8,' + encodeURIComponent(html);
+      }
+    }
+
+    function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    function closeLightbox(){ lightbox.style.display='none'; lightbox.setAttribute('aria-hidden','true'); document.body.style.overflow=''; }
+  
+  // Back/menu helpers: try history.back(), else try relative fallbacks to index.html
+  (function(){
+    function resolveIndexCandidates(){
+      // Prefer going two levels up (assets/ui -> ../../index.html), then root, then local index
+      return [
+        '../../index.html',
+        '/index.html',
+        'index.html'
+      ];
+    }
+
+    function safeBack(){
+      if(window.history && history.length > 1){
+        history.back();
+        // fallback if history didn't navigate
+        setTimeout(()=>{ if(document.visibilityState === 'visible') window.location.href = resolveIndexCandidates()[0]; }, 400);
+      } else {
+        window.location.href = resolveIndexCandidates()[0];
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', ()=>{
+      const h = document.getElementById('btnBackHeader');
+      const f = document.getElementById('btnBackFooter');
+      const m = document.getElementById('btnMenu');
+      if(h) h.addEventListener('click', (e)=>{ e.preventDefault(); safeBack(); });
+      if(f) f.addEventListener('click', (e)=>{ e.preventDefault(); safeBack(); });
+      if(m) m.addEventListener('click', (e)=>{ e.preventDefault(); window.location.href = resolveIndexCandidates()[0]; });
+    });
+  })();
+  </script>
+  <script src="../mobile.js"></script>
+</body>
+</html>

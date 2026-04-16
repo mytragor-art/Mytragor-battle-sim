@@ -1,0 +1,29 @@
+{
+	"name": "mytragor-sim-server",
+	"version": "0.1.0",
+	"private": true,
+	"main": "dist/index.js",
+	"scripts": {
+		"build": "tsc -p tsconfig.json",
+		"start": "node dist/index.js",
+		"dev": "ts-node-dev --respawn --transpile-only src/index.ts"
+	},
+	"dependencies": {
+		"colyseus": "^0.15.0",
+		"@colyseus/core": "^0.15.0",
+		"@colyseus/monitor": "^0.15.0",
+		"@colyseus/ws-transport": "^0.15.0",
+		"@colyseus/schema": "^2.0.0",
+		"express": "^4.19.0",
+		"cors": "^2.8.5",
+		"dotenv": "^16.4.0"
+	},
+	"devDependencies": {
+		"typescript": "^5.6.0",
+		"ts-node-dev": "^2.0.0",
+		"@types/node": "^22.0.0",
+		"@types/express": "^4.17.21",
+		"@types/cors": "^2.8.17"
+	}
+}
+
