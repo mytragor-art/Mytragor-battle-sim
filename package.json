@@ -1,0 +1,12 @@
+{
+  "name": "mytragor-battle-sim",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "cd server && npm install && npm run build",
+    "start": "cd server && node dist/index.js"
+  }
+}
