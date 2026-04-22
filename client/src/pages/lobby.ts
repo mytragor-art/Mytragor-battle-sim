@@ -2,7 +2,7 @@
 
 import { bindLobbyHandlers, connectClient, joinOrCreateLobby } from "../net/mp";
 import { resolveHttpBase, resolveServerEndpoint } from "../config/runtime";
-import { readSavedDecks, type SavedDeck } from "../ui/deckStore";
+import { hydrateSavedDecks, readSavedDecks, type SavedDeck } from "../ui/deckStore";
 import { getLobbyInputs, log, renderPlayers, renderRooms, setReadyUI, setSlotPhase } from "../ui/lobbyView";
 import { getDisplayName } from "../ui/profile";
 
@@ -17,6 +17,23 @@ let isJoining = false;
 let selectedDeck: SavedDeck | null = null;
 let selectedRoomId: string | null = null;
 let roomPollTimer: number | null = null;
+let availableDecks: SavedDeck[] = readSavedDecks();
+let deckRefreshToken = 0;
+
+function applySelectedDeck(deck: SavedDeck | null) {
+	selectedDeck = deck;
+	if (view.leaderViewEl) view.leaderViewEl.textContent = selectedDeck?.leaderName || "—";
+	if (view.deckCardsCountEl) view.deckCardsCountEl.textContent = selectedDeck ? String(selectedDeck.cards.length) : "—";
+	if (view.leaderEl) view.leaderEl.value = selectedDeck?.leaderName || "";
+
+	if (room && selectedDeck) {
+		room.send("choose_deck", {
+			deckId: selectedDeck.id,
+			leaderId: selectedDeck.leaderName,
+			cards: selectedDeck.cards
+		});
+	}
+}
 
 async function leaveCurrentLobby() {
 	if (!room) return;
@@ -40,7 +57,9 @@ function endpointToHttpBase(endpoint: string) {
 
 function renderDeckSelector() {
 	if (!view.deckEl) return;
-	const decks = readSavedDecks();
+	const decks = availableDecks;
+	const currentValue = view.deckEl.value;
+	const selectedId = selectedDeck?.id || currentValue;
 	view.deckEl.innerHTML = "";
 
 	if (!decks.length) {
@@ -48,9 +67,7 @@ function renderDeckSelector() {
 		option.value = "";
 		option.textContent = "(nenhum deck salvo - abra o deckbuilder no mesmo navegador)";
 		view.deckEl.appendChild(option);
-		selectedDeck = null;
-		if (view.leaderViewEl) view.leaderViewEl.textContent = "—";
-		if (view.deckCardsCountEl) view.deckCardsCountEl.textContent = "—";
+		applySelectedDeck(null);
 		return;
 	}
 
@@ -65,22 +82,24 @@ function renderDeckSelector() {
 		op.textContent = `${deck.deckName} • Líder: ${deck.leaderName}`;
 		view.deckEl.appendChild(op);
 	}
+
+	const nextDeck = decks.find((deck) => deck.id === selectedId) || (decks.length === 1 ? decks[0] : null);
+	view.deckEl.value = nextDeck?.id || "";
+	applySelectedDeck(nextDeck);
 }
 
 function syncSelectedDeckFromUI() {
 	if (!view.deckEl) return;
-	selectedDeck = readSavedDecks().find((d) => d.id === view.deckEl!.value) || null;
-	if (view.leaderViewEl) view.leaderViewEl.textContent = selectedDeck?.leaderName || "—";
-	if (view.deckCardsCountEl) view.deckCardsCountEl.textContent = selectedDeck ? String(selectedDeck.cards.length) : "—";
-	if (view.leaderEl) view.leaderEl.value = selectedDeck?.leaderName || "";
+	applySelectedDeck(availableDecks.find((d) => d.id === view.deckEl!.value) || null);
+}
 
-	if (room && selectedDeck) {
-		room.send("choose_deck", {
-			deckId: selectedDeck.id,
-			leaderId: selectedDeck.leaderName,
-			cards: selectedDeck.cards
-		});
-	}
+
+async function refreshSavedDecks() {
+	const token = ++deckRefreshToken;
+	const decks = await hydrateSavedDecks();
+	if (token !== deckRefreshToken) return;
+	availableDecks = decks;
+	renderDeckSelector();
 }
 
 function renderRoomList(rooms: Array<{ roomId: string; clients: number; maxClients: number; metadata?: { title?: string; deckName?: string; leaderId?: string } }>) {
@@ -198,6 +217,14 @@ if (view.btnJoin) {
 	};
 }
 if (view.deckEl) view.deckEl.onchange = syncSelectedDeckFromUI;
+window.addEventListener("storage", (event) => {
+	if (event.key && event.key !== "mytragor_decks" && event.key !== "mytragor_play_deck") return;
+	void refreshSavedDecks();
+});
+window.addEventListener("focus", () => void refreshSavedDecks());
+document.addEventListener("visibilitychange", () => {
+	if (!document.hidden) void refreshSavedDecks();
+});
 if (view.btnRefreshRooms) view.btnRefreshRooms.onclick = () => void refreshRooms();
 if (view.btnJoinSelected) view.btnJoinSelected.onclick = () => {
 	if (!view.roomIdEl || !selectedRoomId) return;
@@ -228,9 +255,10 @@ if (view.btnReady) {
 }
 
 const params = new URLSearchParams(window.location.search);
-if (view.endpointEl) view.endpointEl.value = params.get("endpoint")?.trim() || defaultWsEndpoint();
+if (view.endpointEl) view.endpointEl.value = params.get("endpoint")?.trim() || resolveServerEndpoint(window.location.search);
 if (view.roomIdEl) view.roomIdEl.value = params.get("roomId")?.trim() || "";
 
 renderDeckSelector();
+void refreshSavedDecks();
 startRoomPolling();
 if (view.roomIdEl?.value) void joinLobby();
