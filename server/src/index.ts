@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import { createServer } from "http";
 import { Server, matchMaker } from "colyseus";
+import { WebSocketTransport } from "@colyseus/ws-transport";
 import dotenv from "dotenv";
 
 process.on("uncaughtException", (err) => {
@@ -35,7 +36,9 @@ async function main() {
 	app.use(express.json());
 
 	const httpServer = createServer(app);
-	const gameServer = new Server({ server: httpServer });
+	const gameServer = new Server({
+		transport: new WebSocketTransport({ server: httpServer })
+	});
 
 	gameServer.define("lobby", LobbyRoom);
 	gameServer.define("match", MatchRoom);
