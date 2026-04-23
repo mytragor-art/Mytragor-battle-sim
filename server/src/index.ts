@@ -4,6 +4,15 @@ import { createServer } from "http";
 import { Server, matchMaker } from "colyseus";
 import dotenv from "dotenv";
 
+process.on("uncaughtException", (err) => {
+	console.error("[FATAL] uncaughtException:", err);
+	process.exit(1);
+});
+process.on("unhandledRejection", (reason) => {
+	console.error("[FATAL] unhandledRejection:", reason);
+	process.exit(1);
+});
+
 import { LobbyRoom } from "./rooms/LobbyRoom";
 import { MatchRoom } from "./rooms/MatchRoom";
 
