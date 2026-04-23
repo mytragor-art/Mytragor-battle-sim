@@ -57,6 +57,10 @@ async function main() {
 		}
 	});
 
+	app.get("/health", (_req, res) => {
+		res.json({ status: "ok" });
+	});
+
 	app.use("/colyseus", monitor());
 
 	httpServer.listen(PORT, () => {
