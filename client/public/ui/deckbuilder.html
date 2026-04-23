@@ -1176,14 +1176,23 @@
       localStorage.setItem('mytragor_decks', JSON.stringify(arr));
     }
 
+    function buildDeckId() {
+      try {
+        if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
+      } catch (e) {}
+      return `deck_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    }
+
     btnSalvar.onclick = function () {
       if (!chosenLeader || deck.length !== 40) return;
       const deckName = (deckNameInput.value || '').trim();
 
       const payload = {
+        deckId: buildDeckId(),
         deckName,
         leader: chosenLeader.name,
         leaderName: chosenLeader.name,
+        leaderKey: chosenLeader.key || '',
         leaderImg: chosenLeader.img,
         cards: deck.map(c => c.name),
         fragImg: chosenFragImg || null,
@@ -1204,8 +1213,11 @@
       }
       const deckName = (deckNameInput.value || '').trim();
       const payload = {
+        deckId: buildDeckId(),
         deckName,
         leader: chosenLeader.name,
+        leaderName: chosenLeader.name,
+        leaderKey: chosenLeader.key || '',
         leaderImg: chosenLeader.img,
         cards: deck.map(c => c.name),
         fragImg: chosenFragImg || null

@@ -716,7 +716,15 @@ function encodeDeck(deck) {
 async function getSavedDecks() {
 	let remote = [];
 	try { remote = await loadUserDecksFromFirestoreLocal(); } catch (e) {}
-	if (Array.isArray(remote) && remote.length) return remote.map((deck, index) => normalizeDeck(deck, index));
+	if (Array.isArray(remote) && remote.length) {
+		const normalizedRemote = remote.map((deck, index) => normalizeDeck(deck, index));
+		try {
+			localStorage.setItem('mytragor_decks', JSON.stringify(normalizedRemote));
+		} catch (e) {
+			console.warn('sync remote decks to localStorage failed', e);
+		}
+		return normalizedRemote;
+	}
 	const raw = localStorage.getItem('mytragor_decks');
 	if (!raw) return [];
 	try {
@@ -923,8 +931,11 @@ function renderDeckDetail(deck) {
 		actions.appendChild(createActionButton('Jogar', '', () => {
 			try {
 				localStorage.setItem('mytragor_play_deck', JSON.stringify({
+					deckId: deck.deckId || deck._id || getDeckKey(deck),
 					deckName: deck.deckName || '',
 					leader: deck.leaderName || deck.leader || '',
+					leaderName: deck.leaderName || deck.leader || '',
+					leaderKey: deck.leaderKey || '',
 					leaderImg: deck.leaderImg || null,
 					cards: deck.cards || [],
 					fragImg: deck.fragImg || null
