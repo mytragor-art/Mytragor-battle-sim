@@ -33,7 +33,6 @@ async function main() {
 	const app = express();
 	app.use(cors({ origin: parseCorsOrigins(process.env.CORS_ORIGIN) }));
 	app.use(express.json());
-	app.use(express.static("public")); // opcional: servir client estático
 
 	const httpServer = createServer(app);
 	const gameServer = new Server({ server: httpServer });
@@ -66,12 +65,12 @@ async function main() {
 	});
 
 	app.get("/health", (_req, res) => {
-		res.json({ status: "ok" });
+		res.json({ status: "ok", port: PORT, env: process.env.NODE_ENV });
 	});
 
-	httpServer.listen(PORT, "0.0.0.0", () => {
-		console.log("Colyseus listening on", PORT);
-	});
+	console.log(`[SERVER] Starting on PORT=${PORT}, binding 0.0.0.0`);
+	await gameServer.listen(PORT, "0.0.0.0");
+	console.log(`[SERVER] Ready on port ${PORT}`);
 }
 
 main().catch((err) => {
