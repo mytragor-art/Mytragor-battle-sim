@@ -2,7 +2,6 @@ import express from "express";
 import cors from "cors";
 import { createServer } from "http";
 import { Server, matchMaker } from "colyseus";
-import { monitor } from "@colyseus/monitor";
 import dotenv from "dotenv";
 
 import { LobbyRoom } from "./rooms/LobbyRoom";
@@ -61,9 +60,7 @@ async function main() {
 		res.json({ status: "ok" });
 	});
 
-	app.use("/colyseus", monitor());
-
-	httpServer.listen(PORT, () => {
+	httpServer.listen(PORT, "0.0.0.0", () => {
 		console.log("Colyseus listening on", PORT);
 	});
 }
