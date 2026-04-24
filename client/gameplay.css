@@ -29,9 +29,9 @@
 
   /* Responsive scaler vars */
   --scale: 1;
-  --left-w: 220px; /* largura da coluna do Log (menor para liberar arena) */
-  --hands-w: 250px;
-  --right-w: 248px; /* largura da coluna da Prévia */
+  --left-w: clamp(150px, 15vw, 220px); /* largura da coluna do Log (menor para liberar arena) */
+  --hands-w: clamp(170px, 17vw, 250px);
+  --right-w: clamp(180px, 17vw, 248px); /* largura da coluna da Prévia */
   --arena-w: 920; /* logical arena width (px) */
   --arena-h: 760;  /* logical arena height (px) */
   --radius: 8px;
@@ -59,6 +59,9 @@
 
 @media (max-width: 1360px){
   :root{
+    --left-w: clamp(138px, 13vw, 180px);
+    --hands-w: clamp(152px, 14vw, 190px);
+    --right-w: clamp(160px, 14vw, 198px);
     --cardW: 74px;
     --cardH: 104px;
     --cardW-base: 74px;
@@ -201,6 +204,32 @@ html,body{height:100%;font-family:-apple-system,system-ui,'Segoe UI',Roboto,'Hel
 
 @media(max-width:1200px){
   .app{grid-template-columns: minmax(140px,200px) minmax(168px,202px) 1fr minmax(170px,240px);}
+}
+
+@media (max-width: 1500px), (max-height: 860px){
+  .app{
+    grid-template-columns: minmax(140px, var(--left-w)) minmax(148px, var(--hands-w)) 1fr minmax(160px, var(--right-w));
+  }
+
+  #logCol{
+    min-width: 0;
+    width: 100%;
+    max-width: var(--left-w);
+  }
+
+  #handsCol{
+    min-width: 0;
+    width: 100%;
+    max-width: var(--hands-w);
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  #previewCol{
+    width: 100%;
+    max-width: var(--right-w);
+    margin-left: 0;
+  }
 }
 @media(max-width:980px){
   .app{grid-template-columns:1fr}
