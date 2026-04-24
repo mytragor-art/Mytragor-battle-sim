@@ -7,11 +7,13 @@ function recalcArenaScale() {
 		if (!stage || !wrap) return;
 
 		const rect = wrap.getBoundingClientRect();
+		const safeWidth = Math.max(rect.width - 8, 1);
+		const safeHeight = Math.max(rect.height - 14, 1);
 		const arenaW = parseFloat(getComputedStyle(root).getPropertyValue("--arena-w")) || 1400;
 		const arenaH = parseFloat(getComputedStyle(root).getPropertyValue("--arena-h")) || 780;
 
-		const scaleX = rect.width / arenaW;
-		const scaleY = rect.height / arenaH;
+		const scaleX = safeWidth / arenaW;
+		const scaleY = safeHeight / arenaH;
 
 		let scale = Math.min(scaleX, scaleY);
 		if (!Number.isFinite(scale) || scale <= 0) scale = 1;

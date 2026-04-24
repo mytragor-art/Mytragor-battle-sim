@@ -11,34 +11,6 @@
 <body>
 
 <div class="app">
-  <div class="col" id="logCol">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
-      <h3 style="margin:0">Diário de Batalha</h3>
-      <div style="display:flex;gap:6px;align-items:center">
-        <button id="btnToggleLog" class="panelToggle" title="Colapsar/Expandir log" aria-expanded="true">▸</button>
-        <button id="btnToggleLogMobile" class="panelToggle" title="Abrir/Fechar log" aria-expanded="false" style="display:none">≡</button>
-      </div>
-    </div>
-
-    <div class="panel" id="logPanel">
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-end;margin-bottom:8px">
-        <button id="btnBackLobby" class="btn">Sair</button>
-      </div>
-
-      <div class="hr"></div>
-
-      <div class="pillRow" style="gap:6px;flex-wrap:wrap">
-        <div class="pill">Turno: <b id="turn">—</b></div>
-        <div class="pill">Fase: <b id="turnPhase">—</b></div>
-        <div class="pill">Vez: <b id="turnSlot">—</b></div>
-      </div>
-
-      <div class="hr"></div>
-
-      <pre class="log" id="log" aria-live="polite"></pre>
-    </div>
-  </div>
-
   <div class="col" id="handsCol" aria-label="Mãos dos jogadores">
     <div class="handDock" id="enemyHandDock">
       <div class="handDockTitle">Mão do Oponente</div>
@@ -51,6 +23,15 @@
   </div>
 
   <div class="col" id="arenaCol">
+    <div class="arenaToolbar" aria-label="Controles da partida">
+      <button id="btnOpenLog" class="btn">Diário</button>
+      <div class="arenaStatusBar">
+        <div class="pill">Turno: <b id="turn">—</b></div>
+        <div class="pill">Fase: <b id="turnPhase">—</b></div>
+        <div class="pill">Vez: <b id="turnSlot">—</b></div>
+      </div>
+      <button id="btnBackLobby" class="btn">Sair</button>
+    </div>
     <div class="boardWrap">
       <div class="scaler" id="boardScaler">
         <div class="boardStage" id="boardStage">
@@ -187,6 +168,21 @@
         <div class="bigMetaLine bigMetaSubclass" id="bigMetaSubclass"></div>
         <div class="bigMetaText" id="bigMetaText"></div>
       </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="logModal">
+  <div class="modalBox logModalBox">
+    <div class="logModalHead">
+      <div>
+        <h3 style="margin:0">Diário de Batalha</h3>
+        <div class="logModalSubhead">Abra quando quiser revisar o histórico da partida.</div>
+      </div>
+      <button id="btnCloseLogModal" class="btn">Fechar</button>
+    </div>
+    <div class="panel" id="logPanel">
+      <pre class="log" id="log" aria-live="polite"></pre>
     </div>
   </div>
 </div>

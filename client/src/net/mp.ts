@@ -31,8 +31,8 @@ export async function joinOrCreateLobby(client: Colyseus.Client, roomId?: string
 	return client.joinById(roomId);
 }
 
-export async function joinMatchById(client: Colyseus.Client, matchRoomId: string): Promise<Colyseus.Room> {
-	return client.joinById(matchRoomId);
+export async function joinMatchById(client: Colyseus.Client, matchRoomId: string, options?: Record<string, unknown>): Promise<Colyseus.Room> {
+	return client.joinById(matchRoomId, options);
 }
 
 export function bindLobbyHandlers(room: Colyseus.Room, handlers: LobbyHandlers) {

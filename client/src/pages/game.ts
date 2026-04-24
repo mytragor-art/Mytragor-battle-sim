@@ -1919,10 +1919,12 @@ function renderFragments(containerId: "you-fragsDock" | "ai-fragsDock", total: u
 	const cap = Math.max(0, Math.min(10, Number(maxTotal || 10)));
 	const amount = Math.max(0, Math.min(cap, Number(total || 0)));
 	const activeStartIndex = spentFirst ? 1 : 0;
+	const fragmentBackImage = asAssetPath(CARD_BACK_ASSET);
 	for (let index = 0; index < cap; index += 1) {
 		const token = document.createElement("div");
 		token.className = "fragToken ready";
 		token.style.setProperty("--frag-img", `url('${fragImage}')`);
+		token.style.setProperty("--frag-back-img", `url('${fragmentBackImage}')`);
 		if (spentFirst && index === 0) {
 			token.classList.add("spent");
 			token.title = "Fragmento indisponível por Caminhos Perigosos";
@@ -2048,12 +2050,14 @@ function renderEnemySupport(support: string[]) {
 async function joinMatch() {
 	if (isJoining || !view.endpointEl || !view.roomIdEl) return;
 	const targetRoomId = view.roomIdEl.value.trim();
+	const joinToken = new URLSearchParams(window.location.search).get("joinToken")?.trim() || "";
 	if (!targetRoomId) return log("ERROR", { text: "Informe roomId da partida." });
+	if (!joinToken) return log("ERROR", { text: "Token da partida ausente. Entre novamente pelo lobby." });
 
 	isJoining = true;
 	try {
 		client = await connectClient(view.endpointEl.value.trim());
-		room = await joinMatchById(client, targetRoomId);
+		room = await joinMatchById(client, targetRoomId, { joinToken });
 		roomId = room.id;
 		const displayName = getDisplayName();
 		if (displayName) {
@@ -2307,6 +2311,31 @@ if (view.btnTargetLeader) view.btnTargetLeader.onclick = () => {
 if (view.btnNextPhase) view.btnNextPhase.onclick = () => room?.send("next_phase");
 if (view.btnEndTurn) view.btnEndTurn.onclick = () => room?.send("end_turn");
 if (view.btnBackLobby) view.btnBackLobby.onclick = goLobby;
+
+const logModal = document.getElementById("logModal") as HTMLElement | null;
+const btnOpenLog = document.getElementById("btnOpenLog") as HTMLButtonElement | null;
+const btnCloseLogModal = document.getElementById("btnCloseLogModal") as HTMLButtonElement | null;
+
+function hideLogModal() {
+	if (!logModal) return;
+	logModal.style.display = "none";
+}
+
+function showLogModal() {
+	if (!logModal) return;
+	logModal.style.display = "flex";
+}
+
+if (btnOpenLog) btnOpenLog.onclick = showLogModal;
+if (btnCloseLogModal) btnCloseLogModal.onclick = hideLogModal;
+if (logModal) {
+	logModal.addEventListener("click", (event) => {
+		if (event.target === logModal) hideLogModal();
+	});
+}
+window.addEventListener("keydown", (event) => {
+	if (event.key === "Escape") hideLogModal();
+});
 
 (window as any).hideCardChoice = () => hideCardChoiceModal(true);
 (window as any).hidePile = () => hidePile();

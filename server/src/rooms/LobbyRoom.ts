@@ -1,5 +1,6 @@
 /* Responsibility: lobby-only room (deck/leader/ready), creates MatchRoom and emits start_match. */
 
+import { randomUUID } from "crypto";
 import { Room, Client, matchMaker } from "colyseus";
 import { LobbyState, LobbyPlayer, type Slot } from "./schema/LobbyState";
 
@@ -148,6 +149,21 @@ export class LobbyRoom extends Room<LobbyState> {
 
 		const p1Deck = this.selectedDeckBySession.get(p1.sessionId);
 		const p2Deck = this.selectedDeckBySession.get(p2.sessionId);
+		const starterSlot: Slot = Math.random() < 0.5 ? "p1" : "p2";
+		const seatReservations = [
+			{
+				joinToken: randomUUID(),
+				lobbySessionId: p1.sessionId,
+				slot: "p1" as Slot,
+				displayName: p1.displayName
+			},
+			{
+				joinToken: randomUUID(),
+				lobbySessionId: p2.sessionId,
+				slot: "p2" as Slot,
+				displayName: p2.displayName
+			}
+		];
 
 		const matchRoom = await matchMaker.createRoom("match", {
 			p1: {
@@ -159,12 +175,21 @@ export class LobbyRoom extends Room<LobbyState> {
 				deckId: p2.deckId,
 				leaderId: p2.leaderId,
 				cards: p2Deck?.cards || []
-			}
+			},
+			starterSlot,
+			seatReservations
 		});
 
-		this.broadcast("start_match", {
-			matchRoomId: matchRoom.roomId
-		});
+		for (const reservation of seatReservations) {
+			const targetClient = this.clients.find((client) => client.sessionId === reservation.lobbySessionId);
+			if (!targetClient) continue;
+			targetClient.send("start_match", {
+				matchRoomId: matchRoom.roomId,
+				joinToken: reservation.joinToken,
+				slot: reservation.slot,
+				starterSlot
+			});
+		}
 
 		this.disconnect();
 	}

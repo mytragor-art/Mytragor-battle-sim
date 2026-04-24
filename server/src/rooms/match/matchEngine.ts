@@ -2198,7 +2198,7 @@ function startTurn(
 	setPhase(state, "INITIAL", broadcast);
 
 	const pg = slot === "p1" ? game.p1 : game.p2;
-	const isOpeningTurnForStarter = slot === "p1" && game.turn === 1 && (pg.fragmentMax || 0) <= 0;
+	const isOpeningTurnForStarter = slot === game.starterSlot && game.turn === 1 && (pg.fragmentMax || 0) <= 0;
 	const add = isOpeningTurnForStarter ? 1 : 2;
 	const envEffect = getPlayerEnvEffect(state, slot);
 	pg.fragmentMax = Math.min(10, (pg.fragmentMax || 0) + add);
@@ -2214,6 +2214,7 @@ function startTurn(
 	broadcast("turn_start", {
 		turn: game.turn,
 		turnSlot: game.turnSlot,
+		starterSlot: game.starterSlot,
 		phase: game.phase,
 		add,
 		p1Fragments: game.p1.fragments,
@@ -2227,10 +2228,11 @@ function startTurn(
 	offerCatedralBlessing(state, slot, broadcast, askChoice);
 }
 
-export function initGame(state: MatchState, p1: any, p2: any, broadcast: (name: string, payload: any) => void, attacked: Record<Slot, Set<number>>, summoned: Record<Slot, Set<number>>, triggeredLeaderThisTurn: Record<Slot, Set<string>>, askChoice?: AskChoiceFn) {
+	export function initGame(state: MatchState, p1: any, p2: any, broadcast: (name: string, payload: any) => void, attacked: Record<Slot, Set<number>>, summoned: Record<Slot, Set<number>>, triggeredLeaderThisTurn: Record<Slot, Set<string>>, starterSlot: Slot = "p1", askChoice?: AskChoiceFn) {
 	const game = state.game;
 	game.p1.slot = "p1";
 	game.p2.slot = "p2";
+	game.starterSlot = starterSlot;
 	game.p1.deckId = String(p1?.deckId || "");
 	game.p2.deckId = String(p2?.deckId || "");
 	game.p1.leaderId = String(p1?.leaderId || "");
@@ -2323,7 +2325,7 @@ export function initGame(state: MatchState, p1: any, p2: any, broadcast: (name: 
 
 	game.turn = 1;
 	game.seq = 0;
-	startTurn(state, "p1", broadcast, attacked, summoned, triggeredLeaderThisTurn, askChoice);
+	startTurn(state, starterSlot, broadcast, attacked, summoned, triggeredLeaderThisTurn, askChoice);
 }
 
 export function getSlotBySession(state: MatchState, sessionId: string): Slot | null {

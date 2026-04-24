@@ -41,6 +41,7 @@ export class PlayerGameState extends Schema {
 }
 
 export class GameState extends Schema {
+	@type("string") starterSlot: string = "p1";
 	@type("string") turnSlot: string = "p1";
 	@type("number") turn: number = 1;
 	@type("number") seq: number = 0;

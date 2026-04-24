@@ -17,6 +17,13 @@ import {
 	playCard
 } from "./match/matchEngine";
 
+type ReservedSeat = {
+	joinToken: string;
+	lobbySessionId: string;
+	slot: Slot;
+	displayName: string;
+};
+
 export class MatchRoom extends Room<MatchState> {
 	maxClients = 2;
 	private attackedThisTurn: Record<Slot, Set<number>> = { p1: new Set<number>(), p2: new Set<number>() };
@@ -26,6 +33,8 @@ export class MatchRoom extends Room<MatchState> {
 	private pendingChoices = new Map<string, { sessionId: string; resolve: (optionId: string | null) => void; timeout?: NodeJS.Timeout; optionIds: string[]; multiSelect?: boolean }>();
 	private activeChoiceSessionId: string | null = null;
 	private inactivityTimeout: NodeJS.Timeout | null = null;
+	private reservedSeatByToken = new Map<string, ReservedSeat>();
+	private consumedJoinTokens = new Set<string>();
 
 	private sanitizeDisplayName(name: unknown): string {
 		return String(name || "").trim().slice(0, 18);
@@ -139,9 +148,35 @@ export class MatchRoom extends Room<MatchState> {
 		});
 	};
 
+	private getReservedSeat(options: any, auth?: ReservedSeat | null): ReservedSeat | null {
+		if (auth?.joinToken && (auth.slot === "p1" || auth.slot === "p2")) return auth;
+		const joinToken = String(options?.joinToken || "").trim();
+		return this.reservedSeatByToken.get(joinToken) || null;
+	}
+
+	onAuth(_client: Client, options: any) {
+		const joinToken = String(options?.joinToken || "").trim();
+		const reservedSeat = this.reservedSeatByToken.get(joinToken);
+		if (!reservedSeat) throw new Error("invalid_match_join_token");
+		if (this.consumedJoinTokens.has(joinToken)) throw new Error("match_join_token_already_used");
+		return reservedSeat;
+	}
+
 	onCreate(options: any) {
 		this.setState(new MatchState());
-		initGame(this.state, options?.p1, options?.p2, (name, payload) => this.broadcast(name, payload), this.attackedThisTurn, this.summonedThisTurn, this.triggeredLeaderThisTurn, this.askChoice);
+		for (const reservation of Array.isArray(options?.seatReservations) ? options.seatReservations : []) {
+			const joinToken = String(reservation?.joinToken || "").trim();
+			const lobbySessionId = String(reservation?.lobbySessionId || "").trim();
+			if (!joinToken || !lobbySessionId) continue;
+			this.reservedSeatByToken.set(joinToken, {
+				joinToken,
+				lobbySessionId,
+				slot: reservation?.slot === "p2" ? "p2" : "p1",
+				displayName: this.sanitizeDisplayName(reservation?.displayName)
+			});
+		}
+		const starterSlot: Slot = options?.starterSlot === "p2" ? "p2" : "p1";
+		initGame(this.state, options?.p1, options?.p2, (name, payload) => this.broadcast(name, payload), this.attackedThisTurn, this.summonedThisTurn, this.triggeredLeaderThisTurn, starterSlot, this.askChoice);
 
 		this.onMessage("next_phase", (client) => {
 			if (!this.isValidTurnAction(client, ["INITIAL", "PREP", "COMBAT"])) return;
@@ -213,11 +248,15 @@ export class MatchRoom extends Room<MatchState> {
 		});
 	}
 
-	onJoin(client: Client) {
+	onJoin(client: Client, options?: any, auth?: ReservedSeat) {
+		const reservedSeat = this.getReservedSeat(options, auth);
+		if (!reservedSeat) throw new Error("missing_reserved_seat");
 		const player = new MatchPlayerState();
 		player.sessionId = client.sessionId;
-		player.slot = this.assignSlot();
+		player.slot = reservedSeat.slot;
+		player.displayName = reservedSeat.displayName;
 		this.state.players.set(client.sessionId, player);
+		this.consumedJoinTokens.add(reservedSeat.joinToken);
 		if (!this.state.hostSessionId) this.state.hostSessionId = client.sessionId;
 		client.send("assign_slot", { slot: player.slot, sessionId: client.sessionId });
 		this.refreshInactivityTimer();
@@ -245,12 +284,6 @@ export class MatchRoom extends Room<MatchState> {
 			this.state.hostSessionId = first?.sessionId || "";
 		}
 		this.refreshInactivityTimer();
-	}
-
-	private assignSlot(): Slot {
-		const used = new Set<Slot>();
-		for (const p of this.state.players.values()) if (p.slot === "p1" || p.slot === "p2") used.add(p.slot as Slot);
-		return used.has("p1") ? "p2" : "p1";
 	}
 
 	private isValidTurnAction(client: Client, phases: string[]) {

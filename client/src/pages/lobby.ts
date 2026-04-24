@@ -180,8 +180,9 @@ async function joinLobby(): Promise<boolean> {
 				log("START_MATCH", msg);
 				const endpoint = view.endpointEl?.value.trim() || resolveServerEndpoint(window.location.search);
 				const matchRoomId = String(msg?.matchRoomId || "").trim();
+				const joinToken = String(msg?.joinToken || "").trim();
 				if (matchRoomId) {
-					window.location.href = `./game.html?roomId=${encodeURIComponent(matchRoomId)}&endpoint=${encodeURIComponent(endpoint)}`;
+					window.location.href = `./game.html?roomId=${encodeURIComponent(matchRoomId)}&endpoint=${encodeURIComponent(endpoint)}&joinToken=${encodeURIComponent(joinToken)}`;
 				}
 			},
 			onError: (msg) => log("ERROR", msg),
