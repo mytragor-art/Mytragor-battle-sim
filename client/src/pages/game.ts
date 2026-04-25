@@ -1032,18 +1032,18 @@ function getBattleRuntime(): BattleRuntime {
 			if (selection.side !== "you") return;
 			if (selection.leader) return;
 			stopAttackArrow();
-				selectedAttackerPos = selection.idx;
-				// immediate visual: mark attacker as deitado (tapped) locally so player sees it
-				try {
-					const slotId = `${selection.side}-ally-${selection.idx}`;
-					const slotEl = document.getElementById(slotId);
-					const cardBtn = slotEl?.querySelector(":scope > .card") as HTMLElement | null;
-					if (cardBtn) cardBtn.classList.add("tapped");
-					// also mark local tappedBySide so runtime reflects it
-					tappedBySide[selection.side].add(selection.idx);
-				} catch (e) {
-					// ignore
-				}
+			resetBoardAttackSelection();
+			// immediate visual: mark attacker as deitado (tapped) locally so player sees it
+			try {
+				const slotId = `${selection.side}-ally-${selection.idx}`;
+				const slotEl = document.getElementById(slotId);
+				const cardBtn = slotEl?.querySelector(":scope > .card") as HTMLElement | null;
+				if (cardBtn) cardBtn.classList.add("tapped");
+				// also mark local tappedBySide so runtime reflects it
+				tappedBySide[selection.side].add(selection.idx);
+			} catch {
+				// ignore
+			}
 			if (target.type === "ally") {
 				selectedTargetType = "ally";
 				selectedTargetPos = target.index;
