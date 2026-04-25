@@ -1,0 +1,124 @@
+@keyframes drawCard {
+  from { transform: translateY(-18px) scale(.92); opacity:0; }
+  to { transform: translateY(0) scale(1); opacity:1; }
+}
+.anim-draw { animation: drawCard .22s ease-out; }
+
+@keyframes playCard {
+  0% { transform: scale(.85); opacity:0; }
+  70% { transform: scale(1.06); opacity:1; }
+  100% { transform: scale(1); }
+}
+.anim-play { animation: playCard .28s ease-out; }
+
+@keyframes damageShake {
+  0%,100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  50% { transform: translateX(5px); }
+  75% { transform: translateX(-3px); }
+}
+.anim-damage { animation: damageShake .24s ease-in-out; }
+
+@keyframes deathFade {
+  from { transform: scale(1); opacity:1; filter:brightness(1); }
+  to { transform: scale(.75); opacity:0; filter:brightness(.4); }
+}
+.anim-death { animation: deathFade .35s ease-in forwards; }
+
+@keyframes phasePulse {
+  0% { transform: scale(1); box-shadow:none; }
+  50% { transform: scale(1.05); box-shadow:0 0 18px rgba(255,220,90,.45); }
+  100% { transform: scale(1); box-shadow:none; }
+}
+.anim-phase { animation: phasePulse .35s ease-out; }
+
+@keyframes chosenPowerBurst {
+  0% { transform: scale(1); filter: brightness(1); }
+  35% { transform: scale(1.06); filter: brightness(1.2); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+.anim-power { animation: chosenPowerBurst .34s ease-out; }
+
+@keyframes pileEntry {
+  0% { transform: translateY(-10px) scale(.94); opacity: .2; filter: brightness(1.18); }
+  100% { transform: translateY(0) scale(1); opacity: 1; filter: brightness(1); }
+}
+.anim-pile-in { animation: pileEntry .28s ease-out; }
+
+.chosenReady{
+  position:relative;
+  overflow:visible !important;
+  box-shadow:
+    0 0 10px rgba(255,255,255,.45),
+    0 0 18px rgba(255,80,180,.45),
+    0 0 26px rgba(80,180,255,.40),
+    0 0 34px rgba(255,220,80,.35);
+  animation: chosenPulse 1.8s ease-in-out infinite;
+}
+.chosenReady::before{
+  content:"";
+  position:absolute;
+  inset:-10px;
+  border-radius:16px;
+  pointer-events:none;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(255,255,255,.95) 0 2px, transparent 3px),
+    radial-gradient(circle at 80% 18%, rgba(120,220,255,.95) 0 2px, transparent 3px),
+    radial-gradient(circle at 92% 65%, rgba(255,120,220,.95) 0 2px, transparent 3px),
+    radial-gradient(circle at 20% 82%, rgba(255,230,90,.95) 0 2px, transparent 3px),
+    radial-gradient(circle at 50% 5%, rgba(180,120,255,.9) 0 1.5px, transparent 3px);
+  animation: chosenStars 1.4s linear infinite;
+  z-index:5;
+}
+.chosenReady::after{
+  content:"";
+  position:absolute;
+  inset:-6px;
+  border-radius:18px;
+  pointer-events:none;
+  border:1px solid rgba(255,255,255,.35);
+  box-shadow:
+    0 0 12px rgba(255,255,255,.35),
+    0 0 22px rgba(120,220,255,.32),
+    0 0 28px rgba(255,120,220,.28);
+  animation: chosenAura 2.2s linear infinite;
+  z-index:4;
+}
+
+@keyframes chosenPulse{
+  0%,100%{ filter:brightness(1); }
+  50%{ filter:brightness(1.18); }
+}
+@keyframes chosenStars{
+  0%{ opacity:.45; transform:rotate(0deg) scale(1); }
+  50%{ opacity:1; transform:rotate(4deg) scale(1.04); }
+  100%{ opacity:.45; transform:rotate(0deg) scale(1); }
+}
+@keyframes chosenAura{
+  0%{ filter:hue-rotate(0deg); opacity:.65; }
+  50%{ opacity:1; }
+  100%{ filter:hue-rotate(360deg); opacity:.65; }
+}
+
+.attackArrowSvg{
+  position:fixed;
+  inset:0;
+  width:100vw;
+  height:100vh;
+  pointer-events:none;
+  z-index:9999;
+  display:none;
+}
+.attackArrowPath{
+  fill:none;
+  stroke:#ff2b2b;
+  stroke-width:6;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  marker-end:url(#attackArrowHead);
+  filter:drop-shadow(0 0 8px rgba(255,0,0,.75));
+}
+.attackTargetGlow{
+  outline:2px solid rgba(255,40,40,.9);
+  box-shadow:0 0 18px rgba(255,0,0,.55);
+}

@@ -152,6 +152,36 @@ export function canAttackCardQuiet(runtime: BattleRuntime, side: BattleSide, car
 	return canAttackCard(runtime, side, card);
 }
 
+export function canAttackTargetQuiet(runtime: BattleRuntime, selection: AttackSelection, target: AttackTarget): boolean {
+	const side = selection.side;
+	const foe = enemySide(side);
+	if (target.side !== foe) return false;
+	const attacker = selection.leader ? runtime.state[side].leader : (runtime.state[side].allies[selection.idx] ?? null);
+	if (selection.leader) {
+		if (!attacker || attacker.tapped || Number(attacker.hp || 0) <= 0) return false;
+		if (!isBattlePhase(runtime.state) || firstTurnOf(runtime.state, side)) return false;
+	} else if (!canAttackCard(runtime, side, attacker)) {
+		return false;
+	}
+
+	const enemies = runtime.state[foe].allies
+		.map((card, index) => ({ card, index }))
+		.filter((item) => item.card && Number(item.card.hp || 0) > 0) as Array<{ card: BattleCard; index: number }>;
+	const tauntersTapped = enemies.filter((item) => !!item.card.tapped && hasKeyword(runtime, item.card, "provocar"));
+	const katsuWarrior = runtime.leaderIs(side, "katsu") && isWarriorCard(attacker);
+
+	if (target.type === "leader") {
+		if (!runtime.state[foe].leader || Number(runtime.state[foe].leader.hp || 0) <= 0) return false;
+		return tauntersTapped.length === 0;
+	}
+
+	const targetCard = runtime.state[foe].allies[target.index] ?? null;
+	if (!targetCard || Number(targetCard.hp || 0) <= 0) return false;
+	if (tauntersTapped.length > 0) return tauntersTapped.some((item) => item.index === target.index);
+	if (katsuWarrior) return true;
+	return !!targetCard.tapped;
+}
+
 export function endAttackCleanup(runtime: BattleRuntime): void {
 	ATTACK_CTX = { attacker: null, side: null };
 	clearTargetHighlights();

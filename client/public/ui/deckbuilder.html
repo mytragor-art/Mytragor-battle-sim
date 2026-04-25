@@ -839,6 +839,13 @@
       return String(s || '').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
     }
 
+    function matchesCardName(card, value) {
+      const expected = normalizeText(value || '');
+      if (!expected || !card) return false;
+      if (normalizeText(card.name || '') === expected) return true;
+      return Array.isArray(card.aliases) && card.aliases.some(alias => normalizeText(alias) === expected);
+    }
+
     function formatFilterLabel(value) {
       const normalized = String(value || '').trim().toLowerCase();
       if (normalized === 'arcana') return 'Arcano';
@@ -1266,7 +1273,7 @@
       }
 
       (data.cards || []).forEach(name => {
-        const card = BASE_CARD_POOL.find(c => c.name === name);
+        const card = BASE_CARD_POOL.find(c => matchesCardName(c, name));
         if (card && deck.length < 40) deck.push(card);
       });
 

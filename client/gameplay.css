@@ -505,6 +505,7 @@ html,body{height:100%;font-family:-apple-system,system-ui,'Segoe UI',Roboto,'Hel
   left:8px;
   top:8px;
   width:80px;
+  z-index:3;
   display:grid;
   grid-template-columns:repeat(2, 1fr);
   grid-auto-rows:54px;
@@ -520,7 +521,7 @@ html,body{height:100%;font-family:-apple-system,system-ui,'Segoe UI',Roboto,'Hel
   border-radius:10px;
   border:1px solid rgba(148,163,184,.40);
   background:
-    linear-gradient(180deg, rgba(15,23,42,.68), rgba(2,6,23,.82)),
+    linear-gradient(180deg, rgba(15,23,42,.44), rgba(2,6,23,.56)),
     var(--frag-img, url('/fragments/FRAGMENTOS.png')) center/cover no-repeat;
   display:flex;
   align-items:center;
@@ -531,32 +532,38 @@ html,body{height:100%;font-family:-apple-system,system-ui,'Segoe UI',Roboto,'Hel
   transition: opacity .18s ease, filter .18s ease, box-shadow .18s ease, transform .18s ease;
 }
 .fragToken.ready{
-  opacity:.52;
-  filter: grayscale(.72) saturate(.62) brightness(.82);
+  opacity:.78;
+  filter: grayscale(.18) saturate(.96) brightness(.98) contrast(1.04);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.05), rgba(0,0,0,.12)),
+    var(--frag-img, url('/fragments/FRAGMENTOS.png')) center/cover no-repeat;
   box-shadow:
-    inset 0 0 0 1px rgba(255,255,255,.04),
-    0 4px 10px rgba(0,0,0,.18);
+    0 0 0 1px rgba(214,181,112,.18),
+    0 8px 18px rgba(0,0,0,.28),
+    inset 0 0 0 1px rgba(255,255,255,.12);
 }
 .fragToken.on{
   opacity:1;
-  filter:saturate(1.32) brightness(1.08) contrast(1.08);
+  filter:saturate(1.18) brightness(1.02) contrast(1.06);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.08), rgba(0,0,0,.08)),
+    var(--frag-img, url('/fragments/FRAGMENTOS.png')) center/cover no-repeat;
   box-shadow:
-    0 0 0 1px rgba(250,204,21,.68),
-    0 0 14px rgba(250,204,21,.32),
-    0 8px 18px rgba(10,18,35,.28),
-    inset 0 0 0 1px rgba(255,255,255,.25);
+    0 0 0 1px rgba(214,181,112,.30),
+    0 10px 22px rgba(0,0,0,.35),
+    inset 0 0 0 1px rgba(255,255,255,.16);
 }
 .fragToken.spent{
   position:relative;
-  opacity:.88;
-  filter: saturate(.88) brightness(.9) contrast(1.02);
+  opacity:.5;
+  filter: grayscale(.82) saturate(.34) brightness(.54) contrast(.98);
   background:
     linear-gradient(180deg, rgba(9,18,37,.40), rgba(2,6,23,.58)),
     var(--frag-back-img, url('/ui/layout-background.ai.png')) center/cover no-repeat;
   box-shadow:
-    0 0 0 1px rgba(148,163,184,.46),
-    0 6px 14px rgba(0,0,0,.24),
-    inset 0 0 0 1px rgba(255,255,255,.08);
+    0 0 0 1px rgba(71,85,105,.42),
+    0 6px 14px rgba(0,0,0,.28),
+    inset 0 0 0 1px rgba(255,255,255,.05);
   transform:rotateY(180deg);
 }
 .arenaGrid{
@@ -655,7 +662,7 @@ html,body{height:100%;font-family:-apple-system,system-ui,'Segoe UI',Roboto,'Hel
   padding:1px 5px;
   font-size:10px;
   color:#c9d4e7;
-  z-index:10;
+  z-index:30;
   pointer-events:none;
 }
 
@@ -669,7 +676,7 @@ html,body{height:100%;font-family:-apple-system,system-ui,'Segoe UI',Roboto,'Hel
   padding:1px 5px;
   font-size:10px;
   color:#c9d4e7;
-  z-index:10;
+  z-index:30;
   pointer-events:none;
 }
 

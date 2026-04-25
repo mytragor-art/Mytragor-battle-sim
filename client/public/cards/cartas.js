@@ -322,7 +322,7 @@ name: 'Tamanduá Guardião', kind: 'ally', img: '/allies/layout-tamanduaguardiao
     name: 'Gladiador Implacável', kind: 'ally', img: '/allies/layout-gladiadorimplacavel.ai.png', cost: 4, classe: 'Guerreiro', tipo: 'Humano', filiacao: 'Marcial', ac: 1, hp: 5, maxHp: 5, damage: 3, atkBonus: 3, keywords: [], effect: 'buff_on_kill', effectValue: { atk: 1, ac: 1 }, text: 'Quando este Aliado vencer um inimigo em combate e enviá-lo para o cemitério, coloque 1 marcador "Sangue" neste aliado. Ele recebe +1 de Ataque e +1 de Resistência para cada marcador Sangue nele.'
   },
   {
-  name: 'Yoran, Ronin Vigilante', kind: 'ally', img: '/allies/layout-yohanronin.ai.png', cost: 2, classe: 'Guerreiro', tipo: 'Humano', filiacao: 'Marcial', ac: 0, hp: 3, maxHp: 3, damage: 2, atkBonus: 2, keywords: [], effect: 'kornex_buff_per_marcial_in_play', effectValue: 1, text: 'Este aliado recebe +1 de Ataque para cada outra carta "Marcial" no campo de qualquer jogador.'
+  name: 'Yohan, Ronin Vigilante', aliases: ['Yoran, Ronin Vigilante'], kind: 'ally', img: '/allies/layout-yohanronin.ai.png', cost: 2, classe: 'Guerreiro', tipo: 'Humano', filiacao: 'Marcial', ac: 0, hp: 3, maxHp: 3, damage: 2, atkBonus: 2, keywords: [], effect: 'kornex_buff_per_marcial_in_play', effectValue: 1, text: 'Este aliado recebe +1 de Ataque para cada outra carta "Marcial" no campo de qualquer jogador.'
   },
   {
     name: 'Livro Arcano Instável', kind: 'equip', img: '/equip/layout-livroinstavel.ai.png', cost: 2, classe: '', tipo: 'Equipamento', filiacao: 'Arcana', effect: 'olhar_topo', atkBonus: 1, text: 'O aliado equipado recebe +1 de Ataque. Quando esta carta entrar em campo, olhe a carta do topo do seu deck. Você pode mantê-la no topo ou colocá-la no fundo do deck.'

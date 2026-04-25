@@ -634,6 +634,17 @@ function normalizeLeaderKey(value){
 	return String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '');
 }
 
+function normalizeCardName(value){
+	return String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+}
+
+function matchesCardName(card, value) {
+	const expected = normalizeCardName(value);
+	if (!expected || !card) return false;
+	if (normalizeCardName(card.name) === expected) return true;
+	return Array.isArray(card.aliases) && card.aliases.some(alias => normalizeCardName(alias) === expected);
+}
+
 function getDeckName(deck){
 	return deck.deckName || deck.leader || deck.leaderName || 'Deck';
 }
@@ -693,7 +704,7 @@ function resolveImg(path) {
 
 function getCardImg(cardName) {
 	if (!window.CARD_DEFS) return CARD_BACK_IMAGE;
-	const def = CARD_DEFS.find(c => c.name === cardName);
+	const def = CARD_DEFS.find(c => matchesCardName(c, cardName));
 	return resolveImg(def && def.img ? def.img : CARD_BACK_IMAGE);
 }
 

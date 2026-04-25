@@ -10,6 +10,15 @@
 
 <body>
 
+<svg id="attackArrowSvg" class="attackArrowSvg">
+  <defs>
+    <marker id="attackArrowHead" markerWidth="12" markerHeight="12" refX="10" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#ff2b2b"></path>
+    </marker>
+  </defs>
+  <path id="attackArrowPath" class="attackArrowPath" d=""></path>
+</svg>
+
 <div class="app">
   <div class="col" id="handsCol" aria-label="Mãos dos jogadores">
     <div class="handDock" id="enemyHandDock">

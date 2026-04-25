@@ -1,12 +1,13 @@
 /* Responsibility: wire Match UI with Colyseus network. This is the only place combining UI + NET. */
 
 import { bindMatchHandlers, connectClient, joinMatchById } from "../net/mp";
+import { animateCardTransfer, animateEl, bindAttackTargetHover, setChosenReady, setupAttackArrow, startAttackArrow, stopAttackArrow } from "../animations/animationHelpers";
 import { getGameInputs, log, logText, renderButtonRow } from "../ui/gameView";
 import { setupBoardScale } from "../ui/boardScale";
 import { setupArenaSlots } from "../ui/arenaSlots";
 import { getDisplayName } from "../ui/profile";
 import { resolveServerEndpoint } from "../config/runtime";
-import { canAttackCardQuiet, endAttackCleanup, resolveAttackOn, selectAttacker, type AttackSelection, type AttackTarget as BattleTarget, type BattleCard, type BattleRuntime, type BattleSide } from "../game/battle";
+import { canAttackCardQuiet, canAttackTargetQuiet, endAttackCleanup, resolveAttackOn, selectAttacker, type AttackSelection, type AttackTarget as BattleTarget, type BattleCard, type BattleRuntime, type BattleSide } from "../game/battle";
 
 type CardDef = {
 	name: string;
@@ -35,6 +36,39 @@ type InspectorView = {
 const view = getGameInputs();
 setupBoardScale();
 setupArenaSlots();
+setupAttackArrow();
+
+const previousLaneCards: Record<"you-field" | "ai-field" | "you-support" | "ai-support", string[]> = {
+	"you-field": [],
+	"ai-field": [],
+	"you-support": [],
+	"ai-support": []
+};
+
+const pendingLanePileFlights: Record<"you-field" | "ai-field" | "you-support" | "ai-support", Map<string, number>> = {
+	"you-field": new Map<string, number>(),
+	"ai-field": new Map<string, number>(),
+	"you-support": new Map<string, number>(),
+	"ai-support": new Map<string, number>()
+};
+
+const previousHandCards: Record<"youHand" | "aiHand", string[]> = {
+	"youHand": [],
+	"aiHand": []
+};
+
+type HandTransferSnapshot = {
+	cardId: string;
+	originRect: DOMRect;
+	imageSrc: string;
+};
+
+type LaneTransferSnapshot = {
+	cardId: string;
+	originRect: DOMRect;
+	imageSrc: string;
+	zoneId: "you-field" | "ai-field" | "you-support" | "ai-support";
+};
 
 const cardDefs = (window as Window & { CARD_DEFS?: CardDef[] }).CARD_DEFS ?? [];
 const cardLookup = new Map<string, CardDef>();
@@ -145,6 +179,20 @@ let lastTurnMarker = "";
 let lastMatchEndSeq = -1;
 let revealHideTimer: number | null = null;
 
+function animateChosenPowerActivation(side: BattleSide): void {
+	const leaderSlotId = side === "you" ? "you-leader" : "ai-leader";
+	animateEl(document.querySelector(`#${leaderSlotId} > .card`), "anim-power");
+	if (side === "you") animateEl(view.btnLeaderPower, "anim-power");
+}
+
+function animatePileEntryIfNeeded(slotId: string, previousCards: string[], nextCards: string[]): void {
+	if (nextCards.length <= previousCards.length) return;
+	const slotEl = document.getElementById(slotId);
+	if (!slotEl) return;
+	animateEl(slotEl.querySelector(":scope > .deckVisualCard:last-of-type"), "anim-pile-in");
+	animateEl(slotEl.querySelector(":scope > .slotCount"), "anim-pile-in");
+}
+
 const tappedBySide: Record<BattleSide, Set<number>> = {
 	you: new Set<number>(),
 	ai: new Set<number>()
@@ -156,6 +204,16 @@ const tappedLeaderBySide: Record<BattleSide, boolean> = {
 };
 
 const untapPulseBySide: Record<BattleSide, boolean> = {
+	you: false,
+	ai: false
+};
+
+const justUntappedBySide: Record<BattleSide, Set<number>> = {
+	you: new Set<number>(),
+	ai: new Set<number>()
+};
+
+const justUntappedLeaderBySide: Record<BattleSide, boolean> = {
 	you: false,
 	ai: false
 };
@@ -660,6 +718,19 @@ function countMarcialCardsInBattle(): number {
 	return total;
 }
 
+function isYohanCard(cardId: string): boolean {
+	const card = resolveCard(cardId);
+	const name = normalizeCardId(String(card?.name || cardId || ""));
+	return name === normalizeCardId("Yohan, Ronin Vigilante")
+		|| name === normalizeCardId("Yoran, Ronin Vigilante")
+		|| cardEffectIds(cardId).includes("kornex_buff_per_marcial_in_play");
+}
+
+function getMarcialBattleBonus(cardId: string): number {
+	if (!isYohanCard(cardId)) return 0;
+	return Math.max(0, countMarcialCardsInBattle() - 1);
+}
+
 function getCurrentLeaderHp(side: BattleSide): number {
 	const value = side === "you" ? currentMyLeaderHp : currentEnemyLeaderHp;
 	if (Number.isFinite(value) && value > 0) return value;
@@ -689,13 +760,65 @@ function getFieldAttackValue(side: BattleSide, index: number, cardId: string): n
 	total += getFieldVitalMarksForSide(side, index);
 	total += getFieldBloodMarksForSide(side, index);
 	total += getAuraAttackBonusForSide(side, cardId);
-	if (cardEffectIds(cardId).includes("kornex_buff_per_marcial_in_play")) total += Math.max(0, countMarcialCardsInBattle() - 1);
+	total += getMarcialBattleBonus(cardId);
 	return Math.max(0, total);
 }
 
 function getFieldResistanceValue(side: BattleSide, index: number, cardId: string): number {
 	const baseAc = Number(resolveCard(cardId)?.ac ?? 0);
 	return Math.max(0, baseAc + getFieldAcPermForSide(side, index) + getAttachedSupportNumericBonusForSide(side, index, "acBonus") + getFieldBloodMarksForSide(side, index));
+}
+
+function getBaseAllyInspectorStats(card: CardDef | undefined): Array<{ label: string; value: string; tone?: "good" | "bad" | "neutral" | "gold" }> {
+	const baseHp = Number(card?.hp || 1);
+	const baseAttack = Number(card?.atkBonus || card?.damage || 0);
+	const baseResistance = Number(card?.ac || 0);
+	return [
+		{ label: "Vida", value: String(baseHp) },
+		{ label: "Ataque", value: String(baseAttack) },
+		{ label: "Resistência", value: String(baseResistance) }
+	];
+}
+
+function formatStatWithDelta(total: number, base: number): string {
+	const diff = total - base;
+	if (diff === 0) return String(total);
+	return `${total} (${diff > 0 ? "+" : ""}${diff})`;
+}
+
+function getFallbackFieldInspectorStats(view: InspectorView, card: CardDef | undefined): Array<{ label: string; value: string; tone?: "good" | "bad" | "neutral" | "gold" }> {
+	const hpValues = view.side === "you" ? currentMyFieldHp : currentEnemyFieldHp;
+	const currentHp = Math.max(0, Number(hpValues[view.index || 0] ?? card?.hp ?? 1));
+	const baseHp = Number(card?.hp || 1);
+	const baseAttack = Number(card?.atkBonus || 0);
+	const baseResistance = Number(card?.ac || 0);
+	const marcialBonus = getMarcialBattleBonus(view.cardId);
+	const attackValue = baseAttack + marcialBonus;
+	const out: Array<{ label: string; value: string; tone?: "good" | "bad" | "neutral" | "gold" }> = [
+		{ label: "Vida", value: `${currentHp}/${baseHp}` },
+		{ label: "Ataque", value: formatStatWithDelta(attackValue, baseAttack), tone: attackValue > baseAttack ? "good" : "neutral" },
+		{ label: "Resistência", value: String(baseResistance) }
+	];
+	if (marcialBonus > 0) out.push({ label: "Bônus Marcial", value: `+${marcialBonus}`, tone: "gold" });
+	return out;
+}
+
+function getYohanInspectorStats(view: InspectorView, card: CardDef): Array<{ label: string; value: string; tone?: "good" | "bad" | "neutral" | "gold" }> {
+	const hpValues = view.side === "you" ? currentMyFieldHp : currentEnemyFieldHp;
+	const currentHp = Math.max(0, Number(hpValues[view.index] ?? card.hp ?? 1));
+	const baseHp = Number(card.hp || 1);
+	const baseAttack = Number(card.atkBonus || 0);
+	const baseResistance = Number(card.ac || 0);
+	const attack = getFieldAttackValue(view.side as BattleSide, view.index as number, view.cardId);
+	const resistance = getFieldResistanceValue(view.side as BattleSide, view.index as number, view.cardId);
+	const marcialBonus = getMarcialBattleBonus(view.cardId);
+	const out: Array<{ label: string; value: string; tone?: "good" | "bad" | "neutral" | "gold" }> = [
+		{ label: "Vida", value: `${currentHp}/${baseHp}` },
+		{ label: "Ataque", value: formatStatWithDelta(attack, baseAttack), tone: attack > baseAttack ? "good" : "neutral" },
+		{ label: "Resistência", value: formatStatWithDelta(resistance, baseResistance), tone: resistance > baseResistance ? "good" : "neutral" }
+	];
+	if (marcialBonus > 0) out.push({ label: "Bônus Marcial", value: `+${marcialBonus}`, tone: "gold" });
+	return out;
 }
 
 function getInspectorStats(view: InspectorView | null): Array<{ label: string; value: string; tone?: "good" | "bad" | "neutral" | "gold" }> {
@@ -713,6 +836,7 @@ function getInspectorStats(view: InspectorView | null): Array<{ label: string; v
 		];
 	}
 	if (view.lane === "field" && view.side && typeof view.index === "number") {
+		if (card && isYohanCard(view.cardId)) return getYohanInspectorStats(view, card);
 		const hpValues = view.side === "you" ? currentMyFieldHp : currentEnemyFieldHp;
 		const currentHp = Math.max(0, Number(hpValues[view.index] ?? 0));
 		const maxHp = getDisplayedFieldMaxHp(view.side, view.index, view.cardId);
@@ -721,11 +845,15 @@ function getInspectorStats(view: InspectorView | null): Array<{ label: string; v
 		const baseAttack = Number(card.atkBonus || 0);
 		const baseResistance = Number(card.ac || 0);
 		const baseHp = Number(card.hp || 1);
-		return [
-			{ label: "Vida", value: `${currentHp}/${maxHp}`, tone: currentHp < maxHp ? (currentHp / Math.max(1, maxHp) <= 0.5 ? "bad" : "neutral") : (maxHp > baseHp ? "good" : "neutral") },
-			{ label: "Ataque", value: String(attack), tone: attack > baseAttack ? "good" : (attack < baseAttack ? "bad" : "neutral") },
-			{ label: "Resistência", value: String(resistance), tone: resistance > baseResistance ? "good" : (resistance < baseResistance ? "bad" : "neutral") }
+		const marcialBonus = getMarcialBattleBonus(view.cardId);
+		const hpValue = maxHp === baseHp ? `${currentHp}/${maxHp}` : `${currentHp}/${maxHp} (${maxHp > baseHp ? "+" : ""}${maxHp - baseHp})`;
+		const out = [
+			{ label: "Vida", value: hpValue, tone: currentHp < maxHp ? (currentHp / Math.max(1, maxHp) <= 0.5 ? "bad" : "neutral") : (maxHp > baseHp ? "good" : "neutral") },
+			{ label: "Ataque", value: formatStatWithDelta(attack, baseAttack), tone: attack > baseAttack ? "good" : (attack < baseAttack ? "bad" : "neutral") },
+			{ label: "Resistência", value: formatStatWithDelta(resistance, baseResistance), tone: resistance > baseResistance ? "good" : (resistance < baseResistance ? "bad" : "neutral") }
 		];
+		if (marcialBonus > 0) out.push({ label: "Bônus Marcial", value: `+${marcialBonus}`, tone: "gold" });
+		return out;
 	}
 	if (view.lane === "support") {
 		return [
@@ -736,20 +864,30 @@ function getInspectorStats(view: InspectorView | null): Array<{ label: string; v
 		].filter(Boolean) as Array<{ label: string; value: string; tone?: "good" | "bad" | "neutral" | "gold" }>;
 	}
 	if (getCardKind(view.cardId) === "ally") {
-		const baseHp = Number(card.hp || 1);
-		const baseAttack = Number(card.atkBonus || card.damage || 0);
-		const baseResistance = Number(card.ac || 0);
-		return [
-			{ label: "Vida", value: String(baseHp) },
-			{ label: "Ataque", value: String(baseAttack) },
-			{ label: "Resistência", value: String(baseResistance) }
-		];
+		return getBaseAllyInspectorStats(card);
 	}
 	if (getCardKind(view.cardId) === "chosen") {
 		const baseHp = Number(card.hp || 20);
 		return [{ label: "Vida", value: String(baseHp), tone: "gold" }];
 	}
 	return [];
+}
+
+function getInspectorStatsSafe(view: InspectorView | null): Array<{ label: string; value: string; tone?: "good" | "bad" | "neutral" | "gold" }> {
+	try {
+		return getInspectorStats(view);
+	} catch {
+		const card = resolveCard(view?.cardId || "");
+		if (view?.lane === "field" && view.side && typeof view.index === "number") return getFallbackFieldInspectorStats(view, card);
+		if (getCardKind(view?.cardId || "") === "ally") return getBaseAllyInspectorStats(card);
+		return [];
+	}
+}
+
+function canSelectCombatTarget(target: BattleTarget): boolean {
+	if (!isMyTurn || currentPhase !== "COMBAT" || selectedAttackerPos === null) return false;
+	const runtime = getBattleRuntime();
+	return canAttackTargetQuiet(runtime, { side: "you", idx: selectedAttackerPos }, target);
 }
 
 function cardPreviewDetails(cardId: string, card: CardDef | undefined, includeCost = true, includeFiliation = true, view: InspectorView | null = null): string {
@@ -893,6 +1031,7 @@ function getBattleRuntime(): BattleRuntime {
 			if (!room) return;
 			if (selection.side !== "you") return;
 			if (selection.leader) return;
+			stopAttackArrow();
 				selectedAttackerPos = selection.idx;
 				// immediate visual: mark attacker as deitado (tapped) locally so player sees it
 				try {
@@ -936,6 +1075,7 @@ function beginBoardAttackFrom(index: number): void {
 	selectedAttackerPos = index;
 	selectedTargetType = "leader";
 	selectedTargetPos = null;
+	startAttackArrow(document.getElementById(`you-ally-${index}`));
 	if (view.selectedAttackerEl) view.selectedAttackerEl.textContent = `[${index}] ${currentMyField[index] || "—"}`;
 	if (view.selectedTargetEl) view.selectedTargetEl.textContent = "Líder inimigo";
 	selectAttacker(runtime, "you", index);
@@ -954,10 +1094,12 @@ function canSelectCombatAttacker(index: number): boolean {
 }
 
 function cancelBoardAttackSelection(): void {
+	stopAttackArrow();
 	endAttackCleanup(getBattleRuntime());
 }
 
 function resetBoardAttackSelection(): void {
+	stopAttackArrow();
 	selectedAttackerPos = null;
 	selectedTargetType = "leader";
 	selectedTargetPos = null;
@@ -967,6 +1109,7 @@ function resetBoardAttackSelection(): void {
 
 function resolveSelectedBoardAttack(target: BattleTarget): void {
 	resolveAttackOn(getBattleRuntime(), target);
+	stopAttackArrow();
 	resetBoardAttackSelection();
 }
 
@@ -1008,7 +1151,7 @@ function renderInspector(target: string | InspectorView | null): void {
 	img.src = asAssetPath(card?.img);
 	img.alt = card?.name || nextView.cardId;
 	stats.innerHTML = "";
-	for (const item of getInspectorStats(nextView)) {
+	for (const item of getInspectorStatsSafe(nextView)) {
 		const pill = document.createElement("div");
 		pill.className = `bigStat${item.tone ? ` bigStat--${item.tone}` : ""}`;
 		pill.textContent = `${item.label}: ${item.value}`;
@@ -1074,9 +1217,10 @@ function buildHandCard(cardId: string, selected: boolean, onClick?: () => void, 
 	return button;
 }
 
-function buildBackCard(): HTMLDivElement {
+function buildBackCard(cardId?: string): HTMLDivElement {
 	const back = document.createElement("div");
 	back.className = "card handCard slotCard slotCardBack";
+	if (cardId) back.dataset.cardId = cardId;
 	const image = document.createElement("img");
 	image.className = "slotCardImg";
 	image.src = asAssetPath(CARD_BACK_ASSET);
@@ -1086,6 +1230,327 @@ function buildBackCard(): HTMLDivElement {
 	};
 	back.appendChild(image);
 	return back;
+}
+
+function getNewHandEntryFlags(nextCards: string[], previousCards: string[]): boolean[] {
+	const previousCounts = new Map<string, number>();
+	for (const cardId of previousCards) {
+		previousCounts.set(cardId, (previousCounts.get(cardId) || 0) + 1);
+	}
+	return nextCards.map((cardId) => {
+		const remaining = previousCounts.get(cardId) || 0;
+		if (remaining > 0) {
+			previousCounts.set(cardId, remaining - 1);
+			return false;
+		}
+		return true;
+	});
+}
+
+function listRemovedCards(previousCards: string[], nextCards: string[]): string[] {
+	const nextCounts = new Map<string, number>();
+	for (const cardId of nextCards) nextCounts.set(cardId, (nextCounts.get(cardId) || 0) + 1);
+	const removed: string[] = [];
+	for (const cardId of previousCards) {
+		const remaining = nextCounts.get(cardId) || 0;
+		if (remaining > 0) {
+			nextCounts.set(cardId, remaining - 1);
+			continue;
+		}
+		removed.push(cardId);
+	}
+	return removed;
+}
+
+function listAddedCards(previousCards: string[], nextCards: string[]): string[] {
+	const previousCounts = new Map<string, number>();
+	for (const cardId of previousCards) previousCounts.set(cardId, (previousCounts.get(cardId) || 0) + 1);
+	const added: string[] = [];
+	for (const cardId of nextCards) {
+		const remaining = previousCounts.get(cardId) || 0;
+		if (remaining > 0) {
+			previousCounts.set(cardId, remaining - 1);
+			continue;
+		}
+		added.push(cardId);
+	}
+	return added;
+}
+
+function captureHandTransferSnapshots(containerId: "youHand" | "aiHand"): Map<string, HandTransferSnapshot[]> {
+	const container = document.getElementById(containerId);
+	const snapshots = new Map<string, HandTransferSnapshot[]>();
+	if (!container) return snapshots;
+	for (const node of Array.from(container.querySelectorAll(":scope > [data-card-id]"))) {
+		const el = node as HTMLElement;
+		const cardId = String(el.dataset.cardId || "").trim();
+		if (!cardId) continue;
+		const image = el.querySelector("img") as HTMLImageElement | null;
+		const entry: HandTransferSnapshot = {
+			cardId,
+			originRect: el.getBoundingClientRect(),
+			imageSrc: String(image?.src || "")
+		};
+		const bucket = snapshots.get(cardId) || [];
+		bucket.push(entry);
+		snapshots.set(cardId, bucket);
+	}
+	return snapshots;
+}
+
+function takeHandTransferSnapshot(snapshots: Map<string, HandTransferSnapshot[]>, cardId: string): HandTransferSnapshot | null {
+	const bucket = snapshots.get(cardId);
+	if (!bucket?.length) return null;
+	const snapshot = bucket.shift() || null;
+	if (!bucket.length) snapshots.delete(cardId);
+	return snapshot;
+}
+
+function consumeRemovedHandCard(removedCounts: Map<string, number>, cardId: string): boolean {
+	const remaining = removedCounts.get(cardId) || 0;
+	if (remaining <= 0) return false;
+	if (remaining === 1) removedCounts.delete(cardId);
+	else removedCounts.set(cardId, remaining - 1);
+	return true;
+}
+
+function animateHandTransferFromSnapshot(snapshots: Map<string, HandTransferSnapshot[]>, cardId: string, targetEl: Element | null): void {
+	const snapshot = takeHandTransferSnapshot(snapshots, cardId);
+	if (!snapshot || !targetEl) return;
+	animateCardTransfer(snapshot.originRect, targetEl, { imageSrc: snapshot.imageSrc, fadeOut: false, durationMs: 280 });
+}
+
+function takeAnyHandTransferSnapshot(snapshots: Map<string, HandTransferSnapshot[]>): HandTransferSnapshot | null {
+	for (const [cardId, bucket] of snapshots) {
+		if (!bucket.length) continue;
+		const snapshot = bucket.shift() || null;
+		if (!bucket.length) snapshots.delete(cardId);
+		return snapshot;
+	}
+	return null;
+}
+
+function animateAnyHandTransferFromSnapshot(snapshots: Map<string, HandTransferSnapshot[]>, targetEl: Element | null): void {
+	const snapshot = takeAnyHandTransferSnapshot(snapshots);
+	if (!snapshot || !targetEl) return;
+	animateCardTransfer(snapshot.originRect, targetEl, { imageSrc: snapshot.imageSrc, fadeOut: false, durationMs: 280 });
+}
+
+function animateVisibleHandTransfers(
+	snapshots: Map<string, HandTransferSnapshot[]>,
+	prefix: "you" | "ai",
+	previousHand: string[],
+	nextHand: string[],
+	previousField: string[],
+	nextField: string[],
+	previousSupport: string[],
+	nextSupport: string[],
+	previousEnv: string | null,
+	nextEnv: string | null,
+	previousGrave: string[],
+	nextGrave: string[],
+	previousBanished: string[],
+	nextBanished: string[]
+): void {
+	if (!previousHand.length) return;
+	const removedCounts = new Map<string, number>();
+	for (const cardId of listRemovedCards(previousHand, nextHand)) {
+		removedCounts.set(cardId, (removedCounts.get(cardId) || 0) + 1);
+	}
+	if (!removedCounts.size) return;
+
+	for (let index = 0; index < nextField.length; index += 1) {
+		const cardId = String(nextField[index] || "").trim();
+		if (!cardId || previousField[index] === cardId || !consumeRemovedHandCard(removedCounts, cardId)) continue;
+		animateHandTransferFromSnapshot(snapshots, cardId, document.querySelector(`#${prefix}-ally-${index} > .card`));
+	}
+	for (let index = 0; index < nextSupport.length; index += 1) {
+		const cardId = String(nextSupport[index] || "").trim();
+		if (!cardId || previousSupport[index] === cardId || !consumeRemovedHandCard(removedCounts, cardId)) continue;
+		animateHandTransferFromSnapshot(snapshots, cardId, document.querySelector(`#${prefix}-support-${index} > .card`));
+	}
+	if (nextEnv && nextEnv !== previousEnv && consumeRemovedHandCard(removedCounts, nextEnv)) {
+		animateHandTransferFromSnapshot(snapshots, nextEnv, document.querySelector(`#${prefix}-env > .card`));
+	}
+	for (const cardId of listAddedCards(previousGrave, nextGrave)) {
+		if (!consumeRemovedHandCard(removedCounts, cardId)) continue;
+		animateHandTransferFromSnapshot(snapshots, cardId, document.querySelector(`#${prefix}-grave > .deckVisualCard:last-of-type`) || document.getElementById(`${prefix}-grave`));
+	}
+	for (const cardId of listAddedCards(previousBanished, nextBanished)) {
+		if (!consumeRemovedHandCard(removedCounts, cardId)) continue;
+		animateHandTransferFromSnapshot(snapshots, cardId, document.querySelector(`#${prefix}-banished > .deckVisualCard:last-of-type`) || document.getElementById(`${prefix}-banished`));
+	}
+}
+
+function animateHiddenHandTransfers(
+	snapshots: Map<string, HandTransferSnapshot[]>,
+	prefix: "you" | "ai",
+	previousHand: string[],
+	nextHand: string[],
+	previousField: string[],
+	nextField: string[],
+	previousSupport: string[],
+	nextSupport: string[],
+	previousEnv: string | null,
+	nextEnv: string | null,
+	previousGrave: string[],
+	nextGrave: string[],
+	previousBanished: string[],
+	nextBanished: string[]
+): void {
+	let flightsRemaining = Math.max(0, previousHand.length - nextHand.length);
+	if (!flightsRemaining) return;
+	const tryAnimate = (targetEl: Element | null) => {
+		if (flightsRemaining <= 0) return;
+		animateAnyHandTransferFromSnapshot(snapshots, targetEl);
+		flightsRemaining -= 1;
+	};
+	for (let index = 0; index < nextField.length; index += 1) {
+		if (!nextField[index] || previousField[index] === nextField[index]) continue;
+		tryAnimate(document.querySelector(`#${prefix}-ally-${index} > .card`));
+	}
+	for (let index = 0; index < nextSupport.length; index += 1) {
+		if (!nextSupport[index] || previousSupport[index] === nextSupport[index]) continue;
+		tryAnimate(document.querySelector(`#${prefix}-support-${index} > .card`));
+	}
+	if (nextEnv && nextEnv !== previousEnv) tryAnimate(document.querySelector(`#${prefix}-env > .card`));
+	for (let index = 0; index < listAddedCards(previousGrave, nextGrave).length; index += 1) {
+		tryAnimate(document.querySelector(`#${prefix}-grave > .deckVisualCard:last-of-type`) || document.getElementById(`${prefix}-grave`));
+	}
+	for (let index = 0; index < listAddedCards(previousBanished, nextBanished).length; index += 1) {
+		tryAnimate(document.querySelector(`#${prefix}-banished > .deckVisualCard:last-of-type`) || document.getElementById(`${prefix}-banished`));
+	}
+}
+
+function queueLanePileFlights(zoneId: "you-field" | "ai-field" | "you-support" | "ai-support", cardIds: string[]): void {
+	const queue = pendingLanePileFlights[zoneId];
+	queue.clear();
+	for (const cardId of cardIds) {
+		if (!cardId) continue;
+		queue.set(cardId, (queue.get(cardId) || 0) + 1);
+	}
+}
+
+function consumeLanePileFlight(zoneId: "you-field" | "ai-field" | "you-support" | "ai-support", cardId: string): boolean {
+	const queue = pendingLanePileFlights[zoneId];
+	const remaining = queue.get(cardId) || 0;
+	if (remaining <= 0) return false;
+	if (remaining === 1) queue.delete(cardId);
+	else queue.set(cardId, remaining - 1);
+	return true;
+}
+
+function captureLaneTransferSnapshots(zoneIds: Array<"you-field" | "ai-field" | "you-support" | "ai-support">): Map<string, LaneTransferSnapshot[]> {
+	const snapshots = new Map<string, LaneTransferSnapshot[]>();
+	for (const zoneId of zoneIds) {
+		const zone = document.getElementById(zoneId);
+		if (!zone) continue;
+		for (const slot of Array.from(zone.children)) {
+			const cardEl = (slot as HTMLElement).querySelector(":scope > .card") as HTMLElement | null;
+			if (!cardEl) continue;
+			const cardId = String(cardEl.dataset.cardId || "").trim();
+			if (!cardId) continue;
+			const image = cardEl.querySelector("img") as HTMLImageElement | null;
+			const entry: LaneTransferSnapshot = {
+				cardId,
+				originRect: cardEl.getBoundingClientRect(),
+				imageSrc: String(image?.src || ""),
+				zoneId
+			};
+			const bucket = snapshots.get(cardId) || [];
+			bucket.push(entry);
+			snapshots.set(cardId, bucket);
+		}
+	}
+	return snapshots;
+}
+
+function takeLaneTransferSnapshot(snapshots: Map<string, LaneTransferSnapshot[]>, preferredZoneId: "you-field" | "ai-field" | "you-support" | "ai-support", cardId: string): LaneTransferSnapshot | null {
+	const bucket = snapshots.get(cardId);
+	if (!bucket?.length) return null;
+	const preferredIndex = bucket.findIndex((entry) => entry.zoneId === preferredZoneId);
+	const index = preferredIndex >= 0 ? preferredIndex : 0;
+	const [snapshot] = bucket.splice(index, 1);
+	if (!bucket.length) snapshots.delete(cardId);
+	return snapshot || null;
+}
+
+function animateBoardPileTransferFromSnapshot(
+	snapshots: Map<string, LaneTransferSnapshot[]>,
+	preferredZoneId: "you-field" | "ai-field" | "you-support" | "ai-support",
+	cardId: string,
+	targetEl: Element | null
+): void {
+	const snapshot = takeLaneTransferSnapshot(snapshots, preferredZoneId, cardId);
+	if (!snapshot || !targetEl) return;
+	animateCardTransfer(snapshot.originRect, targetEl, { imageSrc: snapshot.imageSrc, fadeOut: false, durationMs: 300 });
+}
+
+function animateBoardPileTransfers(
+	snapshots: Map<string, LaneTransferSnapshot[]>,
+	fieldZoneId: "you-field" | "ai-field",
+	supportZoneId: "you-support" | "ai-support",
+	previousField: string[],
+	nextField: string[],
+	previousSupport: string[],
+	nextSupport: string[],
+	previousGrave: string[],
+	nextGrave: string[],
+	previousBanished: string[],
+	nextBanished: string[],
+	graveTargetEl: Element | null,
+	banishedTargetEl: Element | null
+): void {
+	const removedField = listRemovedCards(previousField, nextField);
+	const removedSupport = listRemovedCards(previousSupport, nextSupport);
+	if (!removedField.length && !removedSupport.length) return;
+	const removedFieldCounts = new Map<string, number>();
+	for (const cardId of removedField) removedFieldCounts.set(cardId, (removedFieldCounts.get(cardId) || 0) + 1);
+	const removedSupportCounts = new Map<string, number>();
+	for (const cardId of removedSupport) removedSupportCounts.set(cardId, (removedSupportCounts.get(cardId) || 0) + 1);
+
+	const playTransfer = (cardId: string, targetEl: Element | null) => {
+		if (consumeRemovedHandCard(removedFieldCounts, cardId)) {
+			animateBoardPileTransferFromSnapshot(snapshots, fieldZoneId, cardId, targetEl);
+			return;
+		}
+		if (consumeRemovedHandCard(removedSupportCounts, cardId)) {
+			animateBoardPileTransferFromSnapshot(snapshots, supportZoneId, cardId, targetEl);
+		}
+	};
+
+	for (const cardId of listAddedCards(previousGrave, nextGrave)) playTransfer(cardId, graveTargetEl);
+	for (const cardId of listAddedCards(previousBanished, nextBanished)) playTransfer(cardId, banishedTargetEl);
+}
+
+function getBoardCardsMovingToPiles(
+	previousField: string[],
+	nextField: string[],
+	previousSupport: string[],
+	nextSupport: string[],
+	previousGrave: string[],
+	nextGrave: string[],
+	previousBanished: string[],
+	nextBanished: string[]
+): { field: string[]; support: string[] } {
+	const fieldCounts = new Map<string, number>();
+	for (const cardId of listRemovedCards(previousField, nextField)) fieldCounts.set(cardId, (fieldCounts.get(cardId) || 0) + 1);
+	const supportCounts = new Map<string, number>();
+	for (const cardId of listRemovedCards(previousSupport, nextSupport)) supportCounts.set(cardId, (supportCounts.get(cardId) || 0) + 1);
+	const field: string[] = [];
+	const support: string[] = [];
+	const addedToPiles = [
+		...listAddedCards(previousGrave, nextGrave),
+		...listAddedCards(previousBanished, nextBanished)
+	];
+	for (const cardId of addedToPiles) {
+		if (consumeRemovedHandCard(fieldCounts, cardId)) {
+			field.push(cardId);
+			continue;
+		}
+		if (consumeRemovedHandCard(supportCounts, cardId)) support.push(cardId);
+	}
+	return { field, support };
 }
 
 function pileCards(side: BattleSide, which: "deck" | "grave" | "banished"): string[] {
@@ -1572,6 +2037,8 @@ function renderPileCounts(prefix: "you" | "ai", data: any) {
 	const graveCards = asStringArray(data?.grave);
 	const banCards = asStringArray((data as any)?.banished || (data as any)?.ban);
 	const deckCards = asStringArray(data?.deck);
+	const previousGrave = prefix === "you" ? currentMyGrave : currentEnemyGrave;
+	const previousBanished = prefix === "you" ? currentMyBanished : currentEnemyBanished;
 	const graveCount = graveCards.length;
 	const banCount = banCards.length;
 	const deckCount = deckCards.length;
@@ -1582,6 +2049,8 @@ function renderPileCounts(prefix: "you" | "ai", data: any) {
 	renderDeckSlot(prefix === "you" ? "you-deck" : "ai-deck", prefix === "you" ? "youDeckCount" : "aiDeckCount", deckCount);
 	renderVisiblePileSlot(`${prefix}-grave`, `${prefix}GraveCount`, graveCards, false);
 	renderVisiblePileSlot(`${prefix}-banished`, `${prefix}BanCount`, banCards, false);
+	animatePileEntryIfNeeded(`${prefix}-grave`, previousGrave, graveCards);
+	animatePileEntryIfNeeded(`${prefix}-banished`, previousBanished, banCards);
 }
 
 function getFirstEmptyFieldPos(field: string[]): number {
@@ -1661,16 +2130,21 @@ function renderEnvSlot(slotId: "you-env" | "ai-env", envCardId: string | null, a
 function renderSideHand(containerId: "youHand" | "aiHand", cards: string[], selectable: boolean): void {
 	const container = document.getElementById(containerId);
 	if (!container) return;
+	const previousCards = previousHandCards[containerId] || [];
 	container.innerHTML = "";
 	if (!cards.length) {
+		previousHandCards[containerId] = [];
 		container.innerHTML = `<div style="opacity:.7;font-size:12px;padding:4px">—</div>`;
 		return;
 	}
+	const newEntryFlags = selectable
+		? getNewHandEntryFlags(cards, previousCards)
+		: cards.map((_, index) => index >= previousCards.length);
+	let renderedIndex = 0;
 	for (const cardId of cards) {
 		if (selectable) {
 			const selected = cardId === selectedHandCardId;
-			container.appendChild(
-				buildHandCard(cardId, selected, () => {
+			const cardEl = buildHandCard(cardId, selected, () => {
 					selectedHandCardId = cardId;
 					if (view.selectedCardEl) view.selectedCardEl.textContent = selectedHandCardId;
 					if (room && isMyTurn && currentPhase === "PREP") {
@@ -1678,24 +2152,38 @@ function renderSideHand(containerId: "youHand" | "aiHand", cards: string[], sele
 						return;
 					}
 					renderSideHand("youHand", cards, true);
-				}, { cardId, side: "you", lane: "hand" })
-			);
+				}, { cardId, side: "you", lane: "hand" });
+			container.appendChild(cardEl);
+			if (newEntryFlags[renderedIndex]) animateEl(cardEl, "anim-draw");
+			renderedIndex += 1;
 			continue;
 		}
-		container.appendChild(buildBackCard());
+		const backCardEl = buildBackCard();
+		backCardEl.dataset.cardId = cardId;
+		container.appendChild(backCardEl);
+		if (newEntryFlags[renderedIndex]) animateEl(backCardEl, "anim-draw");
+		renderedIndex += 1;
 	}
+	previousHandCards[containerId] = cards.slice();
 }
 
 function renderLane(zoneId: "you-field" | "ai-field" | "you-support" | "ai-support", cards: string[], activeIndex: number | null, onClick?: (index: number) => void, hpValues?: number[]): void {
 	const zone = document.getElementById(zoneId);
 	if (!zone) return;
+	const previousCards = previousLaneCards[zoneId] || [];
 	const slots = Array.from(zone.children) as HTMLElement[];
 	for (let index = 0; index < slots.length; index += 1) {
 		const slotEl = slots[index];
+		clearAttackTargetHover(slotEl);
+		const incomingCardId = String(cards[index] || "");
 		if (zoneId === "you-field") slotEl.id = `you-ally-${index}`;
 		else if (zoneId === "ai-field") slotEl.id = `ai-ally-${index}`;
 		else if (zoneId === "you-support") slotEl.id = `you-support-${index}`;
 		else if (zoneId === "ai-support") slotEl.id = `ai-support-${index}`;
+		const existingCard = slotEl.querySelector(":scope > .card") as HTMLElement | null;
+		if (existingCard && previousCards[index] && previousCards[index] !== incomingCardId) {
+			if (!consumeLanePileFlight(zoneId, previousCards[index])) spawnDeathGhost(slotEl, existingCard);
+		}
 		for (const oldCard of Array.from(slotEl.querySelectorAll(":scope > .card"))) oldCard.remove();
 		slotEl.classList.remove("clickable", "selected", "dropTarget");
 		slotEl.onclick = null;
@@ -1747,7 +2235,7 @@ function renderLane(zoneId: "you-field" | "ai-field" | "you-support" | "ai-suppo
 		if (zoneId === "ai-field" && tappedBySide.ai.has(index)) cardEl.classList.add("tapped");
 		if (zoneId === "you-field" && canSelectCombatAttacker(index)) cardEl.classList.add("can-attack");
 		const renderSide: BattleSide = side;
-		if ((zoneId === "you-field" || zoneId === "ai-field") && !cardEl.classList.contains("tapped") && untapPulseBySide[renderSide]) {
+		if ((zoneId === "you-field" || zoneId === "ai-field") && untapPulseBySide[renderSide] && justUntappedBySide[renderSide].has(index)) {
 			cardEl.classList.add("just-untapped");
 		}
 		cardEl.style.width = "100%";
@@ -1772,15 +2260,22 @@ function renderLane(zoneId: "you-field" | "ai-field" | "you-support" | "ai-suppo
 		slotEl.onmousemove = () => setHoveredInspector({ cardId, side, lane, index });
 		slotEl.onmouseleave = () => setHoveredInspector(null);
 		slotEl.appendChild(cardEl);
+		if (!previousCards[index] && cardId) animateEl(cardEl, "anim-play");
 		if (activeIndex === index) slotEl.classList.add("selected");
 		if (onClick) {
-			const allowClick = zoneId !== "you-field" || currentPhase !== "COMBAT" || canSelectCombatAttacker(index);
+			const allowClick = zoneId === "ai-field"
+				? (selectedAttackerPos === null || currentPhase !== "COMBAT" || !isMyTurn || canSelectCombatTarget({ type: "ally", side: "ai", index }))
+				: (zoneId !== "you-field" || currentPhase !== "COMBAT" || canSelectCombatAttacker(index));
 			if (allowClick) {
 				slotEl.classList.add("clickable");
 				slotEl.onclick = () => onClick(index);
+				if (zoneId === "ai-field" && isMyTurn && currentPhase === "COMBAT" && selectedAttackerPos !== null && canSelectCombatTarget({ type: "ally", side: "ai", index })) {
+					(slotEl as HTMLElement & { __attackHoverCleanup?: (() => void) | null }).__attackHoverCleanup = bindAttackTargetHover(slotEl);
+				}
 			}
 		}
 	}
+	previousLaneCards[zoneId] = cards.slice();
 }
 
 function renderLeaderSlot(slotId: "you-leader" | "ai-leader", leaderId: string, currentHpValue?: number): void {
@@ -1793,8 +2288,10 @@ function renderLeaderSlot(slotId: "you-leader" | "ai-leader", leaderId: string, 
 	const cardEl = buildHandCard(leader, false, undefined, { cardId: leader, side, lane: "leader" });
 	cardEl.className = "card slotCard";
 	const tapped = side === "you" ? currentMyLeaderTapped : currentEnemyLeaderTapped;
+	const leaderPowerReady = side === "you" && hasManualLeaderPower(leader) && canUseLeaderPower();
 	if (tapped) cardEl.classList.add("tapped");
-	if (!tapped && untapPulseBySide[side]) cardEl.classList.add("just-untapped");
+	if (untapPulseBySide[side] && justUntappedLeaderBySide[side]) cardEl.classList.add("just-untapped");
+	setChosenReady(cardEl, leaderPowerReady);
 	cardEl.style.width = "100%";
 	cardEl.style.height = "100%";
 	cardEl.style.margin = "0";
@@ -1996,6 +2493,49 @@ function goLobby() {
 	window.location.href = `./lobby.html?endpoint=${encodeURIComponent(endpoint)}`;
 }
 
+function animatePhaseChange(phase: string) {
+	animateEl(document.getElementById("phaseBar"), "anim-phase");
+	animateEl(view.turnPhaseEl, "anim-phase");
+	animateEl(document.querySelector(`.phaseItem[data-phase="${phase}"]`), "anim-phase");
+}
+
+function clearAttackTargetHover(el: HTMLElement | null) {
+	const cleanup = (el as (HTMLElement & { __attackHoverCleanup?: (() => void) | null }) | null)?.__attackHoverCleanup;
+	if (cleanup) cleanup();
+	if (el) (el as HTMLElement & { __attackHoverCleanup?: (() => void) | null }).__attackHoverCleanup = null;
+}
+
+function spawnDeathGhost(slotEl: HTMLElement, sourceCard: HTMLElement) {
+	const ghost = sourceCard.cloneNode(true) as HTMLElement;
+	ghost.style.position = "absolute";
+	ghost.style.inset = "0";
+	ghost.style.width = "100%";
+	ghost.style.height = "100%";
+	ghost.style.margin = "0";
+	ghost.style.pointerEvents = "none";
+	ghost.style.zIndex = "4";
+	ghost.classList.remove("can-attack", "just-untapped", "tapped");
+	slotEl.appendChild(ghost);
+	animateEl(ghost, "anim-death");
+	ghost.addEventListener("animationend", () => ghost.remove(), { once: true });
+}
+
+function animateFieldDamage(side: BattleSide, previousCards: string[], nextCards: string[], previousHp: number[], nextHp: number[]) {
+	for (let index = 0; index < nextCards.length; index += 1) {
+		if (!nextCards[index] || previousCards[index] !== nextCards[index]) continue;
+		const prev = Number(previousHp[index] ?? 0);
+		const next = Number(nextHp[index] ?? 0);
+		if (!(next < prev)) continue;
+		animateEl(document.querySelector(`#${side}-ally-${index} > .card`), "anim-damage");
+	}
+}
+
+function animateLeaderDamage(slotId: "you-leader" | "ai-leader", previousLeaderId: string, nextLeaderId: string, previousHp: number, nextHp: number) {
+	if (!previousLeaderId || previousLeaderId !== nextLeaderId) return;
+	if (!(Number(nextHp) < Number(previousHp))) return;
+	animateEl(document.querySelector(`#${slotId} > .card`), "anim-damage");
+}
+
 function renderHand(hand: string[]) {
 	renderButtonRow("hand", hand.map((c) => `${c} (Custo 1)`), hand.findIndex((c) => c === selectedHandCardId), "outline:2px solid #f8d46d;", (index) => {
 		selectedHandCardId = hand[index] || null;
@@ -2110,13 +2650,26 @@ async function joinMatch() {
 						showVictory(result);
 					}
 				}
+				if (name === "EFFECT") {
+					const side = sideFromServerSlot((msg?.slot || "") as "p1" | "p2");
+					const effect = String(msg?.effect || "").trim();
+					if (side && ["valbrak_citizen_boost", "ademais_spider_burst", "leafae_vital_guard"].includes(effect)) {
+						animateChosenPowerActivation(side);
+					}
+				}
 				if (name === "TURN_START") {
 					const side = sideFromServerSlot((msg?.turnSlot || "") as "p1" | "p2");
 					if (side) {
+						justUntappedBySide[side] = new Set(tappedBySide[side]);
+						justUntappedLeaderBySide[side] = tappedLeaderBySide[side];
 						tappedBySide[side].clear();
 						tappedLeaderBySide[side] = false;
 						untapPulseBySide[side] = true;
-						setTimeout(() => { untapPulseBySide[side] = false; }, 260);
+						setTimeout(() => {
+							untapPulseBySide[side] = false;
+							justUntappedBySide[side].clear();
+							justUntappedLeaderBySide[side] = false;
+						}, 260);
 						summonedBySide[side].clear();
 					}
 				}
@@ -2143,6 +2696,27 @@ async function joinMatch() {
 
 				if (!slot) slot = inferSlotFromState(state);
 				if (!slot) return;
+
+				const previousMyField = currentMyField.slice();
+				const previousMyFieldHp = currentMyFieldHp.slice();
+				const previousMySupport = currentMySupport.slice();
+				const previousMyEnv = currentMyEnv;
+				const previousMyGrave = currentMyGrave.slice();
+				const previousMyBanished = currentMyBanished.slice();
+				const previousMyHand = previousHandCards.youHand.slice();
+				const myHandTransferSnapshots = captureHandTransferSnapshots("youHand");
+				const previousEnemyHand = previousHandCards.aiHand.slice();
+				const enemyHandTransferSnapshots = captureHandTransferSnapshots("aiHand");
+				const previousEnemyField = currentEnemyField.slice();
+				const previousEnemyFieldHp = currentEnemyFieldHp.slice();
+				const previousEnemySupport = currentEnemySupport.slice();
+				const previousEnemyGrave = currentEnemyGrave.slice();
+				const previousEnemyBanished = currentEnemyBanished.slice();
+				const boardTransferSnapshots = captureLaneTransferSnapshots(["you-field", "you-support", "ai-field", "ai-support"]);
+				const previousMyLeader = currentMyLeader;
+				const previousMyLeaderHp = currentMyLeaderHp;
+				const previousEnemyLeader = currentEnemyLeader;
+				const previousEnemyLeaderHp = currentEnemyLeaderHp;
 
 				const my = slot === "p1" ? state?.game?.p1 : state?.game?.p2;
 				const enemy = slot === "p1" ? state?.game?.p2 : state?.game?.p1;
@@ -2222,6 +2796,30 @@ async function joinMatch() {
 				currentEnemyLeaderBlessing = Number((enemy as any)?.leaderBlessing || 0);
 				currentEnemyLeaderVitalMarks = Number((enemy as any)?.leaderVitalMarks || 0);
 				currentEnemyLeaderSpiderMarks = Number((enemy as any)?.leaderSpiderMarks || 0);
+				const myBoardCardsToPiles = getBoardCardsMovingToPiles(
+					previousMyField,
+					myField,
+					previousMySupport,
+					mySupport,
+					previousMyGrave,
+					currentMyGrave,
+					previousMyBanished,
+					currentMyBanished
+				);
+				const enemyBoardCardsToPiles = getBoardCardsMovingToPiles(
+					previousEnemyField,
+					enemyField,
+					previousEnemySupport,
+					enemySupport,
+					previousEnemyGrave,
+					currentEnemyGrave,
+					previousEnemyBanished,
+					currentEnemyBanished
+				);
+				queueLanePileFlights("you-field", myBoardCardsToPiles.field);
+				queueLanePileFlights("you-support", myBoardCardsToPiles.support);
+				queueLanePileFlights("ai-field", enemyBoardCardsToPiles.field);
+				queueLanePileFlights("ai-support", enemyBoardCardsToPiles.support);
 				const myShadowPenalty = hasShadowPenaltyForPlayer(my, currentMyLeader, currentMyEnv, enemyEnv);
 				const enemyShadowPenalty = hasShadowPenaltyForPlayer(enemy, currentEnemyLeader, enemyEnv, currentMyEnv);
 				const enemyHandCount = Number(enemy?.hand?.length ?? 0);
@@ -2230,6 +2828,7 @@ async function joinMatch() {
 				if (phase !== currentPhase) {
 					resetBoardAttackSelection();
 					cancelBoardAttackSelection();
+					animatePhaseChange(phase);
 				}
 				isMyTurn = myTurn;
 				currentPhase = phase;
@@ -2245,10 +2844,14 @@ async function joinMatch() {
 				if (myLeaderSlot) myLeaderSlot.onclick = null;
 				const enemyLeaderSlot = document.getElementById("ai-leader");
 				if (enemyLeaderSlot) {
+					clearAttackTargetHover(enemyLeaderSlot as HTMLElement);
 					enemyLeaderSlot.onclick = () => {
-						if (!isMyTurn || currentPhase !== "COMBAT" || selectedAttackerPos === null) return;
+						if (!canSelectCombatTarget({ type: "leader", side: "ai" })) return;
 						resolveSelectedBoardAttack({ type: "leader", side: "ai" });
 					};
+					if (canSelectCombatTarget({ type: "leader", side: "ai" })) {
+						(enemyLeaderSlot as HTMLElement & { __attackHoverCleanup?: (() => void) | null }).__attackHoverCleanup = bindAttackTargetHover(enemyLeaderSlot);
+					}
 				}
 				renderEnvSlot("you-env", currentMyEnv, true);
 				renderEnvSlot("ai-env", enemyEnv, false);
@@ -2269,6 +2872,72 @@ async function joinMatch() {
 				renderMySupport(mySupport);
 				renderEnemyField(enemyField, enemyFieldHp);
 				renderEnemySupport(enemySupport);
+				animateVisibleHandTransfers(
+					myHandTransferSnapshots,
+					"you",
+					previousMyHand,
+					hand,
+					previousMyField,
+					myField,
+					previousMySupport,
+					mySupport,
+					previousMyEnv,
+					currentMyEnv,
+					previousMyGrave,
+					currentMyGrave,
+					previousMyBanished,
+					currentMyBanished
+				);
+				animateHiddenHandTransfers(
+					enemyHandTransferSnapshots,
+					"ai",
+					previousEnemyHand,
+					previousHandCards.aiHand,
+					previousEnemyField,
+					enemyField,
+					previousEnemySupport,
+					enemySupport,
+					null,
+					enemyEnv,
+					previousEnemyGrave,
+					currentEnemyGrave,
+					previousEnemyBanished,
+					currentEnemyBanished
+				);
+				animateBoardPileTransfers(
+					boardTransferSnapshots,
+					"you-field",
+					"you-support",
+					previousMyField,
+					myField,
+					previousMySupport,
+					mySupport,
+					previousMyGrave,
+					currentMyGrave,
+					previousMyBanished,
+					currentMyBanished,
+					document.querySelector("#you-grave > .deckVisualCard:last-of-type") || document.getElementById("you-grave"),
+					document.querySelector("#you-banished > .deckVisualCard:last-of-type") || document.getElementById("you-banished")
+				);
+				animateBoardPileTransfers(
+					boardTransferSnapshots,
+					"ai-field",
+					"ai-support",
+					previousEnemyField,
+					enemyField,
+					previousEnemySupport,
+					enemySupport,
+					previousEnemyGrave,
+					currentEnemyGrave,
+					previousEnemyBanished,
+					currentEnemyBanished,
+					document.querySelector("#ai-grave > .deckVisualCard:last-of-type") || document.getElementById("ai-grave"),
+					document.querySelector("#ai-banished > .deckVisualCard:last-of-type") || document.getElementById("ai-banished")
+				);
+				animateFieldDamage("you", previousMyField, myField, previousMyFieldHp, myFieldHp);
+				animateFieldDamage("ai", previousEnemyField, enemyField, previousEnemyFieldHp, enemyFieldHp);
+				animateLeaderDamage("you-leader", previousMyLeader, currentMyLeader, previousMyLeaderHp, currentMyLeaderHp);
+				animateLeaderDamage("ai-leader", previousEnemyLeader, currentEnemyLeader, previousEnemyLeaderHp, currentEnemyLeaderHp);
 				setInspector(hoveredInspectorView || selectedInspectorView || (selectedHandCardId ? { cardId: selectedHandCardId, side: "you", lane: "hand" } : null));
 				if (view.btnPlay) view.btnPlay.disabled = !(myTurn && phase === "PREP" && !!selectedHandCardId);
 				if (view.btnLeaderPower) {
@@ -2294,6 +2963,7 @@ if (view.btnJoin) view.btnJoin.onclick = () => void joinMatch();
 if (view.btnPlay) view.btnPlay.onclick = () => selectedHandCardId && tryPlayCard(selectedHandCardId);
 if (view.btnLeaderPower) view.btnLeaderPower.onclick = () => {
 	if (!canUseLeaderPower()) return;
+	animateChosenPowerActivation("you");
 	room?.send("leader_power");
 };
 if (view.btnAttack) view.btnAttack.onclick = () => {
