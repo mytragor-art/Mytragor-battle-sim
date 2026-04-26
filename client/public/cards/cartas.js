@@ -301,7 +301,7 @@ name: 'Tamanduá Guardião', kind: 'ally', img: '/allies/layout-tamanduaguardiao
     effectA: { type: 'exhaust_martial_to_displace_ally' }, effectB: { type: 'search_deck', query: {kind: 'spell', filiacao: 'Marcial'}, max:12, shuffleAfter: true }, text: 'Escolha 1: • Exaura um aliado "Marcial" que você controla: desloque 1 aliado inimigo. • Adicione à sua 1 carta de magia "Marcial" do seu baralho. Em seguida embaralhe seu baralho.'
   },
   {
-  name: 'Fruto Abençoado', kind: 'spell', img: '/spell/layout-frutoabencoado.ai.png', cost: 0, classe: '', tipo: 'Magia', filiacao: 'Neutra', escolha1: true, resolveZone: 'banished',
+  name: 'Fruto Abençoado', kind: 'spell', img: '/spell/layout-frutoabencoado.ai.png?v=20260426-1', cost: 0, classe: '', tipo: 'Magia', filiacao: 'Neutra', escolha1: true, resolveZone: 'banished',
     effectA: { type: 'heal', value: 1 },
     effectB: { type: 'fragment_back', value: 1 },
     text: 'Escolha 1: • Cure 1 de Vida de um personagem. • Recupere 1 fragmento. Desloque esta carta após resolver.'
@@ -339,7 +339,7 @@ name: 'Tamanduá Guardião', kind: 'ally', img: '/allies/layout-tamanduaguardiao
   
   // --- Cartas de exemplo para testar search_deck ---
  {
-    name: 'Bom Fruto', kind: 'spell', img: '/spell/layout-bomfruto.ai.png', cost: 2, classe: '', tipo: 'Magia', filiacao: 'Religioso',
+    name: 'Bom Fruto', kind: 'spell', img: '/spell/layout-bomfruto.ai.png?v=20260426-1', cost: 2, classe: '', tipo: 'Magia', filiacao: 'Religioso',
     effect: 'search_deck', query: { name: 'Fruto Abençoado' }, max: 12, title: 'Buscar Fruto Abençoado', shuffleAfter: true, text: 'Procure em seu baralho por 1 carta "Fruto Abençoado", revele-a e coloque-a em sua mão. Depois, embaralhe seu baralho.'
   },
   {

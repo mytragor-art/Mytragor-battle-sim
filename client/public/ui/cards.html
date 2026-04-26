@@ -202,6 +202,13 @@
       return filename.replace(/\.png$/i,'').replace(/_/g,' ').replace(/\b(\w)/g, s=>s.toUpperCase());
     }
 
+    function withAssetVersion(dir, file){
+      if (dir === '../spell/' && (file === 'layout-bomfruto.ai.png' || file === 'layout-frutoabencoado.ai.png')) {
+        return `${dir}${file}?v=20260426-1`;
+      }
+      return dir + file;
+    }
+
     function showCollection(title, files){
       collectionArea.innerHTML = '';
       const header = document.createElement('div'); header.style.display='flex'; header.style.justifyContent='space-between'; header.style.alignItems='center';
@@ -217,7 +224,7 @@
         const type = entry.type || 'ally';
 
         const item = document.createElement('div'); item.className='cardItem';
-        const img = document.createElement('img'); img.src = dir + file; img.alt = niceName(file); img.loading = 'lazy'; img.decoding = 'async';
+        const img = document.createElement('img'); img.src = withAssetVersion(dir, file); img.alt = niceName(file); img.loading = 'lazy'; img.decoding = 'async';
         const meta = document.createElement('div'); meta.className='meta';
         meta.textContent = (
           type === 'env' ? 'Ambiente' :
