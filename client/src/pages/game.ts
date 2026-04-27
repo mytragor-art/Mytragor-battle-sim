@@ -2472,18 +2472,19 @@ function asBoolArray(value: any): boolean[] {
 }
 
 function inferSlotFromState(state: any): "p1" | "p2" | null {
-	if (!selfSessionId) return null;
+	const resolvedSessionId = selfSessionId || (typeof room?.sessionId === "string" ? room.sessionId : null);
+	if (!resolvedSessionId) return null;
 	const players = state?.players;
 	if (!players) return null;
 	if (typeof players.get === "function") {
-		const p = players.get(selfSessionId);
+		const p = players.get(resolvedSessionId);
 		if (p?.slot === "p1" || p?.slot === "p2") return p.slot;
 	}
-	const byKey = players[selfSessionId];
+	const byKey = players[resolvedSessionId];
 	if (byKey?.slot === "p1" || byKey?.slot === "p2") return byKey.slot;
 	for (const key of Object.keys(players)) {
 		const p = players[key];
-		if (p?.sessionId === selfSessionId && (p?.slot === "p1" || p?.slot === "p2")) return p.slot;
+		if (p?.sessionId === resolvedSessionId && (p?.slot === "p1" || p?.slot === "p2")) return p.slot;
 	}
 	return null;
 }
@@ -2599,6 +2600,7 @@ async function joinMatch() {
 		client = await connectClient(view.endpointEl.value.trim());
 		room = await joinMatchById(client, targetRoomId, { joinToken });
 		roomId = room.id;
+		selfSessionId = typeof room?.sessionId === "string" ? room.sessionId : selfSessionId;
 		const displayName = getDisplayName();
 		if (displayName) {
 			room.send("set_name", { name: displayName });
