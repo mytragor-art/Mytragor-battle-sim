@@ -3,6 +3,7 @@
 import { Room, Client } from "colyseus";
 import { findCardDef } from "../game/cardCatalog";
 import { MatchState, MatchPlayerState } from "./schema/MatchState";
+import { buildSpectatorSnapshot, publishSpectatorSnapshot, relaySpectatorEvent } from "./spectatorBridge";
 import {
 	type Slot,
 	type AttackTarget,
@@ -40,6 +41,15 @@ export class MatchRoom extends Room<MatchState> {
 		return String(name || "").trim().slice(0, 18);
 	}
 
+	private broadcastMatchEvent(name: string, payload: any) {
+		this.broadcast(name, payload);
+		relaySpectatorEvent(this.roomId, name, payload);
+	}
+
+	private publishSpectatorState() {
+		publishSpectatorSnapshot(this.roomId, buildSpectatorSnapshot(this.state));
+	}
+
 	private sessionIdBySlot(slot: Slot): string | null {
 		for (const p of this.state.players.values()) {
 			if (p.slot === slot) return p.sessionId;
@@ -75,7 +85,8 @@ export class MatchRoom extends Room<MatchState> {
 			const loser = player.slot === "p1" || player.slot === "p2" ? player.slot as Slot : null;
 			if (!loser) return;
 			this.activeChoiceSessionId = null;
-			finishMatch(this.state, loser, "inactivity", (name, payload) => this.broadcast(name, payload));
+			finishMatch(this.state, loser, "inactivity", (name, payload) => this.broadcastMatchEvent(name, payload));
+			this.publishSpectatorState();
 		}, 80_000);
 	}
 
@@ -164,6 +175,16 @@ export class MatchRoom extends Room<MatchState> {
 
 	onCreate(options: any) {
 		this.setState(new MatchState());
+		const reservations = Array.isArray(options?.seatReservations) ? options.seatReservations : [];
+		const p1Reservation = reservations.find((reservation: any) => reservation?.slot === "p1");
+		const p2Reservation = reservations.find((reservation: any) => reservation?.slot === "p2");
+		this.setMetadata({
+			title: `${String(p1Reservation?.displayName || "Jogador 1")} vs ${String(p2Reservation?.displayName || "Jogador 2")}`,
+			p1Name: String(p1Reservation?.displayName || "Jogador 1"),
+			p2Name: String(p2Reservation?.displayName || "Jogador 2"),
+			p1LeaderId: String(options?.p1?.leaderId || ""),
+			p2LeaderId: String(options?.p2?.leaderId || "")
+		});
 		for (const reservation of Array.isArray(options?.seatReservations) ? options.seatReservations : []) {
 			const joinToken = String(reservation?.joinToken || "").trim();
 			const lobbySessionId = String(reservation?.lobbySessionId || "").trim();
@@ -176,17 +197,20 @@ export class MatchRoom extends Room<MatchState> {
 			});
 		}
 		const starterSlot: Slot = options?.starterSlot === "p2" ? "p2" : "p1";
-		initGame(this.state, options?.p1, options?.p2, (name, payload) => this.broadcast(name, payload), this.attackedThisTurn, this.summonedThisTurn, this.triggeredLeaderThisTurn, starterSlot, this.askChoice);
+		initGame(this.state, options?.p1, options?.p2, (name, payload) => this.broadcastMatchEvent(name, payload), this.attackedThisTurn, this.summonedThisTurn, this.triggeredLeaderThisTurn, starterSlot, this.askChoice);
+		this.publishSpectatorState();
 
 		this.onMessage("next_phase", (client) => {
 			if (!this.isValidTurnAction(client, ["INITIAL", "PREP", "COMBAT"])) return;
-			nextPhase(this.state, (name, payload) => this.broadcast(name, payload));
+			nextPhase(this.state, (name, payload) => this.broadcastMatchEvent(name, payload));
+			this.publishSpectatorState();
 			this.refreshInactivityTimer();
 		});
 
 		this.onMessage("end_turn", (client) => {
 			if (!this.isValidTurnAction(client, ["END"])) return;
-			endTurn(this.state, (name, payload) => this.broadcast(name, payload), this.attackedThisTurn, this.summonedThisTurn, this.triggeredLeaderThisTurn, this.askChoice);
+			endTurn(this.state, (name, payload) => this.broadcastMatchEvent(name, payload), this.attackedThisTurn, this.summonedThisTurn, this.triggeredLeaderThisTurn, this.askChoice);
+			this.publishSpectatorState();
 			this.refreshInactivityTimer();
 		});
 
@@ -197,7 +221,8 @@ export class MatchRoom extends Room<MatchState> {
 			const targetPos = Number(msg?.targetPos);
 			const cardKind = String(msg?.cardKind || "");
 			if (!slot || !cardId) return;
-			playCard(this.state, slot, cardId, Number.isInteger(targetPos) ? targetPos : undefined, cardKind, (name, payload) => this.broadcast(name, payload), this.summonedThisTurn, this.triggeredLeaderThisTurn, this.askChoice);
+			playCard(this.state, slot, cardId, Number.isInteger(targetPos) ? targetPos : undefined, cardKind, (name, payload) => this.broadcastMatchEvent(name, payload), this.summonedThisTurn, this.triggeredLeaderThisTurn, this.askChoice);
+			this.publishSpectatorState();
 			this.refreshInactivityTimer();
 		});
 
@@ -205,7 +230,8 @@ export class MatchRoom extends Room<MatchState> {
 			if (!this.isValidTurnAction(client, ["PREP"])) return;
 			const slot = getSlotBySession(this.state, client.sessionId);
 			if (!slot) return;
-			activateLeaderPower(this.state, slot, (name, payload) => this.broadcast(name, payload), this.askChoice);
+			activateLeaderPower(this.state, slot, (name, payload) => this.broadcastMatchEvent(name, payload), this.askChoice);
+			this.publishSpectatorState();
 			this.refreshInactivityTimer();
 		});
 
@@ -223,6 +249,7 @@ export class MatchRoom extends Room<MatchState> {
 			this.activeChoiceSessionId = null;
 			const optionId = msg?.optionId == null ? null : String(msg.optionId);
 			pending.resolve(optionId);
+			this.publishSpectatorState();
 			if (!this.activeChoiceSessionId) this.refreshInactivityTimer();
 		});
 
@@ -237,7 +264,8 @@ export class MatchRoom extends Room<MatchState> {
 			const rawTarget = String(msg?.target || "leader");
 			const target: AttackTarget = rawTarget === "ally" ? { type: "ally", targetPos: Number(msg?.targetPos) } : { type: "leader" };
 			if (target.type === "ally" && (!Number.isInteger(target.targetPos) || target.targetPos < 0)) return;
-			attack(this.state, slot, attackerPos, target, (name, payload) => this.broadcast(name, payload), this.attackedThisTurn, this.summonedThisTurn, this.triggeredLeaderThisTurn, this.askChoice);
+			attack(this.state, slot, attackerPos, target, (name, payload) => this.broadcastMatchEvent(name, payload), this.attackedThisTurn, this.summonedThisTurn, this.triggeredLeaderThisTurn, this.askChoice);
+			this.publishSpectatorState();
 			this.refreshInactivityTimer();
 		});
         
@@ -245,6 +273,7 @@ export class MatchRoom extends Room<MatchState> {
 			const p = this.state.players.get(client.sessionId);
 			if (!p) return;
 			p.displayName = this.sanitizeDisplayName(msg?.name);
+			this.publishSpectatorState();
 		});
 	}
 
@@ -259,6 +288,7 @@ export class MatchRoom extends Room<MatchState> {
 		this.consumedJoinTokens.add(reservedSeat.joinToken);
 		if (!this.state.hostSessionId) this.state.hostSessionId = client.sessionId;
 		client.send("assign_slot", { slot: player.slot, sessionId: client.sessionId });
+		this.publishSpectatorState();
 		this.refreshInactivityTimer();
 	}
 
@@ -275,7 +305,7 @@ export class MatchRoom extends Room<MatchState> {
 		}
 		if (this.activeChoiceSessionId === client.sessionId) this.activeChoiceSessionId = null;
 		if (leavingSlot && this.state.phase !== "FINISHED" && remainingPlayers.length > 0) {
-			finishMatch(this.state, leavingSlot, "opponent_left", (name, payload) => this.broadcast(name, payload));
+			finishMatch(this.state, leavingSlot, "opponent_left", (name, payload) => this.broadcastMatchEvent(name, payload));
 		}
 		this.clearInactivityTimer();
 		this.state.players.delete(client.sessionId);
@@ -283,6 +313,7 @@ export class MatchRoom extends Room<MatchState> {
 			const first = [...this.state.players.values()][0];
 			this.state.hostSessionId = first?.sessionId || "";
 		}
+		this.publishSpectatorState();
 		this.refreshInactivityTimer();
 	}
 

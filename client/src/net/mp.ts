@@ -35,6 +35,19 @@ export async function joinMatchById(client: Colyseus.Client, matchRoomId: string
 	return client.joinById(matchRoomId, options);
 }
 
+export async function resolveSpectatorRoomId(endpoint: string, matchRoomId: string): Promise<string> {
+	const normalizedEndpoint = String(endpoint || "").trim();
+	const httpEndpoint = normalizedEndpoint.replace(/^ws/i, "http").replace(/\/+$/, "");
+	const response = await fetch(`${httpEndpoint}/matches/${encodeURIComponent(matchRoomId)}/spectator`);
+	if (!response.ok) {
+		throw new Error(`spectator_room_lookup_failed:${response.status}`);
+	}
+	const payload = await response.json();
+	const spectatorRoomId = String(payload?.spectatorRoomId || "").trim();
+	if (!spectatorRoomId) throw new Error("spectator_room_lookup_empty");
+	return spectatorRoomId;
+}
+
 export function bindLobbyHandlers(room: Colyseus.Room, handlers: LobbyHandlers) {
 	room.onMessage("assign_slot", (msg: any) => handlers.onAssignSlot?.(msg));
 	room.onMessage("lobby_state", (msg: any) => handlers.onLobbyState?.(msg));
@@ -57,5 +70,6 @@ export function bindMatchHandlers(room: Colyseus.Room, handlers: MatchHandlers) 
 	room.onMessage("choice_waiting_end", (msg: any) => handlers.onLog?.("CHOICE_WAITING_END", msg));
 	room.onMessage("error", (msg: any) => handlers.onError?.(msg));
 	room.onStateChange((state: any) => handlers.onStateSync?.(state));
+	if ((room as any).state) handlers.onStateSync?.((room as any).state);
 	room.onLeave((code) => handlers.onLeave?.(code));
 }

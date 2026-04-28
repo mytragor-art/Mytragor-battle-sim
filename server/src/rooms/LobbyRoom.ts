@@ -180,11 +180,16 @@ export class LobbyRoom extends Room<LobbyState> {
 			seatReservations
 		});
 
+		const spectatorRoom = await matchMaker.createRoom("spectator", {
+			matchRoomId: matchRoom.roomId
+		});
+
 		for (const reservation of seatReservations) {
 			const targetClient = this.clients.find((client) => client.sessionId === reservation.lobbySessionId);
 			if (!targetClient) continue;
 			targetClient.send("start_match", {
 				matchRoomId: matchRoom.roomId,
+				spectatorRoomId: spectatorRoom.roomId,
 				joinToken: reservation.joinToken,
 				slot: reservation.slot,
 				starterSlot

@@ -3,7 +3,7 @@
 import { bindLobbyHandlers, connectClient, joinOrCreateLobby } from "../net/mp";
 import { resolveHttpBase, resolveServerEndpoint } from "../config/runtime";
 import { hydrateSavedDecks, readSavedDecks, type SavedDeck } from "../ui/deckStore";
-import { getLobbyInputs, log, renderPlayers, renderRooms, setReadyUI, setSlotPhase } from "../ui/lobbyView";
+import { getLobbyInputs, log, renderMatches, renderPlayers, renderRooms, setReadyUI, setSlotPhase } from "../ui/lobbyView";
 import { getDisplayName } from "../ui/profile";
 
 const view = getLobbyInputs();
@@ -19,6 +19,7 @@ let selectedRoomId: string | null = null;
 let roomPollTimer: number | null = null;
 let availableDecks: SavedDeck[] = readSavedDecks();
 let deckRefreshToken = 0;
+let selectedMatchRoomId: string | null = null;
 
 function applySelectedDeck(deck: SavedDeck | null) {
 	selectedDeck = deck;
@@ -119,6 +120,22 @@ function renderRoomList(rooms: Array<{ roomId: string; clients: number; maxClien
 	if (!rooms.length) selectedRoomId = null;
 }
 
+function watchMatch(matchRoomId: string) {
+	const endpoint = view.endpointEl?.value.trim() || resolveServerEndpoint(window.location.search);
+	window.location.href = `./game.html?roomId=${encodeURIComponent(matchRoomId)}&endpoint=${encodeURIComponent(endpoint)}&spectator=1`;
+}
+
+function renderMatchList(matches: Array<{ roomId: string; spectatorRoomId?: string; clients: number; maxClients: number; metadata?: { title?: string; p1Name?: string; p2Name?: string; p1LeaderId?: string; p2LeaderId?: string } }>) {
+	renderMatches(matches, selectedMatchRoomId, (roomId) => {
+		selectedMatchRoomId = roomId;
+		renderMatchList(matches);
+	}, (roomId) => {
+		selectedMatchRoomId = roomId;
+		watchMatch(roomId);
+	});
+	if (!matches.length) selectedMatchRoomId = null;
+}
+
 async function refreshRooms() {
 	if (!view.endpointEl) return;
 	const base = endpointToHttpBase(view.endpointEl.value.trim());
@@ -132,10 +149,27 @@ async function refreshRooms() {
 	}
 }
 
+async function refreshMatches() {
+	if (!view.endpointEl) return;
+	const base = endpointToHttpBase(view.endpointEl.value.trim());
+	try {
+		const resp = await fetch(`${base}/matches`);
+		if (!resp.ok) throw new Error(`status_${resp.status}`);
+		const data = await resp.json();
+		renderMatchList(Array.isArray(data?.rooms) ? data.rooms : []);
+	} catch (error) {
+		log("MATCH_LIST_ERROR", { base, error: String(error) });
+	}
+}
+
 function startRoomPolling() {
 	if (roomPollTimer) window.clearInterval(roomPollTimer);
 	void refreshRooms();
-	roomPollTimer = window.setInterval(() => void refreshRooms(), 3000);
+	void refreshMatches();
+	roomPollTimer = window.setInterval(() => {
+		void refreshRooms();
+		void refreshMatches();
+	}, 3000);
 }
 
 async function joinLobby(): Promise<boolean> {
@@ -227,6 +261,7 @@ document.addEventListener("visibilitychange", () => {
 	if (!document.hidden) void refreshSavedDecks();
 });
 if (view.btnRefreshRooms) view.btnRefreshRooms.onclick = () => void refreshRooms();
+if (view.btnRefreshMatches) view.btnRefreshMatches.onclick = () => void refreshMatches();
 if (view.btnJoinSelected) view.btnJoinSelected.onclick = () => {
 	if (!view.roomIdEl || !selectedRoomId) return;
 	view.roomIdEl.value = selectedRoomId;

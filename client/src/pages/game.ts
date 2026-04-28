@@ -1,6 +1,6 @@
 /* Responsibility: wire Match UI with Colyseus network. This is the only place combining UI + NET. */
 
-import { bindMatchHandlers, connectClient, joinMatchById } from "../net/mp";
+import { bindMatchHandlers, connectClient, joinMatchById, resolveSpectatorRoomId } from "../net/mp";
 import { animateCardTransfer, animateEl, bindAttackTargetHover, setChosenReady, setupAttackArrow, startAttackArrow, stopAttackArrow } from "../animations/animationHelpers";
 import { getGameInputs, log, logText, renderButtonRow } from "../ui/gameView";
 import { setupBoardScale } from "../ui/boardScale";
@@ -116,6 +116,10 @@ let room: any = null;
 let slot: "p1" | "p2" | null = null;
 let roomId: string | null = null;
 let selfSessionId: string | null = null;
+let isSpectator = false;
+let spectatorMatchRoomId: string | null = null;
+let spectatorReconnectAttempts = 0;
+let spectatorReconnectTimer: number | null = null;
 let selectedHandCardId: string | null = null;
 let selectedInspectorView: InspectorView | null = null;
 let hoveredInspectorView: InspectorView | null = null;
@@ -234,6 +238,7 @@ function currentBattlePhase(): string {
 }
 
 function ownerLabel(serverSlotRaw: string): string {
+	if (isSpectator) return serverSlotRaw === "p2" ? "Jogador 2" : "Jogador 1";
 	const side = sideFromServerSlot((serverSlotRaw || "") as "p1" | "p2");
 	return side === "you" ? "Você" : "Oponente";
 }
@@ -2489,9 +2494,382 @@ function inferSlotFromState(state: any): "p1" | "p2" | null {
 	return null;
 }
 
+function getPublicPlayerName(state: any, targetSlot: "p1" | "p2"): string {
+	const fallback = targetSlot === "p1" ? "Jogador 1" : "Jogador 2";
+	const players = state?.players;
+	if (!players || typeof players !== "object") return fallback;
+	for (const player of Object.values(players as Record<string, any>)) {
+		if (player?.slot !== targetSlot) continue;
+		const displayName = String(player?.displayName || "").trim();
+		return displayName || fallback;
+	}
+	return fallback;
+}
+
+function syncHandTitles(state: any): void {
+	const enemyHandTitleEl = document.querySelector("#enemyHandDock .handDockTitle") as HTMLElement | null;
+	const myHandTitleEl = document.querySelector("#youHandDock .handDockTitle") as HTMLElement | null;
+	const enemyHandEl = document.getElementById("aiHand");
+	const myHandEl = document.getElementById("youHand");
+	if (!enemyHandTitleEl || !myHandTitleEl || !enemyHandEl || !myHandEl) return;
+	if (!isSpectator) {
+		enemyHandTitleEl.textContent = "Mão do Oponente";
+		myHandTitleEl.textContent = "Sua Mão";
+		enemyHandEl.setAttribute("aria-label", "Mão do oponente");
+		myHandEl.setAttribute("aria-label", "Sua mão");
+		return;
+	}
+	const mySlot = slot === "p2" ? "p2" : "p1";
+	const enemySlot = mySlot === "p1" ? "p2" : "p1";
+	const myName = getPublicPlayerName(state, mySlot);
+	const enemyName = getPublicPlayerName(state, enemySlot);
+	myHandTitleEl.textContent = `Mão de ${myName}`;
+	enemyHandTitleEl.textContent = `Mão de ${enemyName}`;
+	myHandEl.setAttribute("aria-label", `Mão de ${myName}`);
+	enemyHandEl.setAttribute("aria-label", `Mão de ${enemyName}`);
+}
+
 function goLobby() {
 	const endpoint = view.endpointEl?.value?.trim() || defaultWsEndpoint();
 	window.location.href = `./lobby.html?endpoint=${encodeURIComponent(endpoint)}`;
+}
+
+function clearSpectatorReconnectTimer() {
+	if (spectatorReconnectTimer) {
+		window.clearTimeout(spectatorReconnectTimer);
+		spectatorReconnectTimer = null;
+	}
+}
+
+async function reconnectSpectator(): Promise<boolean> {
+	if (!isSpectator || !spectatorMatchRoomId || !view.endpointEl) return false;
+	try {
+		const endpoint = view.endpointEl.value.trim();
+		const targetJoinRoomId = await resolveSpectatorRoomId(endpoint, spectatorMatchRoomId);
+		room = await joinMatchById(client, targetJoinRoomId, {});
+		roomId = room.id;
+		selfSessionId = typeof room?.sessionId === "string" ? room.sessionId : selfSessionId;
+		slot = "p1";
+		bindActiveMatchRoom();
+		logText("Reconectado ao modo espectador.");
+		spectatorReconnectAttempts = 0;
+		return true;
+	} catch (error) {
+		log("ERROR", { text: `Falha ao reconectar espectador: ${String(error)}` });
+		return false;
+	}
+}
+
+function scheduleSpectatorReconnect(code: number) {
+	if (!isSpectator || !spectatorMatchRoomId) {
+		setTimeout(() => goLobby(), 900);
+		return;
+	}
+	if (spectatorReconnectAttempts >= 3) {
+		log("DISCONNECTED", { code, text: "Conexão do espectador encerrada. Voltando ao lobby..." });
+		setTimeout(() => goLobby(), 900);
+		return;
+	}
+	clearSpectatorReconnectTimer();
+	const nextAttempt = spectatorReconnectAttempts + 1;
+	spectatorReconnectAttempts = nextAttempt;
+	logText(`Reconectando espectador (${nextAttempt}/3)...`);
+	spectatorReconnectTimer = window.setTimeout(() => {
+		void reconnectSpectator().then((ok) => {
+			if (!ok) scheduleSpectatorReconnect(code);
+		});
+	}, 700);
+}
+
+function bindActiveMatchRoom() {
+	if (!room) return;
+	bindMatchHandlers(room, {
+		onAssignSlot: (msg) => {
+			isSpectator = msg?.spectator === true || isSpectator;
+			slot = isSpectator ? "p1" : (msg?.slot || null);
+			selfSessionId = typeof msg?.sessionId === "string" ? msg.sessionId : null;
+			log("ASSIGN_SLOT", msg);
+		},
+		onCardPlayed: (msg) => {
+			diaryCardPlayed(msg);
+			const side = sideFromServerSlot((msg?.slot || "") as "p1" | "p2");
+			if (!side) return;
+			if (String(msg?.lane || "") !== "field") return;
+			const targetPos = Number(msg?.targetPos);
+			if (!Number.isInteger(targetPos) || targetPos < 0) return;
+			summonedBySide[side].add(targetPos);
+		},
+		onEffectChoice: (msg) => {
+			if (!isSpectator) showEffectChoiceModal(msg);
+		},
+		onRevealTopCard: (msg) => {
+			if (!isSpectator) showRevealTopCardModal(msg);
+		},
+		onError: (msg) => log("ERROR", msg),
+		onLeave: (code) => {
+			hideCardChoiceModal(false);
+			hideChoiceWaitingModal();
+			if (isSpectator) {
+				scheduleSpectatorReconnect(code);
+				return;
+			}
+			log("DISCONNECTED", { code, text: "Conexão encerrada. Voltando ao lobby..." });
+			setTimeout(() => goLobby(), 900);
+		},
+		onLog: (name, msg) => {
+			if (name === "ATTACK_RESOLVED") diaryAttackResolved(msg);
+			else if (name === "TURN_START") diaryTurnStart(msg);
+			else if (name === "EFFECT") diaryEffect(msg);
+			else if (name === "CHOICE_WAITING") {
+				if (!isSpectator) {
+					showChoiceWaitingModal(msg);
+					logText(`⏳ Seu oponente está escolhendo: ${String(msg?.title || "uma opção")}.`);
+				}
+			}
+			else if (name === "CHOICE_WAITING_END") {
+				if (!isSpectator) hideChoiceWaitingModal();
+			}
+			else if (name === "MATCH_ENDED") {
+				const winner = ownerLabel(String(msg?.winner || ""));
+				logText(`🏁 Partida encerrada. Vencedor: ${winner}.`);
+				hideCardChoiceModal(false);
+				hideChoiceWaitingModal();
+				const seq = Number(msg?.seq ?? -1);
+				if (seq !== lastMatchEndSeq) {
+					lastMatchEndSeq = seq;
+					const result = describeMatchEnded(msg);
+					showVictory(result);
+				}
+			}
+			if (name === "EFFECT") {
+				const side = sideFromServerSlot((msg?.slot || "") as "p1" | "p2");
+				const effect = String(msg?.effect || "").trim();
+				if (side && ["valbrak_citizen_boost", "ademais_spider_burst", "leafae_vital_guard"].includes(effect)) {
+					animateChosenPowerActivation(side);
+				}
+			}
+			if (name === "TURN_START") {
+				const side = sideFromServerSlot((msg?.turnSlot || "") as "p1" | "p2");
+				if (side) {
+					justUntappedBySide[side] = new Set(tappedBySide[side]);
+					justUntappedLeaderBySide[side] = tappedLeaderBySide[side];
+					tappedBySide[side].clear();
+					tappedLeaderBySide[side] = false;
+					untapPulseBySide[side] = true;
+					setTimeout(() => {
+						untapPulseBySide[side] = false;
+						justUntappedBySide[side].clear();
+						justUntappedLeaderBySide[side] = false;
+					}, 260);
+					summonedBySide[side].clear();
+				}
+			}
+			if (name === "ATTACK_RESOLVED") {
+				const side = sideFromServerSlot((msg?.attackerSlot || "") as "p1" | "p2");
+				const attackerPos = Number(msg?.attackerPos);
+				if (!side) return;
+				if (Number.isInteger(attackerPos) && attackerPos >= 0) tappedBySide[side].add(attackerPos);
+				if (msg?.attackerLeader === true || msg?.attacker === "leader" || attackerPos === -1) tappedLeaderBySide[side] = true;
+			}
+		},
+		onStateSync: (state) => {
+			if (view.turnPhaseEl) view.turnPhaseEl.textContent = formatPhaseLabel(state?.game?.phase);
+			if (view.roomIdViewEl) view.roomIdViewEl.textContent = roomId ?? "—";
+			if (view.slotEl) view.slotEl.textContent = isSpectator ? "Espectador" : (slot ?? "—");
+			if (view.turnEl) view.turnEl.textContent = String(state?.game?.turn ?? "—");
+			if (view.turnSlotEl) view.turnSlotEl.textContent = String(state?.game?.turnSlot ?? "—");
+			if (view.p1HpEl) view.p1HpEl.textContent = String(state?.game?.p1?.hp ?? "—");
+			if (view.p2HpEl) view.p2HpEl.textContent = String(state?.game?.p2?.hp ?? "—");
+			if (view.p1FragmentsEl) view.p1FragmentsEl.textContent = String(state?.game?.p1?.fragments ?? "—");
+			if (view.p2FragmentsEl) view.p2FragmentsEl.textContent = String(state?.game?.p2?.fragments ?? "—");
+			if (view.p1HandCountEl) view.p1HandCountEl.textContent = String(state?.game?.p1?.hand?.length ?? "—");
+			if (view.p2HandCountEl) view.p2HandCountEl.textContent = String(state?.game?.p2?.hand?.length ?? "—");
+
+			if (isSpectator && !slot) slot = "p1";
+			if (!slot && !isSpectator) slot = inferSlotFromState(state);
+			if (!slot) return;
+			syncHandTitles(state);
+
+			const previousMyField = currentMyField.slice();
+			const previousMyFieldHp = currentMyFieldHp.slice();
+			const previousMySupport = currentMySupport.slice();
+			const previousMyEnv = currentMyEnv;
+			const previousMyGrave = currentMyGrave.slice();
+			const previousMyBanished = currentMyBanished.slice();
+			const previousMyHand = previousHandCards.youHand.slice();
+			const myHandTransferSnapshots = captureHandTransferSnapshots("youHand");
+			const previousEnemyHand = previousHandCards.aiHand.slice();
+			const enemyHandTransferSnapshots = captureHandTransferSnapshots("aiHand");
+			const previousEnemyField = currentEnemyField.slice();
+			const previousEnemyFieldHp = currentEnemyFieldHp.slice();
+			const previousEnemySupport = currentEnemySupport.slice();
+			const previousEnemyGrave = currentEnemyGrave.slice();
+			const previousEnemyBanished = currentEnemyBanished.slice();
+			const boardTransferSnapshots = captureLaneTransferSnapshots(["you-field", "you-support", "ai-field", "ai-support"]);
+			const previousMyLeader = currentMyLeader;
+			const previousMyLeaderHp = currentMyLeaderHp;
+			const previousEnemyLeader = currentEnemyLeader;
+			const previousEnemyLeaderHp = currentEnemyLeaderHp;
+
+			const my = slot === "p1" ? state?.game?.p1 : state?.game?.p2;
+			const enemy = slot === "p1" ? state?.game?.p2 : state?.game?.p1;
+			currentMyFragments = Number(my?.fragments ?? 0);
+			currentEnemyFragments = Number(enemy?.fragments ?? 0);
+			const turnMarker = `${String(state?.game?.turn || "")}::${String(state?.game?.turnSlot || "")}`;
+			if (turnMarker !== lastTurnMarker) {
+				lastTurnMarker = turnMarker;
+				const startedSide = sideFromServerSlot((state?.game?.turnSlot || "") as "p1" | "p2");
+				if (startedSide === "you") myTurnCount += 1;
+				if (startedSide === "ai") enemyTurnCount += 1;
+			}
+			const hand = asStringArray(my?.hand);
+			currentMyDeck = asStringArray(my?.deck);
+			currentMyGrave = asStringArray(my?.grave);
+			currentMyBanished = asStringArray((my as any)?.banished || (my as any)?.ban);
+			const myField = asStringArray(my?.field);
+			const myFieldHp = asNumberArray(my?.fieldHp);
+			const myFieldAtkTemp = asNumberArray((my as any)?.fieldAtkTemp);
+			const myFieldAtkPerm = asNumberArray((my as any)?.fieldAtkPerm);
+			const myFieldAcPerm = asNumberArray((my as any)?.fieldAcPerm);
+			const myFieldBlessing = asNumberArray((my as any)?.fieldBlessing);
+			const myFieldBlood = asNumberArray((my as any)?.fieldBloodMarks);
+			const myFieldVital = asNumberArray((my as any)?.fieldVitalMarks);
+			const myFieldTapped = asBoolArray((my as any)?.fieldTapped);
+			tappedBySide.you.clear();
+			for (let i = 0; i < myFieldTapped.length; i += 1) if (myFieldTapped[i]) tappedBySide.you.add(i);
+			currentMyField = myField;
+			currentMyFieldHp = myFieldHp;
+			currentMyFieldAtkTemp = myFieldAtkTemp;
+			currentMyFieldAtkPerm = myFieldAtkPerm;
+			currentMyFieldAcPerm = myFieldAcPerm;
+			currentMyFieldBlessing = myFieldBlessing;
+			currentMyFieldBloodMarks = myFieldBlood;
+			currentMyFieldVitalMarks = myFieldVital;
+			const mySupport = asStringArray(my?.support);
+			currentMySupport = mySupport;
+			currentMySupportAttach = asNumberArray((my as any)?.supportAttachTo);
+			currentMySupportCounters = asNumberArray((my as any)?.supportCounters);
+			currentMyEnv = String(my?.env || "") || null;
+			currentMyLeader = String(my?.leaderId || "");
+			currentMyLeaderHp = Number(my?.hp ?? 0);
+			currentMyLeaderTapped = !!(my as any)?.leaderTapped;
+			currentMyLeaderBlessing = Number((my as any)?.leaderBlessing || 0);
+			currentMyLeaderVitalMarks = Number((my as any)?.leaderVitalMarks || 0);
+			currentMyLeaderSpiderMarks = Number((my as any)?.leaderSpiderMarks || 0);
+			const enemyField = asStringArray(enemy?.field);
+			currentEnemyDeck = asStringArray(enemy?.deck);
+			currentEnemyGrave = asStringArray(enemy?.grave);
+			currentEnemyBanished = asStringArray((enemy as any)?.banished || (enemy as any)?.ban);
+			const enemyFieldHp = asNumberArray(enemy?.fieldHp);
+			const enemyFieldAtkTemp = asNumberArray((enemy as any)?.fieldAtkTemp);
+			const enemyFieldAtkPerm = asNumberArray((enemy as any)?.fieldAtkPerm);
+			const enemyFieldAcPerm = asNumberArray((enemy as any)?.fieldAcPerm);
+			const enemyFieldBlessing = asNumberArray((enemy as any)?.fieldBlessing);
+			const enemyFieldBlood = asNumberArray((enemy as any)?.fieldBloodMarks);
+			const enemyFieldVital = asNumberArray((enemy as any)?.fieldVitalMarks);
+			const enemyFieldTapped = asBoolArray((enemy as any)?.fieldTapped);
+			tappedBySide.ai.clear();
+			for (let i = 0; i < enemyFieldTapped.length; i += 1) if (enemyFieldTapped[i]) tappedBySide.ai.add(i);
+			currentEnemyField = enemyField;
+			currentEnemyFieldHp = enemyFieldHp;
+			currentEnemyFieldAtkTemp = enemyFieldAtkTemp;
+			currentEnemyFieldAtkPerm = enemyFieldAtkPerm;
+			currentEnemyFieldAcPerm = enemyFieldAcPerm;
+			currentEnemyFieldBlessing = enemyFieldBlessing;
+			currentEnemyFieldBloodMarks = enemyFieldBlood;
+			currentEnemyFieldVitalMarks = enemyFieldVital;
+			const enemySupport = asStringArray(enemy?.support);
+			currentEnemySupport = enemySupport;
+			currentEnemySupportAttach = asNumberArray((enemy as any)?.supportAttachTo);
+			currentEnemySupportCounters = asNumberArray((enemy as any)?.supportCounters);
+			const enemyEnv = String(enemy?.env || "") || null;
+			currentEnemyLeader = String(enemy?.leaderId || "");
+			currentEnemyLeaderHp = Number(enemy?.hp ?? 0);
+			currentEnemyLeaderTapped = !!(enemy as any)?.leaderTapped;
+			currentEnemyLeaderBlessing = Number((enemy as any)?.leaderBlessing || 0);
+			currentEnemyLeaderVitalMarks = Number((enemy as any)?.leaderVitalMarks || 0);
+			currentEnemyLeaderSpiderMarks = Number((enemy as any)?.leaderSpiderMarks || 0);
+			const myBoardCardsToPiles = getBoardCardsMovingToPiles(previousMyField, myField, previousMySupport, mySupport, previousMyGrave, currentMyGrave, previousMyBanished, currentMyBanished);
+			const enemyBoardCardsToPiles = getBoardCardsMovingToPiles(previousEnemyField, enemyField, previousEnemySupport, enemySupport, previousEnemyGrave, currentEnemyGrave, previousEnemyBanished, currentEnemyBanished);
+			queueLanePileFlights("you-field", myBoardCardsToPiles.field);
+			queueLanePileFlights("you-support", myBoardCardsToPiles.support);
+			queueLanePileFlights("ai-field", enemyBoardCardsToPiles.field);
+			queueLanePileFlights("ai-support", enemyBoardCardsToPiles.support);
+			const myShadowPenalty = hasShadowPenaltyForPlayer(my, currentMyLeader, currentMyEnv, enemyEnv);
+			const enemyShadowPenalty = hasShadowPenaltyForPlayer(enemy, currentEnemyLeader, enemyEnv, currentMyEnv);
+			const enemyHandCount = Number(enemy?.hand?.length ?? 0);
+			const myTurn = !isSpectator && String(state?.game?.turnSlot || "") === slot;
+			const phase = String(state?.game?.phase || "");
+			if (phase !== currentPhase) {
+				resetBoardAttackSelection();
+				cancelBoardAttackSelection();
+				animatePhaseChange(phase);
+			}
+			isMyTurn = myTurn;
+			currentPhase = phase;
+			if (!myTurn || phase !== "COMBAT") {
+				resetBoardAttackSelection();
+				cancelBoardAttackSelection();
+			}
+			renderFragments("you-fragsDock", my?.fragments, my?.fragmentMax, getFragImage(my), myShadowPenalty);
+			renderFragments("ai-fragsDock", enemy?.fragments, enemy?.fragmentMax, getFragImage(enemy), enemyShadowPenalty);
+			renderLeaderSlot("you-leader", String(my?.leaderId || ""), Number(my?.hp ?? 0));
+			renderLeaderSlot("ai-leader", String(enemy?.leaderId || ""), Number(enemy?.hp ?? 0));
+			const myLeaderSlot = document.getElementById("you-leader");
+			if (myLeaderSlot) myLeaderSlot.onclick = null;
+			const enemyLeaderSlot = document.getElementById("ai-leader");
+			if (enemyLeaderSlot) {
+				clearAttackTargetHover(enemyLeaderSlot as HTMLElement);
+				enemyLeaderSlot.onclick = () => {
+					if (!canSelectCombatTarget({ type: "leader", side: "ai" })) return;
+					resolveSelectedBoardAttack({ type: "leader", side: "ai" });
+				};
+				if (canSelectCombatTarget({ type: "leader", side: "ai" })) {
+					(enemyLeaderSlot as HTMLElement & { __attackHoverCleanup?: (() => void) | null }).__attackHoverCleanup = bindAttackTargetHover(enemyLeaderSlot);
+				}
+			}
+			renderEnvSlot("you-env", currentMyEnv, true);
+			renderEnvSlot("ai-env", enemyEnv, false);
+			renderPileCounts("you", my);
+			renderPileCounts("ai", enemy);
+			const pileModal = document.getElementById("pileModal") as HTMLElement | null;
+			if (pileModal && pileModal.style.display === "flex") renderPileModal();
+			renderSideHand("aiHand", Array.from({ length: enemyHandCount }, (_, index) => `opp-${index}`), false);
+			if (selectedHandCardId && !hand.includes(selectedHandCardId)) selectedHandCardId = null;
+			if (selectedAttackerPos !== null && (selectedAttackerPos < 0 || selectedAttackerPos >= myField.length)) selectedAttackerPos = null;
+			if (selectedTargetType === "ally" && (selectedTargetPos === null || selectedTargetPos >= enemyField.length)) {
+				selectedTargetType = "leader";
+				selectedTargetPos = null;
+				if (view.selectedTargetEl) view.selectedTargetEl.textContent = "Líder inimigo";
+			}
+			renderHand(hand);
+			renderMyField(myField, myFieldHp);
+			renderMySupport(mySupport);
+			renderEnemyField(enemyField, enemyFieldHp);
+			renderEnemySupport(enemySupport);
+			animateVisibleHandTransfers(myHandTransferSnapshots, "you", previousMyHand, hand, previousMyField, myField, previousMySupport, mySupport, previousMyEnv, currentMyEnv, previousMyGrave, currentMyGrave, previousMyBanished, currentMyBanished);
+			animateHiddenHandTransfers(enemyHandTransferSnapshots, "ai", previousEnemyHand, previousHandCards.aiHand, previousEnemyField, enemyField, previousEnemySupport, enemySupport, null, enemyEnv, previousEnemyGrave, currentEnemyGrave, previousEnemyBanished, currentEnemyBanished);
+			animateBoardPileTransfers(boardTransferSnapshots, "you-field", "you-support", previousMyField, myField, previousMySupport, mySupport, previousMyGrave, currentMyGrave, previousMyBanished, currentMyBanished, document.querySelector("#you-grave > .deckVisualCard:last-of-type") || document.getElementById("you-grave"), document.querySelector("#you-banished > .deckVisualCard:last-of-type") || document.getElementById("you-banished"));
+			animateBoardPileTransfers(boardTransferSnapshots, "ai-field", "ai-support", previousEnemyField, enemyField, previousEnemySupport, enemySupport, previousEnemyGrave, currentEnemyGrave, previousEnemyBanished, currentEnemyBanished, document.querySelector("#ai-grave > .deckVisualCard:last-of-type") || document.getElementById("ai-grave"), document.querySelector("#ai-banished > .deckVisualCard:last-of-type") || document.getElementById("ai-banished"));
+			animateFieldDamage("you", previousMyField, myField, previousMyFieldHp, myFieldHp);
+			animateFieldDamage("ai", previousEnemyField, enemyField, previousEnemyFieldHp, enemyFieldHp);
+			animateLeaderDamage("you-leader", previousMyLeader, currentMyLeader, previousMyLeaderHp, currentMyLeaderHp);
+			animateLeaderDamage("ai-leader", previousEnemyLeader, currentEnemyLeader, previousEnemyLeaderHp, currentEnemyLeaderHp);
+			setInspector(hoveredInspectorView || selectedInspectorView || (selectedHandCardId ? { cardId: selectedHandCardId, side: "you", lane: "hand" } : null));
+			if (view.btnPlay) view.btnPlay.disabled = isSpectator || !(myTurn && phase === "PREP" && !!selectedHandCardId);
+			if (view.btnLeaderPower) {
+				const showLeaderPower = hasManualLeaderPower(currentMyLeader);
+				const leaderPowerReady = showLeaderPower && canUseLeaderPower();
+				view.btnLeaderPower.style.display = !isSpectator && showLeaderPower ? "" : "none";
+				view.btnLeaderPower.disabled = !leaderPowerReady;
+				view.btnLeaderPower.classList.toggle("is-ready", leaderPowerReady);
+			}
+			if (view.btnAttack) view.btnAttack.disabled = isSpectator || !(myTurn && phase === "COMBAT" && selectedAttackerPos !== null);
+			if (view.btnTargetLeader) view.btnTargetLeader.disabled = isSpectator || !(myTurn && phase === "COMBAT");
+			if (view.btnNextPhase) view.btnNextPhase.disabled = isSpectator || !myTurn;
+			if (view.btnEndTurn) view.btnEndTurn.disabled = isSpectator || !(myTurn && phase === "END");
+		}
+	});
 }
 
 function animatePhaseChange(phase: string) {
@@ -2538,6 +2916,11 @@ function animateLeaderDamage(slotId: "you-leader" | "ai-leader", previousLeaderI
 }
 
 function renderHand(hand: string[]) {
+	if (isSpectator) {
+		renderButtonRow("hand", [], null, "", () => undefined);
+		renderSideHand("youHand", Array.from({ length: hand.length }, (_, index) => `spectator-${index}`), false);
+		return;
+	}
 	renderButtonRow("hand", hand.map((c) => `${c} (Custo 1)`), hand.findIndex((c) => c === selectedHandCardId), "outline:2px solid #f8d46d;", (index) => {
 		selectedHandCardId = hand[index] || null;
 		if (view.selectedCardEl) view.selectedCardEl.textContent = selectedHandCardId || "—";
@@ -2592,22 +2975,30 @@ async function joinMatch() {
 	if (isJoining || !view.endpointEl || !view.roomIdEl) return;
 	const targetRoomId = view.roomIdEl.value.trim();
 	const joinToken = new URLSearchParams(window.location.search).get("joinToken")?.trim() || "";
+	const wantsSpectator = new URLSearchParams(window.location.search).get("spectator") === "1";
 	if (!targetRoomId) return log("ERROR", { text: "Informe roomId da partida." });
-	if (!joinToken) return log("ERROR", { text: "Token da partida ausente. Entre novamente pelo lobby." });
+	if (!wantsSpectator && !joinToken) return log("ERROR", { text: "Token da partida ausente. Entre novamente pelo lobby." });
 
 	isJoining = true;
 	try {
-		client = await connectClient(view.endpointEl.value.trim());
-		room = await joinMatchById(client, targetRoomId, { joinToken });
+		const endpoint = view.endpointEl.value.trim();
+		client = await connectClient(endpoint);
+		isSpectator = wantsSpectator;
+		spectatorMatchRoomId = wantsSpectator ? targetRoomId : null;
+		clearSpectatorReconnectTimer();
+		if (isSpectator && !slot) slot = "p1";
+		const targetJoinRoomId = wantsSpectator ? await resolveSpectatorRoomId(endpoint, targetRoomId) : targetRoomId;
+		room = await joinMatchById(client, targetJoinRoomId, wantsSpectator ? {} : { joinToken });
 		roomId = room.id;
 		selfSessionId = typeof room?.sessionId === "string" ? room.sessionId : selfSessionId;
 		const displayName = getDisplayName();
-		if (displayName) {
+		if (displayName && !isSpectator) {
 			room.send("set_name", { name: displayName });
 		}
 		bindMatchHandlers(room, {
 			onAssignSlot: (msg) => {
-				slot = msg?.slot || null;
+				isSpectator = msg?.spectator === true || isSpectator;
+				slot = isSpectator ? "p1" : (msg?.slot || null);
 				selfSessionId = typeof msg?.sessionId === "string" ? msg.sessionId : null;
 				log("ASSIGN_SLOT", msg);
 			},
@@ -2620,12 +3011,20 @@ async function joinMatch() {
 				if (!Number.isInteger(targetPos) || targetPos < 0) return;
 				summonedBySide[side].add(targetPos);
 			},
-			onEffectChoice: (msg) => showEffectChoiceModal(msg),
-			onRevealTopCard: (msg) => showRevealTopCardModal(msg),
+			onEffectChoice: (msg) => {
+				if (!isSpectator) showEffectChoiceModal(msg);
+			},
+			onRevealTopCard: (msg) => {
+				if (!isSpectator) showRevealTopCardModal(msg);
+			},
 			onError: (msg) => log("ERROR", msg),
 			onLeave: (code) => {
 				hideCardChoiceModal(false);
 				hideChoiceWaitingModal();
+				if (isSpectator) {
+					scheduleSpectatorReconnect(code);
+					return;
+				}
 				log("DISCONNECTED", { code, text: "Conexão encerrada. Voltando ao lobby..." });
 				setTimeout(() => goLobby(), 900);
 			},
@@ -2634,11 +3033,13 @@ async function joinMatch() {
 				else if (name === "TURN_START") diaryTurnStart(msg);
 				else if (name === "EFFECT") diaryEffect(msg);
 				else if (name === "CHOICE_WAITING") {
-					showChoiceWaitingModal(msg);
-					logText(`⏳ Seu oponente está escolhendo: ${String(msg?.title || "uma opção")}.`);
+					if (!isSpectator) {
+						showChoiceWaitingModal(msg);
+						logText(`⏳ Seu oponente está escolhendo: ${String(msg?.title || "uma opção")}.`);
+					}
 				}
 				else if (name === "CHOICE_WAITING_END") {
-					hideChoiceWaitingModal();
+					if (!isSpectator) hideChoiceWaitingModal();
 				}
 				else if (name === "MATCH_ENDED") {
 					const winner = ownerLabel(String(msg?.winner || ""));
@@ -2686,7 +3087,7 @@ async function joinMatch() {
 			onStateSync: (state) => {
 				if (view.turnPhaseEl) view.turnPhaseEl.textContent = formatPhaseLabel(state?.game?.phase);
 				if (view.roomIdViewEl) view.roomIdViewEl.textContent = roomId ?? "—";
-				if (view.slotEl) view.slotEl.textContent = slot ?? "—";
+				if (view.slotEl) view.slotEl.textContent = isSpectator ? "Espectador" : (slot ?? "—");
 				if (view.turnEl) view.turnEl.textContent = String(state?.game?.turn ?? "—");
 				if (view.turnSlotEl) view.turnSlotEl.textContent = String(state?.game?.turnSlot ?? "—");
 				if (view.p1HpEl) view.p1HpEl.textContent = String(state?.game?.p1?.hp ?? "—");
@@ -2696,8 +3097,10 @@ async function joinMatch() {
 				if (view.p1HandCountEl) view.p1HandCountEl.textContent = String(state?.game?.p1?.hand?.length ?? "—");
 				if (view.p2HandCountEl) view.p2HandCountEl.textContent = String(state?.game?.p2?.hand?.length ?? "—");
 
-				if (!slot) slot = inferSlotFromState(state);
+				if (isSpectator && !slot) slot = "p1";
+				if (!slot && !isSpectator) slot = inferSlotFromState(state);
 				if (!slot) return;
+				syncHandTitles(state);
 
 				const previousMyField = currentMyField.slice();
 				const previousMyFieldHp = currentMyFieldHp.slice();
@@ -2825,7 +3228,7 @@ async function joinMatch() {
 				const myShadowPenalty = hasShadowPenaltyForPlayer(my, currentMyLeader, currentMyEnv, enemyEnv);
 				const enemyShadowPenalty = hasShadowPenaltyForPlayer(enemy, currentEnemyLeader, enemyEnv, currentMyEnv);
 				const enemyHandCount = Number(enemy?.hand?.length ?? 0);
-				const myTurn = String(state?.game?.turnSlot || "") === slot;
+				const myTurn = !isSpectator && String(state?.game?.turnSlot || "") === slot;
 				const phase = String(state?.game?.phase || "");
 				if (phase !== currentPhase) {
 					resetBoardAttackSelection();
@@ -2941,47 +3344,53 @@ async function joinMatch() {
 				animateLeaderDamage("you-leader", previousMyLeader, currentMyLeader, previousMyLeaderHp, currentMyLeaderHp);
 				animateLeaderDamage("ai-leader", previousEnemyLeader, currentEnemyLeader, previousEnemyLeaderHp, currentEnemyLeaderHp);
 				setInspector(hoveredInspectorView || selectedInspectorView || (selectedHandCardId ? { cardId: selectedHandCardId, side: "you", lane: "hand" } : null));
-				if (view.btnPlay) view.btnPlay.disabled = !(myTurn && phase === "PREP" && !!selectedHandCardId);
+				if (view.btnPlay) view.btnPlay.disabled = isSpectator || !(myTurn && phase === "PREP" && !!selectedHandCardId);
 				if (view.btnLeaderPower) {
 					const showLeaderPower = hasManualLeaderPower(currentMyLeader);
 					const leaderPowerReady = showLeaderPower && canUseLeaderPower();
-					view.btnLeaderPower.style.display = showLeaderPower ? "" : "none";
+					view.btnLeaderPower.style.display = !isSpectator && showLeaderPower ? "" : "none";
 					view.btnLeaderPower.disabled = !leaderPowerReady;
 					view.btnLeaderPower.classList.toggle("is-ready", leaderPowerReady);
 				}
-				if (view.btnAttack) view.btnAttack.disabled = !(myTurn && phase === "COMBAT" && selectedAttackerPos !== null);
-				if (view.btnTargetLeader) view.btnTargetLeader.disabled = !(myTurn && phase === "COMBAT");
-				if (view.btnNextPhase) view.btnNextPhase.disabled = !myTurn;
-				if (view.btnEndTurn) view.btnEndTurn.disabled = !(myTurn && phase === "END");
+				if (view.btnAttack) view.btnAttack.disabled = isSpectator || !(myTurn && phase === "COMBAT" && selectedAttackerPos !== null);
+				if (view.btnTargetLeader) view.btnTargetLeader.disabled = isSpectator || !(myTurn && phase === "COMBAT");
+				if (view.btnNextPhase) view.btnNextPhase.disabled = isSpectator || !myTurn;
+				if (view.btnEndTurn) view.btnEndTurn.disabled = isSpectator || !(myTurn && phase === "END");
 			}
 		});
 		log("JOINED", { roomId });
+		if (isSpectator) {
+			logText("Modo espectador ativo. Mãos e decks ficam ocultos; cemitério e banidas são públicos.");
+		}
 	} finally {
 		isJoining = false;
 	}
 }
 
 if (view.btnJoin) view.btnJoin.onclick = () => void joinMatch();
-if (view.btnPlay) view.btnPlay.onclick = () => selectedHandCardId && tryPlayCard(selectedHandCardId);
+if (view.btnPlay) view.btnPlay.onclick = () => !isSpectator && selectedHandCardId && tryPlayCard(selectedHandCardId);
 if (view.btnLeaderPower) view.btnLeaderPower.onclick = () => {
+	if (isSpectator) return;
 	if (!canUseLeaderPower()) return;
 	animateChosenPowerActivation("you");
 	room?.send("leader_power");
 };
 if (view.btnAttack) view.btnAttack.onclick = () => {
+	if (isSpectator) return;
 	if (!isMyTurn || currentPhase !== "COMBAT") return;
 	if (selectedAttackerPos === null) return;
 	if (selectedTargetType === "ally" && selectedTargetPos !== null) return resolveSelectedBoardAttack({ type: "ally", side: "ai", index: selectedTargetPos });
 	resolveSelectedBoardAttack({ type: "leader", side: "ai" });
 };
 if (view.btnTargetLeader) view.btnTargetLeader.onclick = () => {
+	if (isSpectator) return;
 	if (!isMyTurn || currentPhase !== "COMBAT") return;
 	selectedTargetType = "leader";
 	selectedTargetPos = null;
 	if (view.selectedTargetEl) view.selectedTargetEl.textContent = "Líder inimigo";
 };
-if (view.btnNextPhase) view.btnNextPhase.onclick = () => room?.send("next_phase");
-if (view.btnEndTurn) view.btnEndTurn.onclick = () => room?.send("end_turn");
+if (view.btnNextPhase) view.btnNextPhase.onclick = () => !isSpectator && room?.send("next_phase");
+if (view.btnEndTurn) view.btnEndTurn.onclick = () => !isSpectator && room?.send("end_turn");
 if (view.btnBackLobby) view.btnBackLobby.onclick = goLobby;
 
 const logModal = document.getElementById("logModal") as HTMLElement | null;

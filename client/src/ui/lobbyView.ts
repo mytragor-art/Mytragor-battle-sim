@@ -14,6 +14,20 @@ type LobbyRoom = {
 	};
 };
 
+type SpectatorMatch = {
+	roomId: string;
+	spectatorRoomId?: string;
+	clients: number;
+	maxClients: number;
+	metadata?: {
+		title?: string;
+		p1Name?: string;
+		p2Name?: string;
+		p1LeaderId?: string;
+		p2LeaderId?: string;
+	};
+};
+
 const byId = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T | null;
 
 export function getLobbyInputs() {
@@ -25,6 +39,7 @@ export function getLobbyInputs() {
 		btnJoin: byId<HTMLButtonElement>("btnJoin"),
 		btnReady: byId<HTMLButtonElement>("btnReady"),
 		btnRefreshRooms: byId<HTMLButtonElement>("btnRefreshRooms"),
+		btnRefreshMatches: byId<HTMLButtonElement>("btnRefreshMatches"),
 		btnJoinSelected: byId<HTMLButtonElement>("btnJoinSelected"),
 		slotEl: byId("slot"),
 		phaseEl: byId("phase"),
@@ -34,6 +49,7 @@ export function getLobbyInputs() {
 		deckCardsCountEl: byId("deckCardsCount"),
 		playersEl: byId("players"),
 		roomListEl: byId("roomList"),
+		matchListEl: byId("matchList"),
 		logEl: byId("log")
 	};
 }
@@ -159,6 +175,56 @@ export function renderRooms(
 			};
 		}
 		roomListEl.appendChild(row);
+	}
+}
+
+export function renderMatches(
+	matches: SpectatorMatch[],
+	selectedRoomId: string | null,
+	onSelect: (roomId: string) => void,
+	onWatch: (roomId: string) => void
+) {
+	const matchListEl = byId("matchList");
+	if (!matchListEl) return;
+	matchListEl.innerHTML = "";
+
+	if (!matches.length) {
+		const empty = document.createElement("div");
+		empty.textContent = "Nenhuma partida em andamento no momento.";
+		empty.className = "roomEmpty";
+		matchListEl.appendChild(empty);
+		return;
+	}
+
+	for (const matchInfo of matches) {
+		const leftName = String(matchInfo.metadata?.p1Name || "Jogador 1");
+		const rightName = String(matchInfo.metadata?.p2Name || "Jogador 2");
+		const title = String(matchInfo.metadata?.title || "").trim() || `${leftName} vs ${rightName}`;
+		const subParts = [matchInfo.metadata?.p1LeaderId, matchInfo.metadata?.p2LeaderId].filter(Boolean);
+		const subtitle = subParts.length ? subParts.join(" • ") : `Partida ${truncateRoomId(matchInfo.roomId)}`;
+		const row = document.createElement("div");
+		row.className = `roomRow${selectedRoomId === matchInfo.roomId ? " selected" : ""}`;
+		row.innerHTML = `
+			<span class="roomMain">
+				<span class="roomTitle">${title}</span>
+				<span class="roomSub">${subtitle}</span>
+			</span>
+			<span class="roomRight">
+				<span class="roomPill">Ao vivo</span>
+				<button type="button" class="btnGold roomEnterBtn">Assistir</button>
+			</span>
+		`;
+		row.onclick = () => onSelect(matchInfo.roomId);
+
+		const watchBtn = row.querySelector(".roomEnterBtn") as HTMLButtonElement | null;
+		if (watchBtn) {
+			watchBtn.onclick = (event) => {
+				event.stopPropagation();
+				onSelect(matchInfo.roomId);
+				onWatch(matchInfo.roomId);
+			};
+		}
+		matchListEl.appendChild(row);
 	}
 }
 
