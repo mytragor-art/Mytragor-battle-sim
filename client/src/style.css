@@ -1970,7 +1970,7 @@ body.lobbyBody::before{
 
 .lobbyCurrentRoom,
 .lobbySubPanel{
-  padding:12px 14px;
+  padding:8px 10px;
 }
 
 .roomStateRow{
@@ -1982,14 +1982,14 @@ body.lobbyBody::before{
 }
 
 .lobbySubPanel + .lobbySubPanel{
-  margin-top:12px;
+  margin-top:8px;
 }
 
 .zoneTitle{
-  margin:0 0 10px;
+  margin:0 0 6px;
   font-family:"Cinzel", Georgia, serif;
-  font-size:12px;
-  letter-spacing:1.4px;
+  font-size:10px;
+  letter-spacing:1px;
   text-transform:uppercase;
   color:rgba(228, 204, 149, 0.82);
 }
@@ -1998,35 +1998,51 @@ body.lobbyBody::before{
   display:flex;
   align-items:center;
   justify-content:space-between;
-  gap:12px;
-  margin-bottom:10px;
+  gap:10px;
+  margin-bottom:6px;
 }
 
 .playersMount,
 .roomList{
   display:grid;
-  gap:10px;
+  gap:6px;
+}
+
+.playersMount{
+  grid-template-columns:1fr;
 }
 
 .playerCard,
 .roomRow,
 .roomEmpty{
-  border-radius:16px;
+  border-radius:14px;
   border:1px solid rgba(236, 213, 168, 0.12);
   background:linear-gradient(180deg, rgba(17,19,27,0.72), rgba(9,11,15,0.58));
   box-shadow:inset 0 1px 0 rgba(255,255,255,0.03);
 }
 
 .playerCard{
-  padding:12px 14px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:8px 10px;
 }
 
 .playerTop{
   display:flex;
   justify-content:space-between;
   align-items:center;
-  gap:10px;
-  margin-bottom:8px;
+  gap:8px;
+  margin-bottom:0;
+  flex:1;
+  min-width:0;
+}
+
+.playerIdentity{
+  display:grid;
+  gap:1px;
+  min-width:0;
 }
 
 .playerName,
@@ -2036,16 +2052,37 @@ body.lobbyBody::before{
   color:#f3ead7;
 }
 
+.playerName{
+  font-size:14px;
+  line-height:1.05;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
 .playerSlot,
 .roomSub,
 .metaKey{
   color:rgba(228, 234, 244, 0.66);
 }
 
+.playerSlot{
+  font-size:10px;
+  letter-spacing:.4px;
+  text-transform:uppercase;
+}
+
 .playerMeta{
-  display:grid;
-  gap:4px;
-  font-size:13px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:5px;
+  font-size:11px;
+  justify-content:flex-end;
+}
+
+.playerMetaCompact{
+  align-items:center;
+  flex-shrink:0;
 }
 
 .metaLine{
@@ -2054,16 +2091,32 @@ body.lobbyBody::before{
   gap:12px;
 }
 
+.metaChip{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  min-width:0;
+  padding:3px 8px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.03);
+}
+
 .metaVal{
   color:#efe6d1;
+  max-width:240px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
 }
 
 .statusBadge{
-  padding:5px 8px;
+  padding:3px 7px;
   border-radius:999px;
   font-family:"Cinzel", Georgia, serif;
-  font-size:10px;
-  letter-spacing:1px;
+  font-size:9px;
+  letter-spacing:.5px;
+  white-space:nowrap;
 }
 
 .roomRow{
@@ -2071,8 +2124,8 @@ body.lobbyBody::before{
   display:flex;
   align-items:center;
   justify-content:space-between;
-  gap:12px;
-  padding:12px 14px;
+  gap:10px;
+  padding:7px 9px;
   cursor:pointer;
   transition:transform .16s ease, border-color .16s ease, background .16s ease;
 }
@@ -2098,30 +2151,68 @@ body.lobbyBody::before{
   min-width:0;
   flex-direction:column;
   align-items:flex-start;
-  gap:4px;
+  gap:2px;
+}
+
+.roomTitle{
+  font-size:13px;
+  line-height:1.05;
 }
 
 .roomSub{
-  font-size:12px;
+  font-size:11px;
+  line-height:1.1;
 }
 
 .roomRight{
-  gap:8px;
+  gap:6px;
+  flex-shrink:0;
 }
 
 .roomPill{
-  padding:5px 8px;
+  padding:3px 6px;
   border-radius:999px;
   border:1px solid rgba(255,255,255,0.08);
   background:rgba(0,0,0,0.18);
   color:rgba(233, 237, 244, 0.78);
-  font-size:12px;
+  font-size:10px;
 }
 
 .roomEnterBtn{
   min-width:auto;
-  padding:8px 12px;
-  font-size:12px;
+  padding:5px 8px;
+  min-height:0;
+  font-size:10px;
+  letter-spacing:.4px;
+}
+
+.roomEmpty{
+  padding:7px 9px;
+  font-size:11px;
+}
+
+#players,
+#roomList,
+#matchList{
+  min-width:0;
+}
+
+#roomList,
+#matchList{
+  max-height:min(24vh, 220px);
+  overflow:auto;
+  padding-right:2px;
+}
+
+#roomList::-webkit-scrollbar,
+#matchList::-webkit-scrollbar{
+  width:8px;
+}
+
+#roomList::-webkit-scrollbar-thumb,
+#matchList::-webkit-scrollbar-thumb{
+  background:rgba(241, 209, 138, 0.18);
+  border-radius:999px;
 }
 
 .advancedPanel{
@@ -2221,5 +2312,19 @@ body.lobbyBody::before{
   .roomRight{
     flex-direction:column;
     align-items:flex-start;
+  }
+
+  .playerMeta{
+    flex-direction:column;
+    align-items:stretch;
+  }
+
+  .playerCard{
+    flex-direction:column;
+    align-items:stretch;
+  }
+
+  .metaChip{
+    justify-content:space-between;
   }
 }

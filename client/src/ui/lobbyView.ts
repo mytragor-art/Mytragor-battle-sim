@@ -86,13 +86,16 @@ export function renderPlayers(players: LobbyPlayer[], mySlot: Slot = null) {
 			return `
 				<article class="playerCard is-empty" data-slot="${slot}">
 					<div class="playerTop">
-						<div class="playerName">${perspective}: aguardando jogador...</div>
-						<div class="playerSlot">${slot}</div>
-						<span class="statusBadge wait">ESPERANDO</span>
+						<div class="playerIdentity">
+							<div class="playerName">${perspective}</div>
+							<div class="playerSlot">${slot}</div>
+						</div>
+						<span class="statusBadge wait">Esperando</span>
 					</div>
-					<div class="playerMeta">
-						<div class="metaLine"><span class="metaKey">Deck</span><span class="metaVal">-</span></div>
-						<div class="metaLine"><span class="metaKey">Líder</span><span class="metaVal">-</span></div>
+					<div class="playerMeta playerMetaCompact">
+						<span class="metaChip"><span class="metaKey">Nome</span><span class="metaVal">aguardando jogador</span></span>
+						<span class="metaChip"><span class="metaKey">Deck</span><span class="metaVal">-</span></span>
+						<span class="metaChip"><span class="metaKey">Líder</span><span class="metaVal">-</span></span>
 					</div>
 				</article>
 			`;
@@ -105,13 +108,15 @@ export function renderPlayers(players: LobbyPlayer[], mySlot: Slot = null) {
 		return `
 			<article class="playerCard" data-slot="${slot}">
 				<div class="playerTop">
-					<div class="playerName">${label}</div>
-					<div class="playerSlot">${slot}</div>
-					<span class="statusBadge ${statusClass}">${statusText}</span>
+					<div class="playerIdentity">
+						<div class="playerName">${label}</div>
+						<div class="playerSlot">${slot}</div>
+					</div>
+					<span class="statusBadge ${statusClass}">${statusText === "PRONTO" ? "Pronto" : "Esperando"}</span>
 				</div>
-				<div class="playerMeta">
-					<div class="metaLine"><span class="metaKey">Deck</span><span class="metaVal">${player.deckId || "-"}</span></div>
-					<div class="metaLine"><span class="metaKey">Líder</span><span class="metaVal">${player.leaderId || "-"}</span></div>
+				<div class="playerMeta playerMetaCompact">
+					<span class="metaChip"><span class="metaKey">Deck</span><span class="metaVal">${player.deckId || "-"}</span></span>
+					<span class="metaChip"><span class="metaKey">Líder</span><span class="metaVal">${player.leaderId || "-"}</span></span>
 				</div>
 			</article>
 		`;
@@ -161,7 +166,7 @@ export function renderRooms(
 			</span>
 			<span class="roomRight">
 				<span class="roomPill">${roomInfo.clients}/${roomInfo.maxClients}</span>
-				<button type="button" class="btnGold roomEnterBtn">ENTRAR</button>
+				<button type="button" class="btnGold roomEnterBtn">Entrar</button>
 			</span>
 		`;
 		row.onclick = () => onSelect(roomInfo.roomId);
@@ -211,7 +216,7 @@ export function renderMatches(
 			</span>
 			<span class="roomRight">
 				<span class="roomPill">Ao vivo</span>
-				<button type="button" class="btnGold roomEnterBtn">Assistir</button>
+				<button type="button" class="btnGold roomEnterBtn">Ver</button>
 			</span>
 		`;
 		row.onclick = () => onSelect(matchInfo.roomId);
