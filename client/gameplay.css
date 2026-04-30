@@ -74,14 +74,19 @@
 
 /* Cartas menores e sem zoom/sombra dentro de modais */
 .modal .card {
-  width: 63px !important;
-  height: 88px !important;
+  width: 84px !important;
+  height: 118px !important;
   position: relative !important;
   inset: auto !important;
   margin: 0 !important;
   z-index: 1 !important;
   transition: none !important;
   box-shadow: none !important;
+}
+.modal .slotCardImg {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
 }
 .modal .card:hover {
   transform: none !important;

@@ -8,12 +8,67 @@ import type { TurnPhase } from "../schema/GameState";
 export type Slot = "p1" | "p2";
 export type AttackTarget = { type: "leader" } | { type: "ally"; targetPos: number };
 export type ChoiceOption = { id: string; label: string; description?: string; side?: Slot; lane?: "field" | "support" | "env" | "deck" | "grave"; pos?: number; cardId?: string; disabled?: boolean; disabledReason?: string };
-export type ChoicePayload = { title: string; options: ChoiceOption[]; allowCancel?: boolean; multiSelect?: boolean; submitLabel?: string; minSelections?: number; maxSelections?: number; sourceCardId?: string };
+export type ChoicePayload = {
+	title: string;
+	options: ChoiceOption[];
+	allowCancel?: boolean;
+	multiSelect?: boolean;
+	submitLabel?: string;
+	minSelections?: number;
+	maxSelections?: number;
+	sourceCardId?: string;
+	attackerId?: string;
+	attackerName?: string;
+	attackerAttack?: number;
+	targetCardId?: string;
+	targetName?: string;
+};
 export type AskChoiceFn = (slot: Slot, payload: ChoicePayload, onResolve: (optionId: string | null) => void) => void;
 export type MatchEndReason = "hp_zero" | "deckout" | "inactivity" | "opponent_left";
 
 function ensureFieldSlots(field: { length: number; push: (value: string) => number }) {
 	while (field.length < 5) field.push("");
+}
+
+function getCombatAttackValue(state: MatchState, slot: Slot, attackerId: string, attackerPos: number, reactiveAttackPenalty: number): number {
+	const me = asPlayer(state, slot) as any;
+	const enemySlotId = enemySlot(slot);
+	const attackerDef = findCardDef(attackerId);
+	const isLeaderAttacker = attackerPos < 0;
+	let attackValue = getAttackBonus(attackerId) + reactiveAttackPenalty + getAuraAttackBonus(state, slot, attackerId);
+	if (isLeaderAttacker) {
+		attackValue += getLeaderAttackBonus(me);
+		attackValue += getAttachedSupportNumericBonus(me, null, "atkBonus");
+		attackValue += getLeaderDamageBonus(me);
+	} else {
+		attackValue += Number(me.fieldAtkTemp[attackerPos] || 0);
+		attackValue += getFieldAttackPermBonus(me, attackerPos);
+		attackValue += getAttachedSupportNumericBonus(me, attackerPos, "atkBonus");
+		attackValue += getFieldDamageBonusFromVital(me, attackerPos);
+	}
+	if (!isLeaderAttacker && String(attackerDef?.effect || "") === "kornex_buff_per_marcial_in_play") {
+		let marcialCount = 0;
+		for (const currentSlot of [slot, enemySlotId] as Slot[]) {
+			const player = asPlayer(state, currentSlot);
+			const leaderId = String(player.leaderId || "");
+			if (leaderId && cardHasFiliation(leaderId, "Marcial")) marcialCount += 1;
+			for (let index = 0; index < player.field.length; index += 1) {
+				const cardId = String(player.field[index] || "");
+				if (cardId && cardHasFiliation(cardId, "Marcial")) marcialCount += 1;
+			}
+			for (let index = 0; index < player.support.length; index += 1) {
+				const cardId = String(player.support[index] || "");
+				if (cardId && cardHasFiliation(cardId, "Marcial")) marcialCount += 1;
+			}
+			const envId = String(player.env || "");
+			if (envId && cardHasFiliation(envId, "Marcial")) marcialCount += 1;
+		}
+		attackValue += Math.max(0, marcialCount - 1);
+	}
+	if (hasMarcialEnvAttackBonus(state, slot, attackerId)) attackValue += 1;
+	attackValue += getAttachedSupportCounter(me, "draw_bonus", isLeaderAttacker ? null : attackerPos);
+	attackValue += getAttachedSupportNumericBonus(me, isLeaderAttacker ? null : attackerPos, "dmgBonus");
+	return attackValue;
 }
 
 function normalizeKind(kind: string | undefined): string {
@@ -2958,39 +3013,7 @@ export function attack(
 		} else {
 			(me as any).fieldTapped[attackerPos] = true;
 		}
-		let attackValue = getAttackBonus(attackerId) + reactiveAttackPenalty + getAuraAttackBonus(state, slot, attackerId);
-		if (isLeaderAttacker) {
-			attackValue += getLeaderAttackBonus(me as any);
-			attackValue += getAttachedSupportNumericBonus(me as any, null, "atkBonus");
-			attackValue += getLeaderDamageBonus(me as any);
-		} else {
-			attackValue += Number((me as any).fieldAtkTemp[attackerPos] || 0);
-			attackValue += getFieldAttackPermBonus(me as any, attackerPos);
-			attackValue += getAttachedSupportNumericBonus(me as any, attackerPos, "atkBonus");
-			attackValue += getFieldDamageBonusFromVital(me as any, attackerPos);
-		}
-		if (!isLeaderAttacker && String(attackerDef?.effect || "") === "kornex_buff_per_marcial_in_play") {
-			let marcialCount = 0;
-			for (const s of [slot, enemySlot] as Slot[]) {
-				const p = asPlayer(state, s);
-				const leaderId = String(p.leaderId || "");
-				if (leaderId && cardHasFiliation(leaderId, "Marcial")) marcialCount += 1;
-				for (let index = 0; index < p.field.length; index += 1) {
-					const cid = String(p.field[index] || "");
-					if (cid && cardHasFiliation(cid, "Marcial")) marcialCount += 1;
-				}
-				for (let index = 0; index < p.support.length; index += 1) {
-					const cid = String(p.support[index] || "");
-					if (cid && cardHasFiliation(cid, "Marcial")) marcialCount += 1;
-				}
-				const envId = String(p.env || "");
-				if (envId && cardHasFiliation(envId, "Marcial")) marcialCount += 1;
-			}
-			attackValue += Math.max(0, marcialCount - 1);
-		}
-		if (hasMarcialEnvAttackBonus(state, slot, attackerId)) attackValue += 1;
-		attackValue += getAttachedSupportCounter(me as any, "draw_bonus", isLeaderAttacker ? null : attackerPos);
-		attackValue += getAttachedSupportNumericBonus(me as any, isLeaderAttacker ? null : attackerPos, "dmgBonus");
+		const attackValue = getCombatAttackValue(state, slot, attackerId, attackerPos, reactiveAttackPenalty);
 		const targetResistance = getTargetResistance(state, enemySlot, finalTargetLocal);
 		const diffToResistance = attackValue - targetResistance;
 		const tieDealsMinimumDamage = diffToResistance === 0;
@@ -3092,9 +3115,21 @@ export function attack(
 				if (cardHasKeyword(def, "bloquear")) blockers.push(index);
 			}
 			if (blockers.length) {
+				const attackValue = getCombatAttackValue(state, slot, attackerId, attackerPos, reactiveAttackPenalty);
+				const targetCardId = finalTarget.type === "ally" ? String(enemy.field[finalTarget.targetPos] || "") : String(enemy.leaderId || "");
+				const targetName = finalTarget.type === "ally" ? targetCardId || "Aliado" : String(enemy.leaderId || "Líder");
 				const options: ChoiceOption[] = blockers.map((pos) => ({ id: `block-${pos}`, label: String(enemy.field[pos] || ""), side: enemySlot, lane: "field", pos, cardId: String(enemy.field[pos] || "") }));
 				options.push({ id: `block-cancel`, label: "Não interpor", side: enemySlot });
-				askChoice(enemySlot, { title: `${String(enemySlot)}: escolher aliado para interpor?`, options, allowCancel: true }, (optionId) => {
+				askChoice(enemySlot, {
+					title: `${String(enemySlot)}: escolher aliado para interpor?`,
+					options,
+					allowCancel: true,
+					attackerId,
+					attackerName: attackerDef?.name || attackerId,
+					attackerAttack: attackValue,
+					targetCardId,
+					targetName
+				}, (optionId) => {
 					let chosenPos: number | null = null;
 					if (optionId && optionId.startsWith("block-")) {
 						const parts = optionId.split("-");

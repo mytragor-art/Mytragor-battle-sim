@@ -23,8 +23,14 @@ type CardDef = {
 	classe?: string;
 	filiacao?: string;
 	hp?: number;
+	atkBonus?: number;
+	damage?: number;
+	ac?: number;
+	description?: string;
 	text?: string;
 };
+
+type InspectorLane = NonNullable<InspectorView["lane"]>;
 
 type InspectorView = {
 	cardId: string;
@@ -152,6 +158,7 @@ let currentEnemySupportAttach: number[] = [];
 let currentMySupportCounters: number[] = [];
 let currentEnemySupportCounters: number[] = [];
 let currentMyEnv: string | null = null;
+let currentEnemyEnv: string | null = null;
 let currentMyLeader = "";
 let currentEnemyLeader = "";
 let currentMyLeaderTapped = false;
@@ -308,8 +315,8 @@ function describeMatchEnded(msg: any): VictoryView {
 		return { title, text: "A partida terminou por deck vazio.", mode: "neutral" };
 	}
 	if (reason === "inactivity") {
-		if (youWon) return { title, text: "Você ganhou por inatividade do oponente após 80 segundos sem ação.", mode: "win" };
-		if (youLost) return { title, text: "Você perdeu por inatividade após 80 segundos sem ação.", mode: "lose" };
+		if (youWon) return { title, text: "Você ganhou por inatividade do oponente após 120 segundos sem ação.", mode: "win" };
+		if (youLost) return { title, text: "Você perdeu por inatividade após 120 segundos sem ação.", mode: "lose" };
 		return { title, text: "A partida terminou por inatividade.", mode: "neutral" };
 	}
 	if (reason === "opponent_left") {
@@ -747,6 +754,19 @@ function getLeaderAttackValue(side: BattleSide, cardId: string): number {
 	return Math.max(0, Number(resolveCard(cardId)?.atkBonus || 0) + getAttachedSupportNumericBonusForSide(side, null, "atkBonus") + getAttachedSupportNumericBonusForSide(side, null, "dmgBonus"));
 }
 
+function buildChoiceAttackerSummary(payload: any): string {
+	const attackerId = String(payload?.attackerId || "").trim();
+	const attackerName = String(payload?.attackerName || attackerId || "").trim();
+	const currentAttack = Number(payload?.attackerAttack);
+	if (!attackerName && !Number.isFinite(currentAttack)) return "";
+	const lines: string[] = [];
+	if (attackerName) lines.push(`Atacante: ${attackerName}`);
+	if (Number.isFinite(currentAttack)) lines.push(`Ataque atual: ${currentAttack}`);
+	const targetName = String(payload?.targetName || "").trim();
+	if (targetName) lines.push(`Alvo atual: ${targetName}`);
+	return lines.join("\n");
+}
+
 function getLeaderResistanceValue(side: BattleSide): number {
 	return Math.max(0, getAttachedSupportNumericBonusForSide(side, null, "acBonus"));
 }
@@ -809,13 +829,14 @@ function getFallbackFieldInspectorStats(view: InspectorView, card: CardDef | und
 }
 
 function getYohanInspectorStats(view: InspectorView, card: CardDef): Array<{ label: string; value: string; tone?: "good" | "bad" | "neutral" | "gold" }> {
+	const index = typeof view.index === "number" ? view.index : 0;
 	const hpValues = view.side === "you" ? currentMyFieldHp : currentEnemyFieldHp;
-	const currentHp = Math.max(0, Number(hpValues[view.index] ?? card.hp ?? 1));
+	const currentHp = Math.max(0, Number(hpValues[index] ?? card.hp ?? 1));
 	const baseHp = Number(card.hp || 1);
 	const baseAttack = Number(card.atkBonus || 0);
 	const baseResistance = Number(card.ac || 0);
-	const attack = getFieldAttackValue(view.side as BattleSide, view.index as number, view.cardId);
-	const resistance = getFieldResistanceValue(view.side as BattleSide, view.index as number, view.cardId);
+	const attack = getFieldAttackValue(view.side as BattleSide, index, view.cardId);
+	const resistance = getFieldResistanceValue(view.side as BattleSide, index, view.cardId);
 	const marcialBonus = getMarcialBattleBonus(view.cardId);
 	const out: Array<{ label: string; value: string; tone?: "good" | "bad" | "neutral" | "gold" }> = [
 		{ label: "Vida", value: `${currentHp}/${baseHp}` },
@@ -852,7 +873,7 @@ function getInspectorStats(view: InspectorView | null): Array<{ label: string; v
 		const baseHp = Number(card.hp || 1);
 		const marcialBonus = getMarcialBattleBonus(view.cardId);
 		const hpValue = maxHp === baseHp ? `${currentHp}/${maxHp}` : `${currentHp}/${maxHp} (${maxHp > baseHp ? "+" : ""}${maxHp - baseHp})`;
-		const out = [
+		const out: Array<{ label: string; value: string; tone?: "good" | "bad" | "neutral" | "gold" }> = [
 			{ label: "Vida", value: hpValue, tone: currentHp < maxHp ? (currentHp / Math.max(1, maxHp) <= 0.5 ? "bad" : "neutral") : (maxHp > baseHp ? "good" : "neutral") },
 			{ label: "Ataque", value: formatStatWithDelta(attack, baseAttack), tone: attack > baseAttack ? "good" : (attack < baseAttack ? "bad" : "neutral") },
 			{ label: "Resistência", value: formatStatWithDelta(resistance, baseResistance), tone: resistance > baseResistance ? "good" : (resistance < baseResistance ? "bad" : "neutral") }
@@ -1817,7 +1838,10 @@ function showChoiceWaitingModal(payload: any) {
 	const text = document.getElementById("choiceWaitingText");
 	if (!modal || !title || !text) return;
 	title.textContent = "Seu oponente está escolhendo";
-	text.textContent = String(payload?.title || "Aguarde a decisão para a partida continuar.");
+	const shouldReveal = (typeof isSpectator !== "undefined" && isSpectator) || payload?.reveal === true;
+	text.textContent = shouldReveal
+		? String(payload?.title || "Aguarde a decisão para a partida continuar.")
+		: "Aguarde a decisão para a partida continuar.";
 	modal.style.display = "flex";
 	startCountdown("choiceWaitingCountdown", "choiceWaitingCountdownValue", Number(payload?.timeoutMs || 0), "waiting");
 }
@@ -1849,8 +1873,9 @@ function showEffectChoiceModal(payload: any) {
 
 	const layout = document.createElement("div");
 	layout.style.display = "grid";
-	layout.style.gridTemplateColumns = "1fr minmax(220px, 280px)";
+	layout.style.gridTemplateColumns = "minmax(0, 1.9fr) minmax(260px, 300px)";
 	layout.style.gap = "12px";
+	layout.style.alignItems = "start";
 
 	const choicesWrap = document.createElement("div");
 	choicesWrap.style.display = "grid";
@@ -1860,19 +1885,34 @@ function showEffectChoiceModal(payload: any) {
 	previewWrap.style.display = "grid";
 	previewWrap.style.gap = "8px";
 	previewWrap.style.alignContent = "start";
+	previewWrap.style.minWidth = "0";
 	const previewImg = document.createElement("img");
 	previewImg.style.width = "100%";
-	previewImg.style.maxWidth = "260px";
+	previewImg.style.maxWidth = "280px";
 	previewImg.style.borderRadius = "8px";
 	previewImg.style.border = "1px solid rgba(255,255,255,.16)";
 	previewImg.src = asAssetPath(CARD_BACK_ASSET);
 	previewImg.alt = "Prévia";
 	previewImg.style.filter = "none";
+	previewImg.style.justifySelf = "center";
 	const previewMeta = document.createElement("div");
-	previewMeta.style.fontSize = "12px";
+	previewMeta.style.fontSize = "13px";
 	previewMeta.style.opacity = "0.9";
 	previewMeta.style.whiteSpace = "pre-line";
 	previewMeta.textContent = "Passe o mouse em uma opção para pré-visualizar.";
+	const attackerSummary = buildChoiceAttackerSummary(payload);
+	if (attackerSummary) {
+		const infoBox = document.createElement("div");
+		infoBox.style.padding = "10px 12px";
+		infoBox.style.border = "1px solid rgba(255,255,255,.14)";
+		infoBox.style.borderRadius = "10px";
+		infoBox.style.background = "rgba(255,255,255,.04)";
+		infoBox.style.fontSize = "13px";
+		infoBox.style.lineHeight = "1.35";
+		infoBox.style.whiteSpace = "pre-line";
+		infoBox.textContent = attackerSummary;
+		previewWrap.appendChild(infoBox);
+	}
 	const timeoutMs = Number(payload?.timeoutMs || 0);
 	if (timeoutMs > 0) {
 		const seconds = Math.max(1, Math.floor(timeoutMs / 1000));
@@ -1932,7 +1972,7 @@ function showEffectChoiceModal(payload: any) {
 
 		const groupGrid = document.createElement("div");
 		groupGrid.style.display = "grid";
-		groupGrid.style.gridTemplateColumns = "repeat(auto-fill, minmax(63px, 1fr))";
+		groupGrid.style.gridTemplateColumns = "repeat(auto-fill, minmax(84px, 1fr))";
 		groupGrid.style.gap = "8px";
 
 		for (const option of group.options) {
@@ -1943,8 +1983,8 @@ function showEffectChoiceModal(payload: any) {
 		const button = document.createElement("button");
 		button.type = "button";
 		button.className = "card slotCard";
-		button.style.width = "63px";
-		button.style.height = "88px";
+		button.style.width = "84px";
+		button.style.height = "118px";
 		const disabled = !!option?.disabled;
 		button.style.cursor = disabled ? "not-allowed" : "pointer";
 		if (disabled) button.style.opacity = "0.45";
@@ -2005,11 +2045,17 @@ function showEffectChoiceModal(payload: any) {
 		optionText.style.lineHeight = "1.2";
 		optionText.style.opacity = "0.95";
 		optionText.style.minHeight = "28px";
+		optionText.style.whiteSpace = "pre-line";
 		optionText.textContent = String(option?.description || option?.label || "");
 		item.appendChild(optionText);
 		groupGrid.appendChild(item);
 		}
 		choicesWrap.appendChild(groupGrid);
+	}
+
+	if (window.innerWidth <= 980) {
+		layout.style.gridTemplateColumns = "1fr";
+		previewWrap.style.order = "-1";
 	}
 
 	layout.appendChild(choicesWrap);
@@ -2530,7 +2576,7 @@ function syncHandTitles(state: any): void {
 }
 
 function goLobby() {
-	const endpoint = view.endpointEl?.value?.trim() || defaultWsEndpoint();
+	const endpoint = view.endpointEl?.value?.trim() || resolveServerEndpoint(window.location.search);
 	window.location.href = `./lobby.html?endpoint=${encodeURIComponent(endpoint)}`;
 }
 
@@ -2783,6 +2829,7 @@ function bindActiveMatchRoom() {
 			currentEnemySupportAttach = asNumberArray((enemy as any)?.supportAttachTo);
 			currentEnemySupportCounters = asNumberArray((enemy as any)?.supportCounters);
 			const enemyEnv = String(enemy?.env || "") || null;
+			currentEnemyEnv = enemyEnv;
 			currentEnemyLeader = String(enemy?.leaderId || "");
 			currentEnemyLeaderHp = Number(enemy?.hp ?? 0);
 			currentEnemyLeaderTapped = !!(enemy as any)?.leaderTapped;
@@ -3195,6 +3242,7 @@ async function joinMatch() {
 				currentEnemySupportAttach = asNumberArray((enemy as any)?.supportAttachTo);
 				currentEnemySupportCounters = asNumberArray((enemy as any)?.supportCounters);
 				const enemyEnv = String(enemy?.env || "") || null;
+				currentEnemyEnv = enemyEnv;
 				currentEnemyLeader = String(enemy?.leaderId || "");
 				currentEnemyLeaderHp = Number(enemy?.hp ?? 0);
 				currentEnemyLeaderTapped = !!(enemy as any)?.leaderTapped;

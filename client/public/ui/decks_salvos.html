@@ -167,6 +167,9 @@
 		min-height: calc(100vh - 96px);
 		box-sizing: border-box;
 	}
+
+	/* Allow columns and panels to shrink instead of forcing horizontal overflow */
+	.appShell, .sidebarPanel, .detailPanel, .deckListItem { min-width: 0; }
 	.sidebarPanel,
 	.detailPanel {
 		position: relative;

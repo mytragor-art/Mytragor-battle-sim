@@ -87,7 +87,7 @@ export class MatchRoom extends Room<MatchState> {
 			this.activeChoiceSessionId = null;
 			finishMatch(this.state, loser, "inactivity", (name, payload) => this.broadcastMatchEvent(name, payload));
 			this.publishSpectatorState();
-		}, 80_000);
+		}, 120_000);
 	}
 
 	private refreshInactivityTimer() {
@@ -112,7 +112,7 @@ export class MatchRoom extends Room<MatchState> {
 			onResolve(null);
 			return;
 		}
-		const timeoutMs = 20_000;
+		const timeoutMs = 40_000;
 		const choiceId = `choice-${++this.choiceSeq}`;
 		const optionIds = (Array.isArray(payload.options) ? payload.options : []).filter((o: any) => !o?.disabled).map((o) => String(o?.id || "")).filter(Boolean);
 		const timeout = setTimeout(() => {
