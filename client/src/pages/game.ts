@@ -2575,6 +2575,24 @@ function syncHandTitles(state: any): void {
 	enemyHandEl.setAttribute("aria-label", `Mão de ${enemyName}`);
 }
 
+function updateArenaTurnPriority(myTurn: boolean): void {
+	const myArena = document.getElementById("youArena");
+	const enemyArena = document.getElementById("opArena");
+	if (!myArena || !enemyArena) return;
+	const applyState = (el: HTMLElement, active: boolean, muted: boolean) => {
+		el.classList.toggle("arenaTurnActive", active);
+		el.classList.toggle("arenaTurnMuted", muted);
+		el.classList.toggle("arenaTurnNeutral", !active && !muted);
+	};
+	if (isSpectator) {
+		applyState(myArena, false, false);
+		applyState(enemyArena, false, false);
+		return;
+	}
+	applyState(myArena, myTurn, !myTurn);
+	applyState(enemyArena, !myTurn, myTurn);
+}
+
 function goLobby() {
 	const endpoint = view.endpointEl?.value?.trim() || resolveServerEndpoint(window.location.search);
 	window.location.href = `./lobby.html?endpoint=${encodeURIComponent(endpoint)}`;
@@ -2854,6 +2872,7 @@ function bindActiveMatchRoom() {
 			}
 			isMyTurn = myTurn;
 			currentPhase = phase;
+			updateArenaTurnPriority(myTurn);
 			if (!myTurn || phase !== "COMBAT") {
 				resetBoardAttackSelection();
 				cancelBoardAttackSelection();
@@ -3285,6 +3304,7 @@ async function joinMatch() {
 				}
 				isMyTurn = myTurn;
 				currentPhase = phase;
+				updateArenaTurnPriority(myTurn);
 				if (!myTurn || phase !== "COMBAT") {
 					resetBoardAttackSelection();
 					cancelBoardAttackSelection();

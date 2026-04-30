@@ -15,8 +15,8 @@
   --hud-chip-h: 30px;
   --hud-chip-px: 10px;
   --hud-chip-fs: 12px;
-  --cardW: 78px;
-  --cardH: 110px;
+  --cardW: 82px;
+  --cardH: 116px;
   --hand-card-w: 72px;
   --hand-card-h: 100px;
 
@@ -24,8 +24,8 @@
   --hand-scale: 0.72;   /* mão menor para caber inteira na mesa */
 
   /* Keep base (unscaled) card sizes so JS can compute scaled values reliably */
-  --cardW-base: 78px;
-  --cardH-base: 110px;
+  --cardW-base: 82px;
+  --cardH-base: 116px;
 
   /* Responsive scaler vars */
   --scale: 1;
@@ -63,10 +63,10 @@
   :root{
     --hands-w: clamp(185px, 17vw, 230px);
     --right-w: clamp(210px, 18vw, 260px);
-    --cardW: 74px;
-    --cardH: 104px;
-    --cardW-base: 74px;
-    --cardH-base: 104px;
+    --cardW: 78px;
+    --cardH: 110px;
+    --cardW-base: 78px;
+    --cardH-base: 110px;
     --gap: 7px;
     --hand-scale: 0.69;
   }
@@ -470,6 +470,12 @@ html,body{height:100%;font-family:-apple-system,system-ui,'Segoe UI',Roboto,'Hel
   overflow: hidden;
   display: grid;
   justify-items: center;
+  transition:
+    border-color .22s ease,
+    box-shadow .22s ease,
+    filter .22s ease,
+    transform .22s ease,
+    background-color .22s ease;
 }
 
 #opArena{ align-items:start; }
@@ -478,6 +484,37 @@ html,body{height:100%;font-family:-apple-system,system-ui,'Segoe UI',Roboto,'Hel
   --slotW: calc(var(--cardW) - 4px);
   --slotH: calc(var(--cardH) - 10px);
   --gap: 11px;
+}
+
+#youArena.arenaTurnActive,
+#opArena.arenaTurnActive{
+  border-color: rgba(241,209,138,0.34);
+  box-shadow:
+    0 0 0 1px rgba(241,209,138,0.10) inset,
+    0 0 26px rgba(241,209,138,0.16),
+    0 14px 30px rgba(0,0,0,0.22);
+}
+
+#youArena.arenaTurnActive{
+  background-color: rgba(28, 22, 10, 0.08);
+}
+
+#opArena.arenaTurnActive{
+  background-color: rgba(32, 18, 10, 0.07);
+}
+
+#youArena.arenaTurnMuted,
+#opArena.arenaTurnMuted{
+  filter: saturate(0.82) brightness(0.88);
+  border-color: rgba(148,163,184,0.14);
+  box-shadow:
+    0 0 0 1px rgba(148,163,184,0.04) inset,
+    0 10px 20px rgba(0,0,0,0.16);
+}
+
+#youArena.arenaTurnNeutral,
+#opArena.arenaTurnNeutral{
+  filter: none;
 }
 
 /* Temas de arena por filiação (gradientes esfumaçados) */
@@ -958,9 +995,9 @@ html,body{height:100%;font-family:-apple-system,system-ui,'Segoe UI',Roboto,'Hel
   display:flex;
   align-items:center;
   justify-content:center;
-  gap: 6px;
+  gap: 5px;
   flex-wrap: nowrap;
-  padding: 5px 8px;
+  padding: 4px 7px;
   border: 1px solid rgba(214,181,112,0.14);
   border-radius: 14px;
   background: rgba(10, 10, 15, 0.58);
@@ -1176,7 +1213,7 @@ html,body{height:100%;font-family:-apple-system,system-ui,'Segoe UI',Roboto,'Hel
   height: calc(var(--arena-h) * 1px);
   transform-origin: center center;
   pointer-events:auto;
-  margin:0 auto;
+  margin:-10px auto 0;
   display:block;
 }
 
@@ -1185,7 +1222,7 @@ html,body{height:100%;font-family:-apple-system,system-ui,'Segoe UI',Roboto,'Hel
 }
 
 .board{
-  padding:4px 6px 2px;
+  padding:2px 6px 0;
   margin:0 auto;
   min-width:640px;
   max-width:var(--content-max);
