@@ -892,7 +892,7 @@ html,body{height:100%;font-family:-apple-system,system-ui,'Segoe UI',Roboto,'Hel
 
 .card.slotCard .equipAttachTag{
   position:absolute;
-  right:6px;
+  left:6px;
   top:6px;
   background:rgba(15,23,42,.92);
   border:1px solid rgba(255,255,255,0.18);
@@ -904,6 +904,19 @@ html,body{height:100%;font-family:-apple-system,system-ui,'Segoe UI',Roboto,'Hel
   line-height:1.1;
   z-index:6;
   pointer-events:none;
+}
+
+.card.slotCard .markerTag{
+  position:absolute;
+  right:4px;
+  padding:2px 6px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:700;
+  line-height:1;
+  z-index:4;
+  pointer-events:none;
+  box-shadow:0 1px 4px rgba(0,0,0,0.35);
 }
 
 /* Visual for tapped (deitado): rotate the whole slot card for clear feedback */

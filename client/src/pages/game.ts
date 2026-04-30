@@ -1627,8 +1627,6 @@ function appendSupportCounterTag(cardEl: HTMLElement, value: number): void {
 	tag.className = "equipAttachTag";
 	tag.textContent = `✦${value}`;
 	tag.title = `Cartas deslocadas por este efeito: ${value}`;
-	tag.style.left = "6px";
-	tag.style.right = "auto";
 	cardEl.appendChild(tag);
 }
 
@@ -2385,68 +2383,33 @@ function getDisplayedFieldMaxHp(side: BattleSide, index: number, cardId: string)
 		+ getAuraHpBonusForSide(side, cardId));
 }
 
+function appendMarkerTag(cardEl: HTMLElement, text: string, background: string, color: string): void {
+	const offsetIndex = cardEl.querySelectorAll(":scope > .markerTag").length;
+	const tag = document.createElement("div");
+	tag.className = "markerTag";
+	tag.textContent = text;
+	tag.style.top = `${4 + (offsetIndex * 20)}px`;
+	tag.style.background = background;
+	tag.style.color = color;
+	cardEl.appendChild(tag);
+}
+
 function appendVitalTag(cardEl: HTMLElement, marks: number): void {
 	const total = Math.max(0, Number(marks || 0));
 	if (!total) return;
-	const tag = document.createElement("div");
-	tag.textContent = `🍀 ${total}`;
-	tag.style.position = "absolute";
-	tag.style.top = "4px";
-	tag.style.left = "50%";
-	tag.style.transform = "translateX(-50%)";
-	tag.style.padding = "2px 6px";
-	tag.style.borderRadius = "999px";
-	tag.style.background = "rgba(22, 101, 52, 0.92)";
-	tag.style.color = "#f0fdf4";
-	tag.style.fontSize = "11px";
-	tag.style.fontWeight = "700";
-	tag.style.lineHeight = "1";
-	tag.style.zIndex = "4";
-	tag.style.pointerEvents = "none";
-	tag.style.boxShadow = "0 1px 4px rgba(0,0,0,0.35)";
-	cardEl.appendChild(tag);
+	appendMarkerTag(cardEl, `🍀 ${total}`, "rgba(22, 101, 52, 0.92)", "#f0fdf4");
 }
 
 function appendSpiderTag(cardEl: HTMLElement, marks: number): void {
 	const total = Math.max(0, Number(marks || 0));
 	if (!total) return;
-	const tag = document.createElement("div");
-	tag.textContent = `🕷 ${total}`;
-	tag.style.position = "absolute";
-	tag.style.top = "4px";
-	tag.style.right = "4px";
-	tag.style.padding = "2px 6px";
-	tag.style.borderRadius = "999px";
-	tag.style.background = "rgba(17, 24, 39, 0.94)";
-	tag.style.color = "#f9fafb";
-	tag.style.fontSize = "11px";
-	tag.style.fontWeight = "700";
-	tag.style.lineHeight = "1";
-	tag.style.zIndex = "4";
-	tag.style.pointerEvents = "none";
-	tag.style.boxShadow = "0 1px 4px rgba(0,0,0,0.35)";
-	cardEl.appendChild(tag);
+	appendMarkerTag(cardEl, `🕷 ${total}`, "rgba(17, 24, 39, 0.94)", "#f9fafb");
 }
 
 function appendBloodTag(cardEl: HTMLElement, marks: number): void {
 	const total = Math.max(0, Number(marks || 0));
 	if (!total) return;
-	const tag = document.createElement("div");
-	tag.textContent = `🩸 ${total}`;
-	tag.style.position = "absolute";
-	tag.style.top = "4px";
-	tag.style.right = "4px";
-	tag.style.padding = "2px 6px";
-	tag.style.borderRadius = "999px";
-	tag.style.background = "rgba(153, 27, 27, 0.94)";
-	tag.style.color = "#fef2f2";
-	tag.style.fontSize = "11px";
-	tag.style.fontWeight = "700";
-	tag.style.lineHeight = "1";
-	tag.style.zIndex = "4";
-	tag.style.pointerEvents = "none";
-	tag.style.boxShadow = "0 1px 4px rgba(0,0,0,0.35)";
-	cardEl.appendChild(tag);
+	appendMarkerTag(cardEl, `🩸 ${total}`, "rgba(153, 27, 27, 0.94)", "#fef2f2");
 }
 
 function getFragImage(playerState: any): string {
