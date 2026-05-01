@@ -105,6 +105,12 @@ body{ padding-bottom: 12px; }
 /* Leaders and tokens may have slightly larger badges but still proportional */
 .leader .hpTag, .leader .costTag { font-size: calc(var(--cardW,75px) * 0.115) !important; padding: 3px 6px !important; }
 
+.leader .chosenStatsRow{
+  left: 6px !important;
+  right: 6px !important;
+  bottom: 6px !important;
+}
+
 /* Ensure tooltip/hover previews don't inflate badges on mobile */
 .card:hover .hpTag, .card:hover .costTag, .card:hover .badgeKw { transform: none !important; }
 

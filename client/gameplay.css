@@ -832,6 +832,7 @@ html,body{height:100%;font-family:-apple-system,system-ui,'Segoe UI',Roboto,'Hel
 }
 
 .card.slotCard{
+  position:relative;
   border:1px dashed rgba(148,163,184,0.50);
   border-radius:var(--radius);
   background: rgba(15, 23, 42, 0.34);
@@ -888,6 +889,83 @@ html,body{height:100%;font-family:-apple-system,system-ui,'Segoe UI',Roboto,'Hel
 
 .card.slotCard .hpTag.low{
   color:#ef4444;
+}
+
+.card.slotCard .allyStatsRow{
+  position:absolute;
+  left:6px;
+  right:6px;
+  bottom:5px;
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  align-items:stretch;
+  gap:0;
+  background:rgba(5,10,22,0.80);
+  border:1px solid rgba(255,255,255,0.14);
+  border-radius:8px;
+  overflow:hidden;
+  z-index:5;
+  pointer-events:none;
+}
+
+.card.slotCard .allyStatTag{
+  background:transparent;
+  border-right:1px solid rgba(255,255,255,0.12);
+  color:#e5e7eb;
+  border-radius:0;
+  padding:1px 2px;
+  font-size:9px;
+  font-weight:800;
+  line-height:1;
+  min-width:0;
+  text-align:center;
+  white-space:normal;
+  display:flex;
+  flex:1 1 0;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  min-height:22px;
+}
+
+.card.slotCard .allyStatTag:last-child{
+  border-right:none;
+}
+
+.card.slotCard .allyStatIcon{
+  font-size:10px;
+  line-height:1;
+  opacity:0.95;
+}
+
+.card.slotCard .allyStatValue{
+  font-size:10px;
+  line-height:1;
+  margin-top:1px;
+}
+
+.card.slotCard .allyStatTag--hp{
+  color:#22c55e;
+}
+
+.card.slotCard .allyStatTag--hp.low{
+  color:#ef4444;
+}
+
+.card.slotCard .allyStatTag--attack{
+  color:#fbbf24;
+}
+
+.card.slotCard .allyStatTag--resistance{
+  color:#93c5fd;
+}
+
+.card.slotCard .chosenStatsRow{
+  grid-template-columns: 1fr;
+}
+
+.card.slotCard .chosenStatsRow--dual{
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .card.slotCard .equipAttachTag{

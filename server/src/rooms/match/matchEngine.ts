@@ -22,6 +22,9 @@ export type ChoicePayload = {
 	attackerAttack?: number;
 	targetCardId?: string;
 	targetName?: string;
+	targetResistance?: number;
+	targetHp?: number;
+	targetMaxHp?: number;
 };
 export type AskChoiceFn = (slot: Slot, payload: ChoicePayload, onResolve: (optionId: string | null) => void) => void;
 export type MatchEndReason = "hp_zero" | "deckout" | "inactivity" | "opponent_left";
@@ -980,7 +983,7 @@ function cardHasClasse(cardId: string, expected: string): boolean {
 }
 
 function isMarcialCharacter(cardId: string): boolean {
-	return cardHasFiliation(cardId, "Marcial") || cardHasClasse(cardId, "Guerreiro");
+	return cardHasFiliation(cardId, "Marcial");
 }
 
 function hasProtected(cardId: string): boolean {
@@ -3118,6 +3121,13 @@ export function attack(
 				const attackValue = getCombatAttackValue(state, slot, attackerId, attackerPos, reactiveAttackPenalty);
 				const targetCardId = finalTarget.type === "ally" ? String(enemy.field[finalTarget.targetPos] || "") : String(enemy.leaderId || "");
 				const targetName = finalTarget.type === "ally" ? targetCardId || "Aliado" : String(enemy.leaderId || "Líder");
+				const targetResistance = getTargetResistance(state, enemySlot, finalTarget);
+				const targetHp = finalTarget.type === "ally"
+					? getTargetHP(state, enemySlot, finalTarget.targetPos)
+					: Number(enemy.hp || 0);
+				const targetMaxHp = finalTarget.type === "ally"
+					? getCardDynamicMaxHp(state, enemySlot, finalTarget.targetPos, targetCardId)
+					: Math.max(1, getCardMaxHp(String(enemy.leaderId || "")) + getAttachedSupportNumericBonus(enemy, null, "hpBonus") + getLeaderBlessing(state, enemySlot));
 				const options: ChoiceOption[] = blockers.map((pos) => ({ id: `block-${pos}`, label: String(enemy.field[pos] || ""), side: enemySlot, lane: "field", pos, cardId: String(enemy.field[pos] || "") }));
 				options.push({ id: `block-cancel`, label: "Não interpor", side: enemySlot });
 				askChoice(enemySlot, {
@@ -3128,7 +3138,10 @@ export function attack(
 					attackerName: attackerDef?.name || attackerId,
 					attackerAttack: attackValue,
 					targetCardId,
-					targetName
+					targetName,
+					targetResistance,
+					targetHp,
+					targetMaxHp
 				}, (optionId) => {
 					let chosenPos: number | null = null;
 					if (optionId && optionId.startsWith("block-")) {
@@ -3277,6 +3290,20 @@ export function attack(
 	};
 
 	const offerEmboscadaReaction = () => {
+		const attackValueForReaction = getCombatAttackValue(state, slot, attackerId, attackerPos, reactiveAttackPenalty);
+		const declaredTargetCardId = target.type === "ally"
+			? String(enemy.field[target.targetPos] || "")
+			: String(enemy.leaderId || "");
+		const declaredTargetName = target.type === "ally"
+			? (declaredTargetCardId || "Aliado")
+			: String(enemy.leaderId || "Líder");
+		const declaredTargetResistance = getTargetResistance(state, enemySlot, target);
+		const declaredTargetHp = target.type === "ally"
+			? getTargetHP(state, enemySlot, target.targetPos)
+			: Number(enemy.hp || 0);
+		const declaredTargetMaxHp = target.type === "ally"
+			? getCardDynamicMaxHp(state, enemySlot, target.targetPos, declaredTargetCardId)
+			: Math.max(1, getCardMaxHp(String(enemy.leaderId || "")) + getAttachedSupportNumericBonus(enemy, null, "hpBonus") + getLeaderBlessing(state, enemySlot));
 		const emboscadaIndex = enemy.hand.findIndex((cid: string) => String(findCardDef(String(cid || ""))?.effect || "") === "aranhas_emboscada");
 		if (emboscadaIndex >= 0) {
 			const emboscadaCardId = String(enemy.hand[emboscadaIndex] || "");
@@ -3286,7 +3313,19 @@ export function attack(
 					{ id: "emboscada-yes", label: `Ativar ${emboscadaCardId}`, description: `Pagar ${emboscadaCost} fragmento(s) para dar -1 ATK ao atacante.` },
 					{ id: "emboscada-no", label: "Não ativar" }
 				];
-				askChoice(enemySlot, { title: `${emboscadaCardId}: deseja ativar contra ${attackerId}?`, options, allowCancel: true }, (optionId) => {
+				askChoice(enemySlot, {
+					title: `${emboscadaCardId}: deseja ativar contra ${attackerId}?`,
+					options,
+					allowCancel: true,
+					attackerId,
+					attackerName: attackerDef?.name || attackerId,
+					attackerAttack: attackValueForReaction,
+					targetCardId: declaredTargetCardId,
+					targetName: declaredTargetName,
+					targetResistance: declaredTargetResistance,
+					targetHp: declaredTargetHp,
+					targetMaxHp: declaredTargetMaxHp
+				}, (optionId) => {
 					if (optionId === "emboscada-yes") {
 						const liveEmboscadaIndex = enemy.hand.findIndex((cid: string) => String(cid || "") === emboscadaCardId);
 						if (liveEmboscadaIndex >= 0 && Number(enemy.fragments || 0) >= emboscadaCost) {
@@ -3314,6 +3353,20 @@ export function attack(
 
 	const contricaoIndex = enemy.hand.findIndex((cid: string) => String(findCardDef(String(cid || ""))?.effect || "") === "freeser");
 	if (contricaoIndex >= 0) {
+		const attackValueForReaction = getCombatAttackValue(state, slot, attackerId, attackerPos, reactiveAttackPenalty);
+		const declaredTargetCardId = target.type === "ally"
+			? String(enemy.field[target.targetPos] || "")
+			: String(enemy.leaderId || "");
+		const declaredTargetName = target.type === "ally"
+			? (declaredTargetCardId || "Aliado")
+			: String(enemy.leaderId || "Líder");
+		const declaredTargetResistance = getTargetResistance(state, enemySlot, target);
+		const declaredTargetHp = target.type === "ally"
+			? getTargetHP(state, enemySlot, target.targetPos)
+			: Number(enemy.hp || 0);
+		const declaredTargetMaxHp = target.type === "ally"
+			? getCardDynamicMaxHp(state, enemySlot, target.targetPos, declaredTargetCardId)
+			: Math.max(1, getCardMaxHp(String(enemy.leaderId || "")) + getAttachedSupportNumericBonus(enemy, null, "hpBonus") + getLeaderBlessing(state, enemySlot));
 		const contricaoCardId = String(enemy.hand[contricaoIndex] || "");
 		const contricaoCost = getCardCost(contricaoCardId);
 		if (contricaoCardId && Number(enemy.fragments || 0) >= contricaoCost) {
@@ -3321,7 +3374,19 @@ export function attack(
 				{ id: "contricao-yes", label: `Ativar ${contricaoCardId}`, description: `Pagar ${contricaoCost} fragmento(s) para negar o ataque e manter o atacante exaurido até o fim do próximo turno do oponente.` },
 				{ id: "contricao-no", label: "Não ativar" }
 			];
-			askChoice(enemySlot, { title: `${contricaoCardId}: deseja negar o ataque de ${attackerId}?`, options, allowCancel: true }, (optionId) => {
+			askChoice(enemySlot, {
+				title: `${contricaoCardId}: deseja negar o ataque de ${attackerId}?`,
+				options,
+				allowCancel: true,
+				attackerId,
+				attackerName: attackerDef?.name || attackerId,
+				attackerAttack: attackValueForReaction,
+				targetCardId: declaredTargetCardId,
+				targetName: declaredTargetName,
+				targetResistance: declaredTargetResistance,
+				targetHp: declaredTargetHp,
+				targetMaxHp: declaredTargetMaxHp
+			}, (optionId) => {
 				if (optionId === "contricao-yes") {
 					const liveContricaoIndex = enemy.hand.findIndex((cid: string) => String(cid || "") === contricaoCardId);
 					if (liveContricaoIndex >= 0 && Number(enemy.fragments || 0) >= contricaoCost) {

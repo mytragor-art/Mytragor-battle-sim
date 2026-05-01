@@ -743,6 +743,25 @@ function getMarcialBattleBonus(cardId: string): number {
 	return Math.max(0, countMarcialCardsInBattle() - 1);
 }
 
+function isMarcialBonusEnvCard(cardId: string | null | undefined): boolean {
+	const card = resolveCard(String(cardId || ""));
+	if (String(card?.effect || "") === "marcial_bonus") return true;
+	const normalized = normalizeCardId(String(card?.name || cardId || ""));
+	return normalized === "camposensanguentados" || normalized === "campoensanguentado" || normalized === "camposbg";
+}
+
+function isMarcialCharacter(cardId: string): boolean {
+	const card = resolveCard(cardId);
+	const source = normalizeKind(String(card?.filiacao || ""));
+	return source.includes(normalizeKind("Marcial"));
+}
+
+function hasMarcialEnvAttackBonusForSide(side: BattleSide, attackerId: string): boolean {
+	if (!isMarcialBonusEnvCard(currentMyEnv) && !isMarcialBonusEnvCard(currentEnemyEnv)) return false;
+	const leaderId = side === "you" ? currentMyLeader : currentEnemyLeader;
+	return cardHasFiliation(leaderId, "Marcial") && isMarcialCharacter(attackerId);
+}
+
 function getCurrentLeaderHp(side: BattleSide): number {
 	const value = side === "you" ? currentMyLeaderHp : currentEnemyLeaderHp;
 	if (Number.isFinite(value) && value > 0) return value;
@@ -751,7 +770,11 @@ function getCurrentLeaderHp(side: BattleSide): number {
 }
 
 function getLeaderAttackValue(side: BattleSide, cardId: string): number {
-	return Math.max(0, Number(resolveCard(cardId)?.atkBonus || 0) + getAttachedSupportNumericBonusForSide(side, null, "atkBonus") + getAttachedSupportNumericBonusForSide(side, null, "dmgBonus"));
+	let total = Number(resolveCard(cardId)?.atkBonus || 0);
+	total += getAttachedSupportNumericBonusForSide(side, null, "atkBonus");
+	total += getAttachedSupportNumericBonusForSide(side, null, "dmgBonus");
+	if (hasMarcialEnvAttackBonusForSide(side, cardId)) total += 1;
+	return Math.max(0, total);
 }
 
 function buildChoiceAttackerSummary(payload: any): string {
@@ -771,6 +794,17 @@ function getLeaderResistanceValue(side: BattleSide): number {
 	return Math.max(0, getAttachedSupportNumericBonusForSide(side, null, "acBonus"));
 }
 
+function getLeaderEquipResistanceBonus(side: BattleSide): number {
+	const equips = attachedEquipCards(side, null);
+	let total = 0;
+	for (const equipId of equips) {
+		const equip = resolveCard(equipId) as any;
+		const value = Number(equip?.acBonus || 0);
+		if (Number.isFinite(value)) total += value;
+	}
+	return Math.max(0, total);
+}
+
 function getLeaderMaxHpValue(side: BattleSide, cardId: string): number {
 	const baseHp = Number(resolveCard(cardId)?.hp || 20);
 	return Math.max(1, baseHp + getAttachedSupportNumericBonusForSide(side, null, "hpBonus") + getLeaderBlessingForSide(side));
@@ -783,15 +817,15 @@ function getFieldAttackValue(side: BattleSide, index: number, cardId: string): n
 	total += getAttachedSupportNumericBonusForSide(side, index, "atkBonus");
 	total += getAttachedSupportNumericBonusForSide(side, index, "dmgBonus");
 	total += getFieldVitalMarksForSide(side, index);
-	total += getFieldBloodMarksForSide(side, index);
 	total += getAuraAttackBonusForSide(side, cardId);
 	total += getMarcialBattleBonus(cardId);
+	if (hasMarcialEnvAttackBonusForSide(side, cardId)) total += 1;
 	return Math.max(0, total);
 }
 
 function getFieldResistanceValue(side: BattleSide, index: number, cardId: string): number {
 	const baseAc = Number(resolveCard(cardId)?.ac ?? 0);
-	return Math.max(0, baseAc + getFieldAcPermForSide(side, index) + getAttachedSupportNumericBonusForSide(side, index, "acBonus") + getFieldBloodMarksForSide(side, index));
+	return Math.max(0, baseAc + getFieldAcPermForSide(side, index) + getAttachedSupportNumericBonusForSide(side, index, "acBonus"));
 }
 
 function getBaseAllyInspectorStats(card: CardDef | undefined): Array<{ label: string; value: string; tone?: "good" | "bad" | "neutral" | "gold" }> {
@@ -1059,17 +1093,6 @@ function getBattleRuntime(): BattleRuntime {
 			if (selection.leader) return;
 			stopAttackArrow();
 			resetBoardAttackSelection();
-			// immediate visual: mark attacker as deitado (tapped) locally so player sees it
-			try {
-				const slotId = `${selection.side}-ally-${selection.idx}`;
-				const slotEl = document.getElementById(slotId);
-				const cardBtn = slotEl?.querySelector(":scope > .card") as HTMLElement | null;
-				if (cardBtn) cardBtn.classList.add("tapped");
-				// also mark local tappedBySide so runtime reflects it
-				tappedBySide[selection.side].add(selection.idx);
-			} catch {
-				// ignore
-			}
 			if (target.type === "ally") {
 				selectedTargetType = "ally";
 				selectedTargetPos = target.index;
@@ -1630,6 +1653,86 @@ function appendSupportCounterTag(cardEl: HTMLElement, value: number): void {
 	cardEl.appendChild(tag);
 }
 
+function appendAllyStatsBar(cardEl: HTMLElement, values: { hp: number; maxHp: number; attack: number; resistance: number }): void {
+	const bar = document.createElement("div");
+	bar.className = "allyStatsRow";
+	const hpTag = document.createElement("div");
+	hpTag.className = "allyStatTag allyStatTag--hp";
+	if (values.maxHp > 0 && values.hp / values.maxHp <= 0.5) hpTag.classList.add("low");
+	const hpIcon = document.createElement("span");
+	hpIcon.className = "allyStatIcon";
+	hpIcon.textContent = "❤";
+	const hpValue = document.createElement("span");
+	hpValue.className = "allyStatValue";
+	hpValue.textContent = String(values.hp);
+	hpTag.appendChild(hpIcon);
+	hpTag.appendChild(hpValue);
+	bar.appendChild(hpTag);
+
+	const attackTag = document.createElement("div");
+	attackTag.className = "allyStatTag allyStatTag--attack";
+	const attackIcon = document.createElement("span");
+	attackIcon.className = "allyStatIcon";
+	attackIcon.textContent = "⚔";
+	const attackValue = document.createElement("span");
+	attackValue.className = "allyStatValue";
+	attackValue.textContent = String(values.attack);
+	attackTag.appendChild(attackIcon);
+	attackTag.appendChild(attackValue);
+	bar.appendChild(attackTag);
+
+	const resistanceTag = document.createElement("div");
+	resistanceTag.className = "allyStatTag allyStatTag--resistance";
+	const resistanceIcon = document.createElement("span");
+	resistanceIcon.className = "allyStatIcon";
+	resistanceIcon.textContent = "🛡";
+	const resistanceValue = document.createElement("span");
+	resistanceValue.className = "allyStatValue";
+	resistanceValue.textContent = String(values.resistance);
+	resistanceTag.appendChild(resistanceIcon);
+	resistanceTag.appendChild(resistanceValue);
+	bar.appendChild(resistanceTag);
+
+	cardEl.appendChild(bar);
+}
+
+function appendChosenStatsBar(cardEl: HTMLElement, values: { hp: number; maxHp: number; resistance: number }): void {
+	const bar = document.createElement("div");
+	bar.className = "allyStatsRow chosenStatsRow";
+
+	const hpTag = document.createElement("div");
+	hpTag.className = "allyStatTag allyStatTag--hp";
+	if (values.maxHp > 0 && values.hp / values.maxHp <= 0.5) hpTag.classList.add("low");
+	const hpIcon = document.createElement("span");
+	hpIcon.className = "allyStatIcon";
+	hpIcon.textContent = "❤";
+	const hpValue = document.createElement("span");
+	hpValue.className = "allyStatValue";
+	hpValue.textContent = String(values.hp);
+	hpTag.appendChild(hpIcon);
+	hpTag.appendChild(hpValue);
+	bar.appendChild(hpTag);
+
+	if (Number.isFinite(values.resistance) && values.resistance > 0) {
+		bar.classList.add("chosenStatsRow--dual");
+		const resistanceTag = document.createElement("div");
+		resistanceTag.className = "allyStatTag allyStatTag--resistance";
+		const resistanceIcon = document.createElement("span");
+		resistanceIcon.className = "allyStatIcon";
+		resistanceIcon.textContent = "🛡";
+		const resistanceValue = document.createElement("span");
+		resistanceValue.className = "allyStatValue";
+		resistanceValue.textContent = String(values.resistance);
+		resistanceTag.appendChild(resistanceIcon);
+		resistanceTag.appendChild(resistanceValue);
+		bar.appendChild(resistanceTag);
+	} else {
+		bar.classList.add("chosenStatsRow--single");
+	}
+
+	cardEl.appendChild(bar);
+}
+
 function pileLabel(which: "deck" | "grave" | "banished"): string {
 	if (which === "deck") return "Deck";
 	if (which === "grave") return "Cemitério";
@@ -1844,6 +1947,117 @@ function showChoiceWaitingModal(payload: any) {
 	startCountdown("choiceWaitingCountdown", "choiceWaitingCountdownValue", Number(payload?.timeoutMs || 0), "waiting");
 }
 
+function createChoiceDuelPanel(payload: any): HTMLElement | null {
+	const attackerId = String(payload?.attackerId || "").trim();
+	const targetCardId = String(payload?.targetCardId || "").trim();
+	const attackerName = String(payload?.attackerName || attackerId || "Atacante").trim();
+	const targetName = String(payload?.targetName || targetCardId || "Alvo").trim();
+	const attackerAttack = Number(payload?.attackerAttack);
+	const targetResistance = Number(payload?.targetResistance);
+	const targetHp = Number(payload?.targetHp);
+	const targetMaxHp = Number(payload?.targetMaxHp);
+	if (!attackerId && !targetCardId) return null;
+
+	const panel = document.createElement("div");
+	panel.style.display = "grid";
+	panel.style.gap = "8px";
+	panel.style.padding = "10px";
+	panel.style.border = "1px solid rgba(255,255,255,.14)";
+	panel.style.borderRadius = "10px";
+	panel.style.background = "rgba(255,255,255,.04)";
+
+	const title = document.createElement("div");
+	title.textContent = "Combate Atual";
+	title.style.fontSize = "12px";
+	title.style.fontWeight = "700";
+	title.style.opacity = "0.95";
+	panel.appendChild(title);
+
+	const row = document.createElement("div");
+	row.style.display = "grid";
+	row.style.gridTemplateColumns = "1fr auto 1fr";
+	row.style.gap = "8px";
+	row.style.alignItems = "start";
+
+	const buildMini = (cardId: string, name: string, tone: "atk" | "def") => {
+		const wrap = document.createElement("div");
+		wrap.style.display = "grid";
+		wrap.style.gap = "4px";
+		wrap.style.justifyItems = "center";
+		const card = resolveCard(cardId);
+		const thumb = document.createElement("img");
+		thumb.src = asAssetPath(card?.img || CARD_BACK_ASSET);
+		thumb.alt = name || cardId || (tone === "atk" ? "Atacante" : "Alvo");
+		thumb.style.width = "72px";
+		thumb.style.height = "100px";
+		thumb.style.objectFit = "cover";
+		thumb.style.borderRadius = "8px";
+		thumb.style.border = tone === "atk"
+			? "1px solid rgba(248,113,113,.55)"
+			: "1px solid rgba(125,211,252,.55)";
+		thumb.style.boxShadow = "0 6px 14px rgba(0,0,0,.35)";
+		thumb.onerror = () => {
+			thumb.src = asAssetPath(CARD_BACK_ASSET);
+		};
+		const label = document.createElement("div");
+		label.textContent = name || cardId || (tone === "atk" ? "Atacante" : "Alvo");
+		label.style.fontSize = "11px";
+		label.style.lineHeight = "1.15";
+		label.style.textAlign = "center";
+		label.style.maxWidth = "96px";
+		label.style.opacity = "0.95";
+		wrap.appendChild(thumb);
+		wrap.appendChild(label);
+		return wrap;
+	};
+
+	row.appendChild(buildMini(attackerId, attackerName, "atk"));
+	const versus = document.createElement("div");
+	versus.textContent = "x";
+	versus.style.alignSelf = "center";
+	versus.style.fontWeight = "800";
+	versus.style.opacity = "0.9";
+	row.appendChild(versus);
+	row.appendChild(buildMini(targetCardId, targetName, "def"));
+
+	panel.appendChild(row);
+
+	const hasRiskLine = Number.isFinite(attackerAttack) || Number.isFinite(targetResistance);
+	const hasHpLine = Number.isFinite(targetHp) || Number.isFinite(targetMaxHp);
+	if (hasRiskLine || hasHpLine) {
+		const stats = document.createElement("div");
+		stats.style.display = "flex";
+		stats.style.flexWrap = "wrap";
+		stats.style.gap = "6px";
+		stats.style.justifyContent = "center";
+		if (hasRiskLine) {
+			const risk = document.createElement("div");
+			risk.style.padding = "3px 8px";
+			risk.style.borderRadius = "999px";
+			risk.style.border = "1px solid rgba(255,255,255,.18)";
+			risk.style.background = "rgba(15,23,42,.72)";
+			risk.style.fontSize = "11px";
+			risk.style.fontWeight = "700";
+			risk.textContent = `ATK ${Number.isFinite(attackerAttack) ? attackerAttack : "?"} x RES ${Number.isFinite(targetResistance) ? targetResistance : "?"}`;
+			stats.appendChild(risk);
+		}
+		if (hasHpLine) {
+			const hp = document.createElement("div");
+			hp.style.padding = "3px 8px";
+			hp.style.borderRadius = "999px";
+			hp.style.border = "1px solid rgba(255,255,255,.18)";
+			hp.style.background = "rgba(15,23,42,.72)";
+			hp.style.fontSize = "11px";
+			hp.style.fontWeight = "700";
+			hp.textContent = `Vida alvo ${Number.isFinite(targetHp) ? targetHp : "?"}/${Number.isFinite(targetMaxHp) ? targetMaxHp : "?"}`;
+			stats.appendChild(hp);
+		}
+		panel.appendChild(stats);
+	}
+
+	return panel;
+}
+
 function hideChoiceWaitingModal() {
 	const modal = document.getElementById("choiceWaitingModal") as HTMLElement | null;
 	if (modal) modal.style.display = "none";
@@ -1911,6 +2125,7 @@ function showEffectChoiceModal(payload: any) {
 		infoBox.textContent = attackerSummary;
 		previewWrap.appendChild(infoBox);
 	}
+	const duelPanel = createChoiceDuelPanel(payload);
 	const timeoutMs = Number(payload?.timeoutMs || 0);
 	if (timeoutMs > 0) {
 		const seconds = Math.max(1, Math.floor(timeoutMs / 1000));
@@ -2049,6 +2264,11 @@ function showEffectChoiceModal(payload: any) {
 		groupGrid.appendChild(item);
 		}
 		choicesWrap.appendChild(groupGrid);
+	}
+
+	if (duelPanel) {
+		duelPanel.style.marginTop = "10px";
+		choicesWrap.appendChild(duelPanel);
 	}
 
 	if (window.innerWidth <= 980) {
@@ -2294,13 +2514,11 @@ function renderLane(zoneId: "you-field" | "ai-field" | "you-support" | "ai-suppo
 			const side = zoneId === "you-field" ? "you" : "ai";
 			const maxHp = getDisplayedFieldMaxHp(side, index, cardId);
 			const currentHp = Math.max(0, Number(hpValues?.[index] ?? maxHp));
+			const attack = getFieldAttackValue(side, index, cardId);
+			const resistance = getFieldResistanceValue(side, index, cardId);
 			appendBloodTag(cardEl, getFieldBloodMarksForSide(side, index));
 			appendVitalTag(cardEl, getFieldVitalMarksForSide(side, index));
-			const hpTag = document.createElement("div");
-			hpTag.className = "hpTag";
-			if (maxHp > 0 && currentHp / maxHp <= 0.5) hpTag.classList.add("low");
-			hpTag.textContent = `${currentHp}`;
-			cardEl.appendChild(hpTag);
+			appendAllyStatsBar(cardEl, { hp: currentHp, maxHp, attack, resistance });
 			appendEquipAttachTag(cardEl, zoneId === "you-field" ? "you" : "ai", index);
 		}
 		if (zoneId === "you-support" || zoneId === "ai-support") {
@@ -2348,13 +2566,10 @@ function renderLeaderSlot(slotId: "you-leader" | "ai-leader", leaderId: string, 
 	const baseMaxHp = Number(resolveCard(leader)?.hp || 20);
 	const currentHp = Math.max(0, Number(currentHpValue ?? baseMaxHp));
 	const maxHp = getLeaderMaxHpValue(side, leader);
+	const resistanceFromEquip = getLeaderEquipResistanceBonus(side);
 	appendVitalTag(cardEl, side === "you" ? currentMyLeaderVitalMarks : currentEnemyLeaderVitalMarks);
 	appendSpiderTag(cardEl, side === "you" ? currentMyLeaderSpiderMarks : currentEnemyLeaderSpiderMarks);
-	const hpTag = document.createElement("div");
-	hpTag.className = "hpTag";
-	if (maxHp > 0 && currentHp / maxHp <= 0.5) hpTag.classList.add("low");
-	hpTag.textContent = `${currentHp}`;
-	cardEl.appendChild(hpTag);
+	appendChosenStatsBar(cardEl, { hp: currentHp, maxHp, resistance: resistanceFromEquip });
 	appendEquipAttachTag(cardEl, side, null);
 	slotEl.onmousemove = () => setHoveredInspector({ cardId: leader, side, lane: "leader" });
 	slotEl.onmouseleave = () => setHoveredInspector(null);
