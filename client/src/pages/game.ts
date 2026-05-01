@@ -1127,6 +1127,7 @@ function beginBoardAttackFrom(index: number): void {
 	startAttackArrow(document.getElementById(`you-ally-${index}`));
 	if (view.selectedAttackerEl) view.selectedAttackerEl.textContent = `[${index}] ${currentMyField[index] || "—"}`;
 	if (view.selectedTargetEl) view.selectedTargetEl.textContent = "Líder inimigo";
+	rerenderCombatSelectionState();
 	selectAttacker(runtime, "you", index);
 	if (!document.querySelector(".slot.clickable")) {
 		resetBoardAttackSelection();
@@ -1142,6 +1143,28 @@ function canSelectCombatAttacker(index: number): boolean {
 	return canAttackCardQuiet(runtime, "you", card);
 }
 
+function rerenderCombatSelectionState(): void {
+	renderMyField(currentMyField, currentMyFieldHp);
+	renderEnemyField(currentEnemyField, currentEnemyFieldHp);
+	renderLeaderSlot("you-leader", currentMyLeader, currentMyLeaderHp);
+	renderLeaderSlot("ai-leader", currentEnemyLeader, currentEnemyLeaderHp);
+	syncEnemyLeaderCombatTargetState();
+}
+
+function syncEnemyLeaderCombatTargetState(): void {
+	const enemyLeaderSlot = document.getElementById("ai-leader");
+	if (!enemyLeaderSlot) return;
+	enemyLeaderSlot.classList.toggle("combat-target", canSelectCombatTarget({ type: "leader", side: "ai" }));
+	clearAttackTargetHover(enemyLeaderSlot as HTMLElement);
+	enemyLeaderSlot.onclick = () => {
+		if (!canSelectCombatTarget({ type: "leader", side: "ai" })) return;
+		resolveSelectedBoardAttack({ type: "leader", side: "ai" });
+	};
+	if (canSelectCombatTarget({ type: "leader", side: "ai" })) {
+		(enemyLeaderSlot as HTMLElement & { __attackHoverCleanup?: (() => void) | null }).__attackHoverCleanup = bindAttackTargetHover(enemyLeaderSlot);
+	}
+}
+
 function cancelBoardAttackSelection(): void {
 	stopAttackArrow();
 	endAttackCleanup(getBattleRuntime());
@@ -1154,6 +1177,7 @@ function resetBoardAttackSelection(): void {
 	selectedTargetPos = null;
 	if (view.selectedAttackerEl) view.selectedAttackerEl.textContent = "—";
 	if (view.selectedTargetEl) view.selectedTargetEl.textContent = "Líder inimigo";
+	rerenderCombatSelectionState();
 }
 
 function resolveSelectedBoardAttack(target: BattleTarget): void {
@@ -2454,7 +2478,7 @@ function renderLane(zoneId: "you-field" | "ai-field" | "you-support" | "ai-suppo
 			if (!consumeLanePileFlight(zoneId, previousCards[index])) spawnDeathGhost(slotEl, existingCard);
 		}
 		for (const oldCard of Array.from(slotEl.querySelectorAll(":scope > .card"))) oldCard.remove();
-		slotEl.classList.remove("clickable", "selected", "dropTarget");
+		slotEl.classList.remove("clickable", "selected", "dropTarget", "combat-target");
 		slotEl.onclick = null;
 		slotEl.ondragenter = null;
 		slotEl.ondragover = null;
@@ -2503,6 +2527,7 @@ function renderLane(zoneId: "you-field" | "ai-field" | "you-support" | "ai-suppo
 		if (zoneId === "you-field" && tappedBySide.you.has(index)) cardEl.classList.add("tapped");
 		if (zoneId === "ai-field" && tappedBySide.ai.has(index)) cardEl.classList.add("tapped");
 		if (zoneId === "you-field" && canSelectCombatAttacker(index)) cardEl.classList.add("can-attack");
+		if (zoneId === "ai-field" && canSelectCombatTarget({ type: "ally", side: "ai", index })) cardEl.classList.add("can-be-targeted");
 		const renderSide: BattleSide = side;
 		if ((zoneId === "you-field" || zoneId === "ai-field") && untapPulseBySide[renderSide] && justUntappedBySide[renderSide].has(index)) {
 			cardEl.classList.add("just-untapped");
@@ -2529,6 +2554,7 @@ function renderLane(zoneId: "you-field" | "ai-field" | "you-support" | "ai-suppo
 		slotEl.appendChild(cardEl);
 		if (!previousCards[index] && cardId) animateEl(cardEl, "anim-play");
 		if (activeIndex === index) slotEl.classList.add("selected");
+		if (zoneId === "ai-field" && canSelectCombatTarget({ type: "ally", side: "ai", index })) slotEl.classList.add("combat-target");
 		if (onClick) {
 			const allowClick = zoneId === "ai-field"
 				? (selectedAttackerPos === null || currentPhase !== "COMBAT" || !isMyTurn || canSelectCombatTarget({ type: "ally", side: "ai", index }))
@@ -3061,17 +3087,7 @@ function bindActiveMatchRoom() {
 			renderLeaderSlot("ai-leader", String(enemy?.leaderId || ""), Number(enemy?.hp ?? 0));
 			const myLeaderSlot = document.getElementById("you-leader");
 			if (myLeaderSlot) myLeaderSlot.onclick = null;
-			const enemyLeaderSlot = document.getElementById("ai-leader");
-			if (enemyLeaderSlot) {
-				clearAttackTargetHover(enemyLeaderSlot as HTMLElement);
-				enemyLeaderSlot.onclick = () => {
-					if (!canSelectCombatTarget({ type: "leader", side: "ai" })) return;
-					resolveSelectedBoardAttack({ type: "leader", side: "ai" });
-				};
-				if (canSelectCombatTarget({ type: "leader", side: "ai" })) {
-					(enemyLeaderSlot as HTMLElement & { __attackHoverCleanup?: (() => void) | null }).__attackHoverCleanup = bindAttackTargetHover(enemyLeaderSlot);
-				}
-			}
+			syncEnemyLeaderCombatTargetState();
 			renderEnvSlot("you-env", currentMyEnv, true);
 			renderEnvSlot("ai-env", enemyEnv, false);
 			renderPileCounts("you", my);

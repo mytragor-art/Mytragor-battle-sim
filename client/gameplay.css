@@ -15,8 +15,8 @@
   --hud-chip-h: 30px;
   --hud-chip-px: 10px;
   --hud-chip-fs: 12px;
-  --cardW: 82px;
-  --cardH: 116px;
+  --cardW: 90px;
+  --cardH: 126px;
   --hand-card-w: 72px;
   --hand-card-h: 100px;
 
@@ -24,37 +24,37 @@
   --hand-scale: 0.72;   /* mão menor para caber inteira na mesa */
 
   /* Keep base (unscaled) card sizes so JS can compute scaled values reliably */
-  --cardW-base: 82px;
-  --cardH-base: 116px;
+  --cardW-base: 90px;
+  --cardH-base: 126px;
 
   /* Responsive scaler vars */
   --scale: 1;
   --left-w: 0px;
   --hands-w: clamp(220px, 20vw, 300px);
   --right-w: clamp(240px, 21vw, 320px); /* largura da coluna da Prévia */
-  --arena-w: 920; /* logical arena width (px) */
-  --arena-h: 760;  /* logical arena height (px) */
+  --arena-w: 1000; /* logical arena width (px) */
+  --arena-h: 800;  /* logical arena height (px) */
   --radius: 8px;
-  --gap: 9px;
+  --gap: 10px;
   --zoom: 1.0;
-  --slot-card-w: 88px;
-  --slot-card-h: 114px;
+  --slot-card-w: 96px;
+  --slot-card-h: 124px;
   --pile-card-w: 86px;
   --pile-card-h: 110px;
-  --slotW: calc(var(--cardW) - 8px);
-  --slotH: calc(var(--cardH) - 14px);
+  --slotW: calc(var(--cardW) - 6px);
+  --slotH: calc(var(--cardH) - 12px);
   --content-max: calc(var(--arena-w) * 1px);
-  --op-arena-fr: 0.9fr;
-  --you-arena-fr: 1.1fr;
+  --op-arena-fr: 1.02fr;
+  --you-arena-fr: 0.98fr;
 }
 
 @media (min-width: 1650px){
   :root{
-    --cardW: 82px;
-    --cardH: 116px;
-    --cardW-base: 82px;
-    --cardH-base: 116px;
-    --gap: 10px;
+    --cardW: 94px;
+    --cardH: 132px;
+    --cardW-base: 94px;
+    --cardH-base: 132px;
+    --gap: 11px;
     --hand-scale: 0.74;
   }
 }
@@ -63,11 +63,11 @@
   :root{
     --hands-w: clamp(185px, 17vw, 230px);
     --right-w: clamp(210px, 18vw, 260px);
-    --cardW: 78px;
-    --cardH: 110px;
-    --cardW-base: 78px;
-    --cardH-base: 110px;
-    --gap: 7px;
+    --cardW: 84px;
+    --cardH: 118px;
+    --cardW-base: 84px;
+    --cardH-base: 118px;
+    --gap: 8px;
     --hand-scale: 0.69;
   }
 }
@@ -252,7 +252,7 @@ html,body{height:100%;font-family:-apple-system,system-ui,'Segoe UI',Roboto,'Hel
 /* Columns */
 .col{background:var(--hud-bg);border:1px solid var(--hud-border);border-radius:12px;padding:8px;box-sizing:border-box;backdrop-filter: blur(2px);position:relative;z-index:1}
 #handsCol{ grid-column:1; grid-row:1 / span 2; width:var(--hands-w); max-width:var(--hands-w); min-width:160px; overflow:hidden; position:sticky; top:8px; height:calc(100vh - 16px); display:grid; grid-template-rows:1fr 1fr; gap:6px; padding:6px; }
-#arenaCol{ grid-column:2; grid-row:1 / span 2; overflow:hidden; max-width: calc(var(--arena-w) * 1px); justify-self:center; width:100%; height:calc(100vh - 16px); display:grid; grid-template-rows:auto 1fr; min-height:0; gap:6px; }
+#arenaCol{ grid-column:2; grid-row:1 / span 2; overflow-x:visible; overflow-y:auto; max-width: calc(var(--arena-w) * 1px); justify-self:center; width:100%; height:calc(100vh - 16px); display:grid; grid-template-rows:auto 1fr; min-height:0; gap:6px; padding-bottom:6px; }
 #previewCol{ grid-column:3; grid-row:1 / span 2; max-width: var(--right-w); width: var(--right-w); overflow:auto; position:sticky; top:8px; height: calc(100vh - 16px); }
 
 .arenaToolbar{
@@ -457,8 +457,8 @@ html,body{height:100%;font-family:-apple-system,system-ui,'Segoe UI',Roboto,'Hel
   isolation: isolate;
   border: 1px solid rgba(255,255,255,0.14);
   border-radius: 12px;
-  padding: 8px;
-  padding-left: calc(8px + 90px); /* reserva espaço para os fragmentos à esquerda */
+  padding: 8px 10px 10px;
+  padding-left: calc(10px + 96px); /* reserva espaço para os fragmentos à esquerda */
   background: var(--arena-surface);
   margin-bottom: 2px;
   box-sizing: border-box;
@@ -467,9 +467,13 @@ html,body{height:100%;font-family:-apple-system,system-ui,'Segoe UI',Roboto,'Hel
 
 #opArena, #youArena {
   min-height: 0;
-  overflow: hidden;
+  height: 100%;
+  overflow: visible;
   display: grid;
+  align-self: stretch;
+  align-content: start;
   justify-items: center;
+  box-sizing: border-box;
   transition:
     border-color .22s ease,
     box-shadow .22s ease,
@@ -478,12 +482,20 @@ html,body{height:100%;font-family:-apple-system,system-ui,'Segoe UI',Roboto,'Hel
     background-color .22s ease;
 }
 
-#opArena{ align-items:start; }
+#opArena{
+  align-items:start;
+  padding-top:6px;
+  padding-bottom:8px;
+  --slotH: calc(var(--cardH) - 12px);
+  --gap: 8px;
+}
 #youArena{
   align-items:start;
-  --slotW: calc(var(--cardW) - 4px);
-  --slotH: calc(var(--cardH) - 10px);
-  --gap: 11px;
+  padding-top:10px;
+  padding-bottom:16px;
+  --slotW: calc(var(--cardW) - 2px);
+  --slotH: calc(var(--cardH) - 11px);
+  --gap: 9px;
 }
 
 #youArena.arenaTurnActive,
@@ -543,30 +555,30 @@ html,body{height:100%;font-family:-apple-system,system-ui,'Segoe UI',Roboto,'Hel
     linear-gradient(180deg, rgba(2,6,23,.44), rgba(2,6,23,.62));
 }
 
-.sideTitle{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.sideTitle{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
 .arena#opArena .sideTitle{display:none}
-.sideTitle.bottom{margin-top:8px;margin-bottom:0}
+.sideTitle.bottom{margin-top:6px;margin-bottom:0}
 .arena#youArena .sideTitle.bottom{display:none}
 .nameLine{display:flex;align-items:center;gap:6px}
 .miniLine{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .fragDock{
   position:absolute;
-  left:8px;
-  top:8px;
-  width:80px;
+  left:10px;
+  top:10px;
+  width:86px;
   z-index:3;
   display:grid;
   grid-template-columns:repeat(2, 1fr);
-  grid-auto-rows:54px;
-  gap:4px;
+  grid-auto-rows:58px;
+  gap:5px;
   align-content:start;
   justify-items:center;
   padding:2px 0;
   box-sizing:border-box
 }
 .fragToken{
-  width:38px;
-  height:54px;
+  width:41px;
+  height:58px;
   border-radius:10px;
   border:1px solid rgba(148,163,184,.40);
   background:
@@ -618,7 +630,7 @@ html,body{height:100%;font-family:-apple-system,system-ui,'Segoe UI',Roboto,'Hel
 .arenaGrid{
   display:grid;
   grid-template-columns: 1fr var(--slotW);
-  gap:8px;
+  gap:10px;
   align-items:start;
   max-width:100%;
 }
@@ -634,7 +646,7 @@ html,body{height:100%;font-family:-apple-system,system-ui,'Segoe UI',Roboto,'Hel
 .leaderBar{
   display:flex;
   justify-content:center;
-  gap:var(--gap);
+  gap:8px;
   align-items:center;
 }
 
@@ -700,6 +712,36 @@ html,body{height:100%;font-family:-apple-system,system-ui,'Segoe UI',Roboto,'Hel
 .slot.clickable *{pointer-events:none;}
 .slot.selected{ box-shadow:0 0 0 2px rgba(245,158,11,0.92) inset, 0 0 18px rgba(245,158,11,0.18); }
 .slot.dropTarget{ box-shadow:0 0 0 3px rgba(45,212,191,.75) inset; border-color:rgba(45,212,191,.8); }
+.slot.combat-target{
+  border-color: rgba(74, 222, 128, 0.88);
+  box-shadow:
+    0 0 0 2px rgba(34, 197, 94, 0.52) inset,
+    0 0 18px rgba(34, 197, 94, 0.20),
+    0 10px 22px rgba(0,0,0,0.22);
+}
+
+.slot.combat-target .card.slotCard,
+.card.slotCard.can-be-targeted{
+  border-color: rgba(74, 222, 128, 0.96);
+  box-shadow:
+    0 0 0 2px rgba(34, 197, 94, 0.72) inset,
+    0 0 18px rgba(74, 222, 128, 0.34),
+    0 10px 20px rgba(0,0,0,.35);
+  animation: combatTargetPulse 1.3s ease-in-out infinite;
+}
+
+.slot.combat-target:hover{
+  border-color: rgba(134, 239, 172, 1);
+}
+
+.slot.combat-target .card.slotCard:hover,
+.card.slotCard.can-be-targeted:hover{
+  transform: translateY(-4px);
+  box-shadow:
+    0 0 0 2px rgba(134, 239, 172, 0.82) inset,
+    0 0 24px rgba(74, 222, 128, 0.40),
+    0 16px 30px rgba(0,0,0,0.56);
+}
 
 .slotLabel{
   position:absolute;
@@ -736,6 +778,24 @@ html,body{height:100%;font-family:-apple-system,system-ui,'Segoe UI',Roboto,'Hel
 @media (max-width: 1120px){
   .arenaGrid{ grid-template-columns: 1fr; }
   .pilesCol{ flex-direction:row; }
+}
+
+@media all and (-ms-high-contrast: none), (-ms-high-contrast: active){
+  #arenaCol{
+    overflow-y:auto;
+    padding-bottom:10px;
+  }
+
+  #opArena,
+  #youArena{
+    padding-top:8px;
+    padding-bottom:14px;
+  }
+
+  .leaderBar{
+    gap:8px;
+    align-items:flex-start;
+  }
 }
 
 /* ========= MÃO E PRÉVIA (616-649) ========= */
@@ -1053,6 +1113,23 @@ html,body{height:100%;font-family:-apple-system,system-ui,'Segoe UI',Roboto,'Hel
   }
 }
 
+@keyframes combatTargetPulse{
+  0%, 100%{
+    border-color: rgba(74, 222, 128, 0.68);
+    box-shadow:
+      0 0 0 1px rgba(34, 197, 94, 0.54) inset,
+      0 0 12px rgba(34, 197, 94, 0.22),
+      0 10px 20px rgba(0,0,0,.35);
+  }
+  50%{
+    border-color: rgba(134, 239, 172, 0.98);
+    box-shadow:
+      0 0 0 2px rgba(74, 222, 128, 0.78) inset,
+      0 0 20px rgba(74, 222, 128, 0.36),
+      0 10px 20px rgba(0,0,0,.35);
+  }
+}
+
 .card.slotCard.choiceCardMuted .slotCardImg{
   filter:grayscale(1) saturate(0.15) contrast(1.05) brightness(0.92);
 }
@@ -1295,16 +1372,16 @@ html,body{height:100%;font-family:-apple-system,system-ui,'Segoe UI',Roboto,'Hel
   width:100%;
   height:100%;
   pointer-events:auto;
-  transform-origin:center center;
+  transform-origin:top center;
   will-change:transform;
 }
 
 .boardStage{
   width: calc(var(--arena-w) * 1px);
   height: calc(var(--arena-h) * 1px);
-  transform-origin: center center;
+  transform-origin: top center;
   pointer-events:auto;
-  margin:-10px auto 0;
+  margin:0 auto;
   display:block;
 }
 
@@ -1322,7 +1399,7 @@ html,body{height:100%;font-family:-apple-system,system-ui,'Segoe UI',Roboto,'Hel
   box-sizing:border-box;
   display:grid;
   grid-template-rows:minmax(0, var(--op-arena-fr)) auto minmax(0, var(--you-arena-fr));
-  gap:4px;
+  gap:2px;
   min-height:0;
 }
 

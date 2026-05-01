@@ -205,7 +205,17 @@ export class MatchRoom extends Room<MatchState> {
 			});
 		}
 		const starterSlot: Slot = options?.starterSlot === "p2" ? "p2" : "p1";
+
+		const autoAdvanceFromInitial = () => {
+			if (this.state.game.phase !== "INITIAL") return;
+			if (this.pendingChoices.size > 0) return;
+			nextPhase(this.state, (name, payload) => this.broadcastMatchEvent(name, payload));
+			this.publishSpectatorState();
+			this.refreshInactivityTimer();
+		};
+
 		initGame(this.state, options?.p1, options?.p2, (name, payload) => this.broadcastMatchEvent(name, payload), this.attackedThisTurn, this.summonedThisTurn, this.triggeredLeaderThisTurn, starterSlot, this.askChoice);
+		autoAdvanceFromInitial();
 		this.publishSpectatorState();
 
 		this.onMessage("next_phase", (client) => {
@@ -218,6 +228,7 @@ export class MatchRoom extends Room<MatchState> {
 		this.onMessage("end_turn", (client) => {
 			if (!this.isValidTurnAction(client, ["END"])) return;
 			endTurn(this.state, (name, payload) => this.broadcastMatchEvent(name, payload), this.attackedThisTurn, this.summonedThisTurn, this.triggeredLeaderThisTurn, this.askChoice);
+			autoAdvanceFromInitial();
 			this.publishSpectatorState();
 			this.refreshInactivityTimer();
 		});
@@ -257,6 +268,7 @@ export class MatchRoom extends Room<MatchState> {
 			this.activeChoiceSessionId = null;
 			const optionId = msg?.optionId == null ? null : String(msg.optionId);
 			pending.resolve(optionId);
+			autoAdvanceFromInitial();
 			this.publishSpectatorState();
 			if (!this.activeChoiceSessionId) this.refreshInactivityTimer();
 		});
