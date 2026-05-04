@@ -3126,8 +3126,8 @@ export function attack(
 					? getTargetHP(state, enemySlot, finalTarget.targetPos)
 					: Number(enemy.hp || 0);
 				const targetMaxHp = finalTarget.type === "ally"
-					? getCardDynamicMaxHp(state, enemySlot, finalTarget.targetPos, targetCardId)
-					: Math.max(1, getCardMaxHp(String(enemy.leaderId || "")) + getAttachedSupportNumericBonus(enemy, null, "hpBonus") + getLeaderBlessing(state, enemySlot));
+					? getCardDynamicMaxHp(state, enemySlot, targetCardId)
+					: Math.max(1, getCardMaxHp(String(enemy.leaderId || "")) + getAttachedSupportNumericBonus(enemy, null, "hpBonus") + getLeaderBlessing(enemy));
 				const options: ChoiceOption[] = blockers.map((pos) => ({ id: `block-${pos}`, label: String(enemy.field[pos] || ""), side: enemySlot, lane: "field", pos, cardId: String(enemy.field[pos] || "") }));
 				options.push({ id: `block-cancel`, label: "Não interpor", side: enemySlot });
 				askChoice(enemySlot, {
@@ -3302,8 +3302,8 @@ export function attack(
 			? getTargetHP(state, enemySlot, target.targetPos)
 			: Number(enemy.hp || 0);
 		const declaredTargetMaxHp = target.type === "ally"
-			? getCardDynamicMaxHp(state, enemySlot, target.targetPos, declaredTargetCardId)
-			: Math.max(1, getCardMaxHp(String(enemy.leaderId || "")) + getAttachedSupportNumericBonus(enemy, null, "hpBonus") + getLeaderBlessing(state, enemySlot));
+			? getCardDynamicMaxHp(state, enemySlot, declaredTargetCardId)
+			: Math.max(1, getCardMaxHp(String(enemy.leaderId || "")) + getAttachedSupportNumericBonus(enemy, null, "hpBonus") + getLeaderBlessing(enemy));
 		const emboscadaIndex = enemy.hand.findIndex((cid: string) => String(findCardDef(String(cid || ""))?.effect || "") === "aranhas_emboscada");
 		if (emboscadaIndex >= 0) {
 			const emboscadaCardId = String(enemy.hand[emboscadaIndex] || "");
@@ -3365,8 +3365,8 @@ export function attack(
 			? getTargetHP(state, enemySlot, target.targetPos)
 			: Number(enemy.hp || 0);
 		const declaredTargetMaxHp = target.type === "ally"
-			? getCardDynamicMaxHp(state, enemySlot, target.targetPos, declaredTargetCardId)
-			: Math.max(1, getCardMaxHp(String(enemy.leaderId || "")) + getAttachedSupportNumericBonus(enemy, null, "hpBonus") + getLeaderBlessing(state, enemySlot));
+			? getCardDynamicMaxHp(state, enemySlot, declaredTargetCardId)
+			: Math.max(1, getCardMaxHp(String(enemy.leaderId || "")) + getAttachedSupportNumericBonus(enemy, null, "hpBonus") + getLeaderBlessing(enemy));
 		const contricaoCardId = String(enemy.hand[contricaoIndex] || "");
 		const contricaoCost = getCardCost(contricaoCardId);
 		if (contricaoCardId && Number(enemy.fragments || 0) >= contricaoCost) {
