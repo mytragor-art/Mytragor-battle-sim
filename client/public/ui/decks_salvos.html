@@ -511,7 +511,7 @@
 				<span class="topbarSubtitle" id="deckCount">0 decks salvos</span>
 			</div>
 			<input id="searchDecks" class="searchInput" placeholder="Buscar decks ou líder..." />
-			<a href="deckbuilder.html" class="btn">Montar baralho</a>
+			<a href="deckbuilder.html" class="btn">Voltar</a>
 		</div>
 	</div>
 
@@ -604,6 +604,7 @@ const CHOSEN_IMAGES = {
 };
 
 const CARD_BACK_IMAGE = 'layout-background.ai.png';
+const DECK_EDIT_DRAFT_KEY = 'mytragor_deck_edit_draft';
 const deckState = {
 	all: [],
 	filtered: [],
@@ -661,6 +662,18 @@ function getDeckKey(deck){
 	return [getDeckName(deck), getLeaderName(deck), deck.fragImg || '', (deck.cards || []).join('|')].join('::');
 }
 
+function openDeckInEditor(deck) {
+	try {
+		localStorage.setItem(DECK_EDIT_DRAFT_KEY, JSON.stringify({
+			mode: deck && deck._id ? 'copy' : 'edit',
+			deck: normalizeDeck(deck, 0)
+		}));
+	} catch (error) {
+		console.warn('openDeckInEditor failed', error);
+	}
+	window.location.href = 'deckbuilder.html?edit=1';
+}
+
 function resolveLeaderImage(deck){
 	if (deck.leaderImg) return deck.leaderImg;
 	const leaderKey = normalizeLeaderKey(deck.leaderKey || deck.leader || deck.leaderName || '');
@@ -705,10 +718,33 @@ function resolveImg(path) {
 	}
 }
 
+function resolveThumbImg(path) {
+	if (!path) return resolveImg(CARD_BACK_IMAGE);
+	try {
+		let normalized = String(path).replace(/\\/g, '/').replace(/^\.\//, '').replace(/^\.\.\//, '');
+		if (normalized.startsWith('assets/')) {
+			normalized = normalized.slice('assets/'.length);
+		}
+		const thumbPath = 'publicadas/' + normalized.replace(/\.(png|jpe?g|webp|avif)$/i, '.thumb.webp');
+		return resolveImg(thumbPath);
+	} catch (e) {
+		return resolveImg(path);
+	}
+}
+
+function getCardDef(cardName) {
+	if (!window.CARD_DEFS) return null;
+	return window.CARD_DEFS.find(c => matchesCardName(c, cardName)) || null;
+}
+
 function getCardImg(cardName) {
-	if (!window.CARD_DEFS) return CARD_BACK_IMAGE;
-	const def = CARD_DEFS.find(c => matchesCardName(c, cardName));
+	const def = getCardDef(cardName);
 	return resolveImg(def && def.img ? def.img : CARD_BACK_IMAGE);
+}
+
+function getGridCardImg(cardName) {
+	const def = getCardDef(cardName);
+	return resolveThumbImg(def && def.img ? def.img : CARD_BACK_IMAGE);
 }
 
 function encodeDeck(deck) {
@@ -810,9 +846,18 @@ function renderDeckList(decks) {
 
 		const leader = document.createElement('img');
 		leader.className = 'deckListLeader';
-		leader.src = resolveImg(resolveLeaderImage(deck));
+		leader.loading = 'lazy';
+		leader.decoding = 'async';
+		leader.src = resolveThumbImg(resolveLeaderImage(deck));
 		leader.alt = getLeaderName(deck);
-		leader.onerror = () => { leader.src = CARD_BACK_IMAGE; };
+		leader.onerror = () => {
+			const fallbackSrc = resolveImg(resolveLeaderImage(deck));
+			if (leader.src !== fallbackSrc) {
+				leader.src = fallbackSrc;
+				return;
+			}
+			leader.src = CARD_BACK_IMAGE;
+		};
 
 		const body = document.createElement('div');
 		body.className = 'deckListBody';
@@ -875,6 +920,17 @@ function createActionButton(label, className, onClick) {
 	return button;
 }
 
+function openLobbyWithDeck(deckId) {
+	const href = (window.location && window.location.href) || '';
+	try {
+		const url = new URL('../lobby.html', href);
+		if (deckId) url.searchParams.set('deckId', String(deckId));
+		return url.href;
+	} catch {
+		return deckId ? `../lobby.html?deckId=${encodeURIComponent(String(deckId))}` : '../lobby.html';
+	}
+}
+
 function renderDeckCards(deck) {
 	const grid = document.getElementById('selectedDeckGrid');
 	const note = document.getElementById('deckCardsNote');
@@ -892,6 +948,7 @@ function renderDeckCards(deck) {
 
 	deck.cards.forEach(cardName => {
 		const imgSrc = getCardImg(cardName);
+		const gridImgSrc = getGridCardImg(cardName);
 		const card = document.createElement('button');
 		card.type = 'button';
 		card.className = 'selectedCard';
@@ -899,9 +956,17 @@ function renderDeckCards(deck) {
 		card.onclick = () => showCardModal(imgSrc, cardName);
 
 		const img = document.createElement('img');
-		img.src = imgSrc;
+		img.loading = 'lazy';
+		img.decoding = 'async';
+		img.src = gridImgSrc;
 		img.alt = cardName;
-		img.onerror = () => { img.src = CARD_BACK_IMAGE; };
+		img.onerror = () => {
+			if (img.src !== imgSrc) {
+				img.src = imgSrc;
+				return;
+			}
+			img.src = CARD_BACK_IMAGE;
+		};
 
 		const label = document.createElement('div');
 		label.className = 'selectedCardName';
@@ -942,10 +1007,14 @@ function renderDeckDetail(deck) {
 
 		const actions = document.getElementById('detailActions');
 		actions.innerHTML = '';
+		actions.appendChild(createActionButton(deck._id ? 'Duplicar e editar' : 'Editar', 'isMuted', () => {
+			openDeckInEditor(deck);
+		}));
 		actions.appendChild(createActionButton('Jogar', '', () => {
+			const playDeckId = deck.deckId || deck._id || getDeckKey(deck);
 			try {
 				localStorage.setItem('mytragor_play_deck', JSON.stringify({
-					deckId: deck.deckId || deck._id || getDeckKey(deck),
+					deckId: playDeckId,
 					deckName: deck.deckName || '',
 					leader: deck.leaderName || deck.leader || '',
 					leaderName: deck.leaderName || deck.leader || '',
@@ -955,7 +1024,7 @@ function renderDeckDetail(deck) {
 					fragImg: deck.fragImg || null
 				}));
 			} catch (e) {}
-			window.open('../../mytragor_simulador.html', '_blank');
+			window.location.href = openLobbyWithDeck(playDeckId);
 		}));
 		actions.appendChild(createActionButton('Copiar lista', 'isMuted', () => {
 			if (navigator.clipboard) navigator.clipboard.writeText((deck.cards || []).join('\n'));

@@ -1181,7 +1181,11 @@ function resetBoardAttackSelection(): void {
 }
 
 function resolveSelectedBoardAttack(target: BattleTarget): void {
-	resolveAttackOn(getBattleRuntime(), target);
+	const runtime = getBattleRuntime();
+	if (selectedAttackerPos !== null) {
+		selectAttacker(runtime, "you", selectedAttackerPos);
+	}
+	resolveAttackOn(runtime, target);
 	stopAttackArrow();
 	resetBoardAttackSelection();
 }

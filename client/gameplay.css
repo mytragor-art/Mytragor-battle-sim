@@ -41,8 +41,8 @@
   --slot-card-h: 124px;
   --pile-card-w: 86px;
   --pile-card-h: 110px;
-  --slotW: calc(var(--cardW) - 6px);
-  --slotH: calc(var(--cardH) - 12px);
+  --slotW: calc((var(--cardW) - 6px) * 1.055);
+  --slotH: calc((var(--cardH) - 12px) * 1.055);
   --content-max: calc(var(--arena-w) * 1px);
   --op-arena-fr: 1.02fr;
   --you-arena-fr: 0.98fr;
@@ -486,15 +486,15 @@ html,body{height:100%;font-family:-apple-system,system-ui,'Segoe UI',Roboto,'Hel
   align-items:start;
   padding-top:6px;
   padding-bottom:8px;
-  --slotH: calc(var(--cardH) - 12px);
+  --slotH: calc((var(--cardH) - 12px) * 1.055);
   --gap: 8px;
 }
 #youArena{
   align-items:start;
   padding-top:10px;
   padding-bottom:16px;
-  --slotW: calc(var(--cardW) - 2px);
-  --slotH: calc(var(--cardH) - 11px);
+  --slotW: calc((var(--cardW) - 2px) * 1.055);
+  --slotH: calc((var(--cardH) - 11px) * 1.055);
   --gap: 9px;
 }
 
@@ -588,36 +588,38 @@ html,body{height:100%;font-family:-apple-system,system-ui,'Segoe UI',Roboto,'Hel
   align-items:center;
   justify-content:center;
   box-shadow: inset 0 0 0 1px rgba(255,255,255,.05);
-  opacity:.42;
-  filter: grayscale(.92) saturate(.48) brightness(.72);
+  opacity:.38;
+  filter: grayscale(1) saturate(.08) brightness(.52) contrast(.92);
   transition: opacity .18s ease, filter .18s ease, box-shadow .18s ease, transform .18s ease;
 }
 .fragToken.ready{
-  opacity:.78;
-  filter: grayscale(.18) saturate(.96) brightness(.98) contrast(1.04);
+  opacity:.5;
+  filter: grayscale(1) saturate(.12) brightness(.58) contrast(.94);
   background:
-    linear-gradient(180deg, rgba(255,255,255,.05), rgba(0,0,0,.12)),
+    linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.22)),
     var(--frag-img, url('/fragments/FRAGMENTOS.png')) center/cover no-repeat;
   box-shadow:
-    0 0 0 1px rgba(214,181,112,.18),
-    0 8px 18px rgba(0,0,0,.28),
-    inset 0 0 0 1px rgba(255,255,255,.12);
+    0 0 0 1px rgba(120,130,146,.18),
+    0 8px 18px rgba(0,0,0,.34),
+    inset 0 0 0 1px rgba(255,255,255,.04);
 }
 .fragToken.on{
   opacity:1;
-  filter:saturate(1.18) brightness(1.02) contrast(1.06);
+  filter:grayscale(0) saturate(1.12) brightness(1.04) contrast(1.06);
   background:
-    linear-gradient(180deg, rgba(255,255,255,.08), rgba(0,0,0,.08)),
+    linear-gradient(180deg, rgba(255,255,255,.20), rgba(255,255,255,.06) 38%, rgba(0,0,0,.06)),
     var(--frag-img, url('/fragments/FRAGMENTOS.png')) center/cover no-repeat;
   box-shadow:
-    0 0 0 1px rgba(214,181,112,.30),
+    0 0 0 1px rgba(255,255,255,.26),
+    0 0 12px rgba(255,255,255,.22),
     0 10px 22px rgba(0,0,0,.35),
-    inset 0 0 0 1px rgba(255,255,255,.16);
+    inset 0 0 0 1px rgba(255,255,255,.24),
+    inset 0 10px 16px rgba(255,255,255,.08);
 }
 .fragToken.spent{
   position:relative;
-  opacity:.5;
-  filter: grayscale(.82) saturate(.34) brightness(.54) contrast(.98);
+  opacity:.36;
+  filter: grayscale(1) saturate(0) brightness(.42) contrast(.9);
   background:
     linear-gradient(180deg, rgba(9,18,37,.40), rgba(2,6,23,.58)),
     var(--frag-back-img, url('/ui/layout-background.ai.png')) center/cover no-repeat;

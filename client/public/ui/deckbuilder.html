@@ -781,6 +781,7 @@
     const btnLimpar = document.getElementById('btnLimpar');
     const btnVerDecks = document.getElementById('btnVerDecks');
     const deckNameInput = document.getElementById('deckNameInput');
+    const deckMeta = document.getElementById('deckMeta');
 
     const previewImg = document.getElementById('previewImg');
     const previewTitle = document.getElementById('previewTitle');
@@ -801,6 +802,7 @@
 
     const btnImportDeck = document.getElementById('btnImportDeck');
     const importCodeInput = document.getElementById('importCodeInput');
+    const DECK_EDIT_DRAFT_KEY = 'mytragor_deck_edit_draft';
 
     const FRAG_OPTIONS = [
       { label: 'Arcano', img: '../fragments/layout-fragmento_arcano.png' },
@@ -847,6 +849,7 @@
     let deck = [];
     let chosenLeader = null;
     let chosenFragImg = null;
+    let editSession = null;
 
     const filterState = {
       query: '',
@@ -892,6 +895,36 @@
       } catch {
         return path;
       }
+    }
+
+    function resolveThumbImg(path) {
+      if (!path) return resolveImg(CARD_BACK_IMAGE);
+      try {
+        let normalized = String(path).replace(/\\/g, '/').replace(/^\.\//, '').replace(/^\.\.\//, '');
+        if (normalized.startsWith('assets/')) {
+          normalized = normalized.slice('assets/'.length);
+        }
+        const thumbPath = 'publicadas/' + normalized.replace(/\.(png|jpe?g|webp|avif)$/i, '.thumb.webp');
+        return resolveImg(thumbPath);
+      } catch {
+        return resolveImg(path);
+      }
+    }
+
+    function attachGridThumb(imgEl, assetPath) {
+      if (!imgEl) return;
+      const fallbackSrc = resolveImg(assetPath || CARD_BACK_IMAGE);
+      imgEl.loading = 'lazy';
+      imgEl.decoding = 'async';
+      imgEl.dataset.fallbackSrc = fallbackSrc;
+      imgEl.src = resolveThumbImg(assetPath || CARD_BACK_IMAGE);
+      imgEl.onerror = function(){
+        if (this.dataset.fallbackSrc && this.src !== this.dataset.fallbackSrc) {
+          this.src = this.dataset.fallbackSrc;
+          return;
+        }
+        this.src = CARD_BACK_IMAGE;
+      };
     }
 
     function isCardAllowed(card) {
@@ -1060,7 +1093,7 @@
         tile.innerHTML = card.kind === 'fragment'
           ? `<img src="${resolveImg(card.img)}" alt="${displayName}"><div>${displayName}</div><div class="pool-card-note">Somente visual</div>`
           : `<img src="${resolveImg(card.img)}" alt="${displayName}"><div>${displayName}</div>`;
-        tile.querySelector('img').onerror = function(){ this.src = CARD_BACK_IMAGE; };
+        attachGridThumb(tile.querySelector('img'), card.img);
 
         if (card.kind === 'chosen') {
           tile.onclick = () => {
@@ -1098,7 +1131,7 @@
           const tile = document.createElement('div');
           tile.className = 'deck-card';
           tile.innerHTML = `<img src="${resolveImg(chosenLeader.img)}" alt="${chosenLeader.name}"><div><b>Líder:</b> ${chosenLeader.name}</div>`;
-          tile.querySelector('img').onerror = function(){ this.src = CARD_BACK_IMAGE; };
+          attachGridThumb(tile.querySelector('img'), chosenLeader.img);
           attachPreview(tile, chosenLeader);
           deckList.appendChild(tile);
           continue;
@@ -1109,7 +1142,7 @@
           const tile = document.createElement('div');
           tile.className = 'deck-card';
           tile.innerHTML = `<img src="${resolveImg(card.img)}" alt="${card.name}"><div>${card.name}</div>`;
-          tile.querySelector('img').onerror = function(){ this.src = CARD_BACK_IMAGE; };
+          attachGridThumb(tile.querySelector('img'), card.img);
           tile.onclick = () => removeFromDeck(deck.indexOf(card));
           attachPreview(tile, card);
           deckList.appendChild(tile);
@@ -1147,7 +1180,7 @@
         const tile = document.createElement('div');
         tile.className = 'leader-modal-card';
         tile.innerHTML = `<img src="${resolveImg(leader.img)}" alt="${leader.name}"><div>${leader.name}</div>`;
-        tile.querySelector('img').onerror = function(){ this.src = CARD_BACK_IMAGE; };
+        attachGridThumb(tile.querySelector('img'), leader.img);
         tile.onclick = () => {
           chosenLeader = leader;
           deck.push(requestedCard);
@@ -1205,19 +1238,85 @@
       localStorage.setItem('mytragor_decks', JSON.stringify(arr));
     }
 
-    function buildDeckId() {
-      try {
-        if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
-      } catch (e) {}
-      return `deck_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    function findDeckIndex(arr, target) {
+      if (!Array.isArray(arr) || !target) return -1;
+      const targetDeckId = String(target.deckId || target.id || '').trim();
+      const targetRemoteId = String(target._id || '').trim();
+      return arr.findIndex(item => {
+        const itemDeckId = String(item && (item.deckId || item.id) || '').trim();
+        const itemRemoteId = String(item && item._id || '').trim();
+        if (targetRemoteId && itemRemoteId && targetRemoteId === itemRemoteId) return true;
+        if (targetDeckId && itemDeckId && targetDeckId === itemDeckId) return true;
+        return String(item && item.deckName || '').trim() === String(target.deckName || '').trim()
+          && String(item && (item.leader || item.leaderName) || '').trim() === String(target.leader || target.leaderName || '').trim();
+      });
     }
 
-    btnSalvar.onclick = function () {
-      if (!chosenLeader || deck.length !== 40) return;
-      const deckName = (deckNameInput.value || '').trim();
+    function readEditDraft() {
+      const params = new URLSearchParams(window.location.search || '');
+      if (params.get('edit') !== '1') {
+        try { localStorage.removeItem(DECK_EDIT_DRAFT_KEY); } catch {}
+        return null;
+      }
+      try {
+        const raw = localStorage.getItem(DECK_EDIT_DRAFT_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object' || !parsed.deck) return null;
+        return parsed;
+      } catch {
+        return null;
+      }
+    }
 
-      const payload = {
-        deckId: buildDeckId(),
+    function clearEditDraft() {
+      try { localStorage.removeItem(DECK_EDIT_DRAFT_KEY); } catch {}
+    }
+
+    function updateEditModeUi() {
+      if (!editSession) {
+        if (deckMeta) deckMeta.textContent = '(líder + 40)';
+        btnSalvar.textContent = 'Salvar';
+        return;
+      }
+      if (editSession.mode === 'edit') {
+        if (deckMeta) deckMeta.textContent = 'Editando deck salvo • salvar pode sobrescrever o original';
+        btnSalvar.textContent = 'Salvar alterações';
+        return;
+      }
+      if (deckMeta) deckMeta.textContent = 'Editando cópia de deck salvo • será salvo como novo deck local';
+      btnSalvar.textContent = 'Salvar cópia';
+    }
+
+    function applyLoadedDeck(data) {
+      deck = [];
+      chosenLeader = null;
+      chosenFragImg = data && data.fragImg ? data.fragImg : null;
+
+      const leaderName = String(data && (data.leaderName || data.leader) || '').trim();
+      if (leaderName) {
+        const leader = LEADERS.find(item => matchesCardName(item, leaderName));
+        if (leader) chosenLeader = leader;
+      }
+
+      const cardNames = Array.isArray(data && data.cards) ? data.cards : [];
+      cardNames.forEach(name => {
+        if (deck.length >= 40) return;
+        const card = BASE_CARD_POOL.find(item => matchesCardName(item, name));
+        if (card) deck.push(card);
+      });
+
+      deckNameInput.value = data && data.deckName ? data.deckName : '';
+      renderPool();
+      renderDeck();
+      if (chosenLeader) setPreview(chosenLeader);
+    }
+
+    function buildDeckPayload(existingDeck) {
+      const deckName = (deckNameInput.value || '').trim();
+      return {
+        ...(existingDeck && existingDeck._id ? { _id: existingDeck._id } : {}),
+        deckId: existingDeck && (existingDeck.deckId || existingDeck.id) ? String(existingDeck.deckId || existingDeck.id) : buildDeckId(),
         deckName,
         leader: chosenLeader.name,
         leaderName: chosenLeader.name,
@@ -1225,14 +1324,94 @@
         leaderImg: chosenLeader.img,
         cards: deck.map(c => c.name),
         fragImg: chosenFragImg || null,
-        tags: []
+        tags: Array.isArray(existingDeck && existingDeck.tags) ? existingDeck.tags : []
       };
+    }
 
+    function buildDeckId() {
+      try {
+        if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
+      } catch (e) {}
+      return `deck_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    }
+
+    function showSaveChoiceModal() {
+      return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.className = 'modalOverlay';
+
+        const box = document.createElement('div');
+        box.className = 'modalBox';
+        box.style.width = 'min(520px, 92vw)';
+        box.innerHTML = `
+          <h3 style="margin:0 0 10px;color:var(--gold-a);">Salvar alterações do deck</h3>
+          <p style="margin:0 0 14px;color:#cbd5e1;line-height:1.5;">
+            Você está editando um deck salvo. Escolha como deseja concluir este salvamento.
+          </p>
+          <div style="display:grid;gap:10px;">
+            <button type="button" class="btn" id="saveChoiceOverwrite" style="width:100%;justify-content:center;">Sobrescrever deck original</button>
+            <button type="button" class="btn ghost" id="saveChoiceCopy" style="width:100%;justify-content:center;">Salvar como novo deck</button>
+            <button type="button" class="btn ghost" id="saveChoiceCancel" style="width:100%;justify-content:center;border-color:rgba(220,109,91,.35);color:#ffd8d1;">Cancelar</button>
+          </div>
+        `;
+
+        function close(choice) {
+          document.removeEventListener('keydown', onKeyDown);
+          if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+          resolve(choice);
+        }
+
+        function onKeyDown(event) {
+          if (event.key === 'Escape') close('cancel');
+        }
+
+        overlay.addEventListener('click', (event) => {
+          if (event.target === overlay) close('cancel');
+        });
+
+        box.querySelector('#saveChoiceOverwrite').onclick = () => close('overwrite');
+        box.querySelector('#saveChoiceCopy').onclick = () => close('copy');
+        box.querySelector('#saveChoiceCancel').onclick = () => close('cancel');
+
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+        document.addEventListener('keydown', onKeyDown);
+      });
+    }
+
+    btnSalvar.onclick = async function () {
+      if (!chosenLeader || deck.length !== 40) return;
       const all = getSavedDecksLocal();
-      all.push(payload);
+      let payload = buildDeckPayload(editSession && editSession.mode === 'edit' ? editSession.deck : null);
+
+      if (editSession && editSession.mode === 'edit') {
+        const choice = await showSaveChoiceModal();
+        if (choice === 'cancel') return;
+        if (choice === 'overwrite') {
+          const deckIndex = findDeckIndex(all, editSession.deck);
+          if (deckIndex >= 0) {
+            all[deckIndex] = payload;
+          } else {
+            all.push(payload);
+          }
+        } else {
+          payload = buildDeckPayload(null);
+          all.push(payload);
+        }
+      } else {
+        payload = buildDeckPayload(null);
+        all.push(payload);
+      }
+
       saveSavedDecksLocal(all);
 
-      alert(`Deck salvo: ${deckName || chosenLeader.name}`);
+      if (editSession && editSession.mode === 'edit') {
+        clearEditDraft();
+        editSession = null;
+        updateEditModeUi();
+      }
+
+      alert(`Deck salvo: ${payload.deckName || chosenLeader.name}`);
     };
 
     btnPlay.onclick = function () {
@@ -1306,6 +1485,11 @@
       renderDeck();
       alert(`Deck importado: ${deck.length} cartas${chosenLeader ? ', líder: ' + chosenLeader.name : ''}`);
     };
+
+    editSession = readEditDraft();
+    if (editSession && editSession.deck) {
+      applyLoadedDeck(editSession.deck);
+    }
 
     function setupFilters() {
       filterSearch.addEventListener('input', (e) => {
@@ -1444,8 +1628,11 @@
 
     setupFilterMenus();
     setupFilters();
-    renderPool();
-    renderDeck();
+    updateEditModeUi();
+    if (!editSession) {
+      renderPool();
+      renderDeck();
+    }
   </script>
 
   <script src="../mobile.js"></script>

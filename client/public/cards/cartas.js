@@ -61,7 +61,7 @@ const CARD_DEFS = [
   name: 'Cervo de Galhos Brancos', key: 'cervo_ga_brancos', aliases: ['Cervo dos Galhos Brancos', 'cervo de galhos brancos', 'cervo dos galhos brancos'], kind: 'ally', img: '/allies/layout-cervogalhosbrancos.ai.png', cost: 3, classe: 'Criatura', tipo: 'Animal', filiacao: 'Religioso', ac: 0, hp: 3, maxHp: 3, damage: 1, atkBonus: 1, keywords: [], effect: 'curar_animal', effectValue: 1, text: 'Ao ser convocado, cure 1 de Vida de outro aliado "Animal".'
   },
 {
-  name: 'Cão de Caça Feroz', kind: 'ally', img: '/allies/layout-caocacaferoz.ai.png', cost: 2, classe: 'Criatura', tipo: 'Animal', filiacao: 'Neutra', ac: 0, hp: 4, maxHp: 4, damage: 4, atkBonus: 4, keywords: ['investida'], text: 'Investida — Pode atacar no turno que é convocado.'
+  name: 'Cão de Caça Feroz', kind: 'ally', img: '/allies/layout-caocacaferoz.ai.png', cost: 4, classe: 'Criatura', tipo: 'Animal', filiacao: 'Neutra', ac: 0, hp: 4, maxHp: 4, damage: 4, atkBonus: 4, keywords: ['investida'], text: 'Investida — Pode atacar no turno que é convocado.'
 },
   {
   name: 'Jabuti Barreira', kind: 'ally', img: '/allies/layout-jabutibarreira.ai.png', cost: 4, classe: 'Criatura', tipo: 'Animal', filiacao: 'Religioso', ac: 1, hp: 8, maxHp: 8, damage: 1, atkBonus: 1, keywords: ['bloquear'], text: 'Interpor — Este personagem pode bloquear um ataque direcionado a outro personagem.'
@@ -86,7 +86,7 @@ const CARD_DEFS = [
     name: 'Gladiador Aposentado', kind: 'ally', img: '/allies/layout-gladiadoraposentado.ai.png', cost: 7, classe: 'Cidadão', tipo: 'Humano', filiacao: 'Neutra', ac: 2, hp: 8, maxHp: 8, damage: 6, atkBonus: 6, keywords: [], text: ''
   },
   {
-    name: 'Aranhas Negras, Executor', kind: 'ally', img: '/allies/layout-aranhasexecutor.ai.png', cost: 4, classe: 'Ladino', tipo: 'Humano', filiacao: 'Sombras', ac: 1, hp: 6, maxHp: 6, damage: 3, atkBonus: 3, keywords: [],
+    name: 'Aranhas Negras, Executor', kind: 'ally', img: '/allies/layout-aranhasexecutor.ai.png', cost: 5, classe: 'Ladino', tipo: 'Humano', filiacao: 'Sombras', ac: 1, hp: 6, maxHp: 6, damage: 3, atkBonus: 3, keywords: [],
     // Ao entrar, permite banir uma carta; também fornece aura de +1 ATK a aliados com "Aranhas Negras" no nome
     effect: 'ban_on_enter', effectValue: 1, auraTarget: { nameIncludes: 'Aranhas Negras' }, auraScope: 'allies', auraProp: 'atk', text: 'Quando este aliado for convocado, você pode deslocar uma carta em campo. Aliados que você controla com "Aranhas Negras" no nome recebem +1 de Ataque.'
   },
@@ -115,7 +115,7 @@ const CARD_DEFS = [
   name: 'Gladiador Ousado', kind: 'ally', img: '/allies/layout-gladiadorousado.ai.png', cost: 4, classe: 'Guerreiro', tipo: 'Humano', filiacao: 'Neutra', ac: 1, hp: 6, maxHp: 6, damage: 3, atkBonus: 3, keywords: ['provocar'], text: 'Desafio — Enquanto este aliado estiver Exaurido, seus oponentes só podem atacar aliados com Desafio.'
   },
   {
-name: 'Tamanduá Guardião', kind: 'ally', img: '/allies/layout-tamanduaguardiao.ai.png', cost: 4, classe: 'Criatura', tipo: 'Animal', filiacao: 'Religioso', ac: 1, hp: 7, maxHp: 7, damage: 2, atkBonus: 2, keywords: ['provocar'], effect: '', text: 'Desafio — Enquanto este aliado estiver Exaurido, seus oponentes só podem declarar ataques tendo como alvo aliados com Desafio.'
+name: 'Tamanduá Guardião', kind: 'ally', img: '/allies/layout-tamanduaguardiao.ai.png', cost: 2, classe: 'Criatura', tipo: 'Animal', filiacao: 'Religioso', ac: 1, hp: 7, maxHp: 7, damage: 2, atkBonus: 2, keywords: ['provocar'], effect: '', text: 'Desafio — Enquanto este aliado estiver Exaurido, seus oponentes só podem declarar ataques tendo como alvo aliados com Desafio.'
   },
     {
     name: 'Leão Rei Sagrado', kind: 'ally', img: '/allies/layout-leaoreisagrado.ai.png', cost: 6, classe: 'Criatura', tipo: 'Animal', filiacao: 'Religioso', ac: 1, hp: 5, maxHp: 5, damage: 4, atkBonus: 4, keywords: [], effect: 'search_deck_animal_aura_atk', effectValue: 1, auraTarget: { tipo: 'Animal' }, auraProp: 'atk', text: 'Quando este aliado for Convocado, adicione um aliado "Animal" do seu baralho para sua mão, em seguida embaralhe seu baralho. Enquanto este aliado estiver em campo, seus aliados "Animal" recebem +1 de ataque.'
@@ -256,7 +256,7 @@ name: 'Tamanduá Guardião', kind: 'ally', img: '/allies/layout-tamanduaguardiao
     name: 'Catedral Ensolarada', kind: 'env', img: '/envs/layout-catedralensolarada.ai.png', cost: 3, classe: '', tipo: 'Ambiente', filiacao: 'Religioso', effect: 'religioso_protecao', text: 'Enquanto esta carta estiver em campo, jogadores com Escolhido "Religioso" escolhem 1 Aliado em sua fase inicial. O Aliado selecionado recebe +2 de vida até o inicio do próximo turno do jogador. Se ao perder o bônus concedido por este Ambiente o Aliado chegar a 0 ou menos de vida, ele é enviado para o cemitério.'
   },
   {
-    name: 'Lâmina Serralhada', kind: 'equip', img: '/equip/layout-laminaserrilhada.ai.png', cost: 1, classe: '', tipo: 'Equipamento', filiacao: 'Marcial', effect: 'dmg_bonus', dmgBonus: 2, text: 'O personagem equipado ganha +2 de dano.'
+    name: 'Lâmina Serralhada', kind: 'equip', img: '/equip/layout-laminaserrilhada.ai.png', cost: 1, classe: '', tipo: 'Equipamento', filiacao: 'Marcial', atkBonus: 2, text: 'O Aliado equipado recebe +2 de Ataque.'
   },
   {
   name: 'Manto de Couro', kind: 'equip', img: '/equip/layout-mantocouro.ai.png', cost: 1, classe: '', tipo: 'Equipamento', filiacao: 'Neutra', acBonus: 1, hpBonus: 1, text: 'O personagem equipado recebe +1 de Resistência e +1 de Vida.'

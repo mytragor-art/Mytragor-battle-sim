@@ -20,6 +20,7 @@ let roomPollTimer: number | null = null;
 let availableDecks: SavedDeck[] = readSavedDecks();
 let deckRefreshToken = 0;
 let selectedMatchRoomId: string | null = null;
+let pendingDeckId: string | null = null;
 
 function applySelectedDeck(deck: SavedDeck | null) {
 	selectedDeck = deck;
@@ -60,7 +61,7 @@ function renderDeckSelector() {
 	if (!view.deckEl) return;
 	const decks = availableDecks;
 	const currentValue = view.deckEl.value;
-	const selectedId = selectedDeck?.id || currentValue;
+	const selectedId = pendingDeckId || selectedDeck?.id || currentValue;
 	view.deckEl.innerHTML = "";
 
 	if (!decks.length) {
@@ -86,6 +87,7 @@ function renderDeckSelector() {
 
 	const nextDeck = decks.find((deck) => deck.id === selectedId) || (decks.length === 1 ? decks[0] : null);
 	view.deckEl.value = nextDeck?.id || "";
+	if (nextDeck && pendingDeckId === nextDeck.id) pendingDeckId = null;
 	applySelectedDeck(nextDeck);
 }
 
@@ -291,6 +293,7 @@ if (view.btnReady) {
 }
 
 const params = new URLSearchParams(window.location.search);
+pendingDeckId = params.get("deckId")?.trim() || null;
 if (view.endpointEl) view.endpointEl.value = params.get("endpoint")?.trim() || resolveServerEndpoint(window.location.search);
 if (view.roomIdEl) view.roomIdEl.value = params.get("roomId")?.trim() || "";
 
