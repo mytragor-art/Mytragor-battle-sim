@@ -6,12 +6,14 @@ import { WebSocketTransport } from "@colyseus/ws-transport";
 import dotenv from "dotenv";
 
 process.on("uncaughtException", (err) => {
-	console.error("[FATAL] uncaughtException:", err);
-	process.exit(1);
+	console.error("[FATAL] uncaughtException:", err && (err.stack || err));
+	// Do not call process.exit here to avoid abruptly terminating the server
+	// and dropping all active rooms. Let a process manager handle restarts.
 });
 process.on("unhandledRejection", (reason) => {
 	console.error("[FATAL] unhandledRejection:", reason);
-	process.exit(1);
+	// Do not exit; log for diagnosis. Consider using a process manager
+	// (pm2/systemd) to restart on failures if desired.
 });
 
 import { LobbyRoom } from "./rooms/LobbyRoom";
