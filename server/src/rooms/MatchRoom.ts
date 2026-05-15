@@ -44,7 +44,7 @@ export class MatchRoom extends Room<MatchState> {
 	private safeRun(context: string, fn: () => void, client?: Client) {
 		try {
 			fn();
-		} catch (err) {
+		} catch (err: any) {
 			console.error(`[ROOM ERROR] room=${this.roomId} context=${context} client=${client?.sessionId || "-"}`, err && (err.stack || err));
 			try {
 				this.broadcast("server_error", { context, message: String((err && (err as any).message) || "internal_error") });
@@ -309,7 +309,7 @@ export class MatchRoom extends Room<MatchState> {
 			p.displayName = this.sanitizeDisplayName(msg?.name);
 			this.publishSpectatorState();
 		});
-		} catch (err) {
+		} catch (err: any) {
 			console.error(`[ROOM ERROR] room=${this.roomId} onCreate`, err && (err.stack || err));
 			throw err;
 		}
@@ -329,7 +329,7 @@ export class MatchRoom extends Room<MatchState> {
 			client.send("assign_slot", { slot: player.slot, sessionId: client.sessionId });
 			this.publishSpectatorState();
 			this.refreshInactivityTimer();
-		} catch (err) {
+		} catch (err: any) {
 			console.error(`[ROOM ERROR] room=${this.roomId} onJoin client=${client?.sessionId || "-"}`, err && (err.stack || err));
 			try { client.send("server_error", { message: "join_failed" }); } catch (_) {}
 		}
@@ -359,7 +359,7 @@ export class MatchRoom extends Room<MatchState> {
 			}
 			this.publishSpectatorState();
 			this.refreshInactivityTimer();
-		} catch (err) {
+		} catch (err: any) {
 			console.error(`[ROOM ERROR] room=${this.roomId} onLeave client=${client?.sessionId || "-"}`, err && (err.stack || err));
 		}
 	}
@@ -370,7 +370,7 @@ export class MatchRoom extends Room<MatchState> {
 			// ensure spectator channel disposed
 			try { disposeSpectatorChannel(this.roomId); } catch (_) {}
 			console.log(`[ROOM] disposed room=${this.roomId}`);
-		} catch (err) {
+		} catch (err: any) {
 			console.error(`[ROOM ERROR] room=${this.roomId} onDispose`, err && (err.stack || err));
 		}
 	}
