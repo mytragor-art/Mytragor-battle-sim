@@ -73,6 +73,9 @@ npm.cmd run build:test
 npm.cmd run build:prod
 ```
 
+Os builds do cliente agora regeneram automaticamente as miniaturas em `client/public/publicadas` antes do `vite build`.
+Isso evita que a grade do deckbuilder e de decks salvos fique com thumbs antigas quando a arte original muda mantendo o mesmo nome.
+
 ## GitHub
 
 Foi adicionada uma raiz `.gitignore` para evitar subir:

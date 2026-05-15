@@ -106,6 +106,21 @@ function isSpellOrTrickKind(kind: string | undefined): boolean {
 	return normalized === "spell" || normalized === "magia" || normalized === "truque" || normalized === "trick";
 }
 
+function isTokenCardId(cardId: string): boolean {
+	const card = findCardDef(cardId) as any;
+	const key = String(card?.key || "").trim();
+	const img = String(card?.img || "").trim();
+	return key.startsWith("token_") || /\/tokens\//i.test(img);
+}
+
+function moveRemovedFieldCardOutOfPlay(owner: any, removedCardId: string): "grave" | "vanish" | "none" {
+	const liveCardId = String(removedCardId || "").trim();
+	if (!liveCardId) return "none";
+	if (isTokenCardId(liveCardId)) return "vanish";
+	owner.grave.push(liveCardId);
+	return "grave";
+}
+
 function getCardCost(cardId: string): number {
 	const card = findCardDef(cardId);
 	const cost = Number(card?.cost);
@@ -780,12 +795,13 @@ function handleDestroyedAllyTriggers(
 			const cardDef = findCardDef(String(cid || ""));
 			if (!cardDef) continue;
 			if (!isAllyKind((cardDef as any)?.kind || (cardDef as any)?.tipo)) continue;
+			if (normalizeLoose(String((cardDef as any)?.name || cid || "")) === normalizeLoose(String(def?.name || destroyedCardId || ""))) continue;
 			const cost = Number((cardDef as any)?.cost || 0);
 			if (!Number.isFinite(cost) || cost > 3) continue;
 			graveOptions.push({ id: `hiena-${index}`, label: cid, side: ownerSlot, lane: "grave", pos: index, cardId: cid });
 		}
 		if (!graveOptions.length) return;
-		askChoice(ownerSlot, { title: `${destroyedCardId}: escolha aliado (custo 3 ou menos) do cemitério`, options: graveOptions, allowCancel: true }, (optionId) => {
+		askChoice(ownerSlot, { title: `${destroyedCardId}: escolha aliado (custo 3 ou menos, exceto Hiena Carniceira) do cemitério`, options: graveOptions, allowCancel: false }, (optionId) => {
 			if (!optionId) return;
 			const pick = graveOptions.find((o) => o.id === optionId);
 			if (!pick || typeof pick.pos !== "number" || !pick.cardId) return;
@@ -1068,9 +1084,9 @@ function clearCatedralBlessing(
 		destroyAttachedSupports(state, slot, pos, broadcast);
 		const removed = clearFieldSlotWithAuras(state, slot, pos);
 		if (!removed) continue;
-		player.grave.push(removed);
-		if (askChoice) handleDestroyedAllyTriggers(state, slot, removed, broadcast, askChoice, { fromCombat: false });
-		broadcast("effect_log", { slot, cardId: removed, effect: "religioso_protecao", text: `${removed}: perdeu o bônus de vida da Catedral Ensolarada e foi enviado ao cemitério.` });
+		const exitZone = moveRemovedFieldCardOutOfPlay(player, removed);
+		if (exitZone === "grave" && askChoice) handleDestroyedAllyTriggers(state, slot, removed, broadcast, askChoice, { fromCombat: false });
+		broadcast("effect_log", { slot, cardId: removed, effect: "religioso_protecao", text: exitZone === "grave" ? `${removed}: perdeu o bônus de vida da Catedral Ensolarada e foi enviado ao cemitério.` : `${removed}: perdeu o bônus de vida da Catedral Ensolarada e desapareceu do campo por ser uma ficha.` });
 	}
 }
 
@@ -1157,6 +1173,21 @@ function clearFieldSlotWithAuras(state: MatchState, slot: Slot, pos: number): st
 	const removedId = String(player.field[pos] || "");
 	const removed = clearFieldSlot(player, pos);
 	if (removedId) removeAuraHpBonusFromSource(state, slot, removedId);
+	return removed;
+}
+
+function moveFieldCardToGraveWithoutDestroyedTriggers(
+	state: MatchState,
+	ownerSlot: Slot,
+	pos: number,
+	broadcast: (name: string, payload: any) => void
+): string {
+	const owner = asPlayer(state, ownerSlot) as any;
+	const liveCardId = String(owner.field[pos] || "");
+	if (!liveCardId) return "";
+	destroyAttachedSupports(state, ownerSlot, pos, broadcast);
+	const removed = clearFieldSlotWithAuras(state, ownerSlot, pos) || liveCardId;
+	moveRemovedFieldCardOutOfPlay(owner, removed);
 	return removed;
 }
 
@@ -1297,8 +1328,9 @@ function triggerAutoEffects(
 				destroyAttachedSupports(state, targetSlot, pick.pos, broadcast);
 				const removed = clearFieldSlotWithAuras(state, targetSlot, pick.pos);
 				if (removed) {
-					targetPlayer.grave.push(removed);
-					handleDestroyedAllyTriggers(state, targetSlot, removed, broadcast, askChoice);
+					if (moveRemovedFieldCardOutOfPlay(targetPlayer, removed) === "grave") {
+						handleDestroyedAllyTriggers(state, targetSlot, removed, broadcast, askChoice);
+					}
 				}
 			}
 			broadcast("effect_log", { slot, cardId, effect, text: `${cardId}: causou 2 de dano em ${targetId}.` });
@@ -1570,8 +1602,9 @@ function triggerAutoEffects(
 					destroyAttachedSupports(state, slot, costPick.pos, broadcast);
 					const removed = clearFieldSlotWithAuras(state, slot, costPick.pos);
 					if (removed) {
-						me.grave.push(removed);
-						handleDestroyedAllyTriggers(state, slot, removed, broadcast, askChoice);
+						if (moveRemovedFieldCardOutOfPlay(me, removed) === "grave") {
+							handleDestroyedAllyTriggers(state, slot, removed, broadcast, askChoice);
+						}
 					}
 				}
 			}
@@ -1607,8 +1640,9 @@ function triggerAutoEffects(
 					destroyAttachedSupports(state, enemySlot(slot), targetPick.pos, broadcast);
 					const removed = clearFieldSlotWithAuras(state, enemySlot(slot), targetPick.pos);
 					if (removed) {
-						foe.grave.push(removed);
-						handleDestroyedAllyTriggers(state, enemySlot(slot), removed, broadcast, askChoice);
+						if (moveRemovedFieldCardOutOfPlay(foe, removed) === "grave") {
+							handleDestroyedAllyTriggers(state, enemySlot(slot), removed, broadcast, askChoice);
+						}
 					}
 				}
 				broadcast("effect_log", { slot, cardId, effect, text: `${cardId}: causou 2 de dano em ${payerId} e 4 em ${targetId}.` });
@@ -1680,8 +1714,9 @@ function triggerAutoEffects(
 			destroyAttachedSupports(state, enemySlot(slot), pick.pos, broadcast);
 			const removed = clearFieldSlotWithAuras(state, enemySlot(slot), pick.pos);
 			if (!removed) return;
-			foe.grave.push(removed);
-			handleDestroyedAllyTriggers(state, enemySlot(slot), removed, broadcast, askChoice);
+			if (moveRemovedFieldCardOutOfPlay(foe, removed) === "grave") {
+				handleDestroyedAllyTriggers(state, enemySlot(slot), removed, broadcast, askChoice);
+			}
 			broadcast("effect_log", { slot, cardId, effect, text: `${cardId}: destruiu ${removed}.` });
 		});
 		return;
@@ -1866,8 +1901,9 @@ function triggerAutoEffects(
 				destroyAttachedSupports(state, slot, pick.pos, broadcast);
 				const removed = clearFieldSlotWithAuras(state, slot, pick.pos);
 				if (removed) {
-					own.grave.push(removed);
-					handleDestroyedAllyTriggers(state, slot, removed, broadcast, askChoice);
+					if (moveRemovedFieldCardOutOfPlay(own, removed) === "grave") {
+						handleDestroyedAllyTriggers(state, slot, removed, broadcast, askChoice);
+					}
 				}
 			}
 			drawCard(state, slot, 1, broadcast);
@@ -1962,8 +1998,9 @@ function triggerAutoEffects(
 				destroyAttachedSupports(state, slot, pick.pos, broadcast);
 				const removed = clearFieldSlotWithAuras(state, slot, pick.pos);
 				if (removed) {
-					me.grave.push(removed);
-					handleDestroyedAllyTriggers(state, slot, removed, broadcast, askChoice);
+					if (moveRemovedFieldCardOutOfPlay(me, removed) === "grave") {
+						handleDestroyedAllyTriggers(state, slot, removed, broadcast, askChoice);
+					}
 				}
 			}
 			me.hp = Math.min(getCardDynamicMaxHp(state, slot, String(me.leaderId || "")), Number(me.hp || 0) + healLeader);
@@ -2778,6 +2815,48 @@ export function playCard(state: MatchState, slot: Slot, cardId: string, targetPo
 	}
 
 	const targetLane = lane === "field" ? pg.field : pg.support;
+	const finalizeLanePlay = (finalPos: number): void => {
+		if (lane === "field") {
+			placeAllyOnField(state, slot, pg as any, cardId, finalPos, broadcast, askChoice);
+		} else {
+			targetLane[finalPos] = cardId;
+		}
+		if (lane === "support") {
+			(pg as any).supportAttachTo[finalPos] = -2;
+			(pg as any).supportCounters[finalPos] = 0;
+		}
+		if (lane === "field") summoned[slot].add(finalPos);
+		if (lane !== "field") triggerAutoEffects(state, slot, cardId, cardDef, broadcast, askChoice, { lane, pos: finalPos });
+		if (state.phase === "FINISHED") return;
+
+		try {
+			const summonedDef = cardDef || findCardDef(cardId);
+			const summonedClasse = String(((summonedDef as any)?.classe || (summonedDef as any)?.class || ""));
+			const isCitizen = normalizeKind(summonedClasse) === "cidadao";
+			const isBlackSpiders = cardNameIncludes(cardId, "Aranhas Negras");
+			if (lane === "field" && isCitizen) {
+				const ownerLeaderId = asPlayer(state, slot).leaderId;
+				const owner = asPlayer(state, slot) as any;
+				const valbrakTurnKey = leaderEffectTurnKey(owner, "valbrak");
+				if (ownerLeaderId && !triggeredLeaderThisTurn[slot].has(valbrakTurnKey)) {
+					const leaderDef = findCardDef(ownerLeaderId);
+					if (cardHasEffectId(leaderDef, "valbrak")) {
+						drawCard(state, slot, 1, broadcast);
+						if (state.phase === "FINISHED") return;
+						triggeredLeaderThisTurn[slot].add(valbrakTurnKey);
+						broadcast("effect_log", { slot, cardId: ownerLeaderId, effect: "valbrak", text: `${ownerLeaderId}: Valbrak ativou e comprou 1 carta ao convocar ${cardId}.` });
+					}
+				}
+			}
+			if (lane === "field" && isBlackSpiders) {
+				awardAdemaisSpiderMarkOnSummon(state, slot, cardId, broadcast);
+			}
+		} catch (e) {
+			// swallow errors to avoid breaking core play flow
+		}
+		game.seq += 1;
+		broadcast("card_played", { slot, lane, cardId, targetPos: finalPos, cost, p1Fragments: game.p1.fragments, p2Fragments: game.p2.fragments, seq: game.seq });
+	};
 	let finalPos = -1;
 	if (typeof targetPos === "number" && targetPos >= 0 && targetPos < 5) {
 		if (String(targetLane[targetPos] || "")) return void broadcast("error", { text: "Slot ocupado." });
@@ -2790,7 +2869,47 @@ export function playCard(state: MatchState, slot: Slot, cardId: string, targetPo
 			}
 		}
 	}
-	if (finalPos < 0) return void broadcast("error", { text: lane === "field" ? "Campo de aliados cheio." : "Linha de suporte cheia." });
+	if (finalPos < 0) {
+		if (lane !== "field") return void broadcast("error", { text: "Linha de suporte cheia." });
+		const replaceOptions: ChoiceOption[] = [];
+		for (let pos = 0; pos < pg.field.length; pos += 1) {
+			const liveCardId = String(pg.field[pos] || "");
+			if (!liveCardId) continue;
+			if (summoned[slot].has(pos)) continue;
+			replaceOptions.push({
+				id: `replace-${pos}`,
+				label: liveCardId,
+				side: slot,
+				lane: "field",
+				pos,
+				cardId: liveCardId,
+				description: `Enviar ${liveCardId} ao cemitério e convocar ${cardId} neste slot. Efeitos de cemitério de ${liveCardId} não serão ativados.`
+			});
+		}
+		if (!replaceOptions.length) return void broadcast("error", { text: "Campo cheio. Só é possível substituir aliados que já estavam em campo desde turnos anteriores." });
+		askChoice(slot, { title: `${cardId}: escolha um aliado do turno anterior para substituir`, options: replaceOptions, allowCancel: true }, (optionId) => {
+			if (!optionId) return;
+			const pick = replaceOptions.find((option) => option.id === optionId);
+			if (!pick || typeof pick.pos !== "number" || !pick.cardId) return;
+			const liveIdx = pg.hand.findIndex((c) => c === cardId);
+			if (liveIdx < 0) return;
+			const replacePos = pick.pos;
+			const liveOccupant = String(pg.field[replacePos] || "");
+			if (!liveOccupant || liveOccupant !== pick.cardId || summoned[slot].has(replacePos)) return;
+			if (!payCardCost()) return;
+			pg.hand.splice(liveIdx, 1);
+			const removed = moveFieldCardToGraveWithoutDestroyedTriggers(state, slot, replacePos, broadcast);
+			if (!removed) return;
+			broadcast("effect_log", {
+				slot,
+				cardId,
+				effect: "replace_ally",
+				text: `${cardId}: substituiu ${removed} no slot ${replacePos + 1}. ${removed} foi para o cemitério sem ativar efeitos de cemitério.`
+			});
+			finalizeLanePlay(replacePos);
+		});
+		return;
+	}
 	if (lane === "support" && isEquipKind(actualKind)) {
 		const options: ChoiceOption[] = [];
 		if (String(pg.leaderId || "")) options.push({ id: "equip-leader", label: `Líder (${pg.leaderId})`, side: slot, lane: "env", cardId: String(pg.leaderId || "") });
@@ -2825,46 +2944,7 @@ export function playCard(state: MatchState, slot: Slot, cardId: string, targetPo
 	}
 	if (!payCardCost()) return;
 	pg.hand.splice(idx, 1);
-	if (lane === "field") {
-		placeAllyOnField(state, slot, pg as any, cardId, finalPos, broadcast, askChoice);
-	} else {
-		targetLane[finalPos] = cardId;
-	}
-	if (lane === "support") {
-		(pg as any).supportAttachTo[finalPos] = -2;
-		(pg as any).supportCounters[finalPos] = 0;
-	}
-	if (lane === "field") summoned[slot].add(finalPos);
-	if (lane !== "field") triggerAutoEffects(state, slot, cardId, cardDef, broadcast, askChoice, { lane, pos: finalPos });
-	if (state.phase === "FINISHED") return;
-
-	// Leader triggers: Valbrak — once per turn, when a "Cidadão" ally is summoned, draw a card
-	try {
-		const summonedDef = cardDef || findCardDef(cardId);
-		const summonedClasse = String(((summonedDef as any)?.classe || (summonedDef as any)?.class || ""));
-		const isCitizen = normalizeKind(summonedClasse) === "cidadao";
-		const isBlackSpiders = cardNameIncludes(cardId, "Aranhas Negras");
-		if (lane === "field" && isCitizen) {
-			const ownerLeaderId = asPlayer(state, slot).leaderId;
-			const owner = asPlayer(state, slot) as any;
-			const valbrakTurnKey = leaderEffectTurnKey(owner, "valbrak");
-			if (ownerLeaderId && !triggeredLeaderThisTurn[slot].has(valbrakTurnKey)) {
-				const leaderDef = findCardDef(ownerLeaderId);
-				if (cardHasEffectId(leaderDef, "valbrak")) {
-					drawCard(state, slot, 1, broadcast);
-					if (state.phase === "FINISHED") return;
-					triggeredLeaderThisTurn[slot].add(valbrakTurnKey);
-					broadcast("effect_log", { slot, cardId: ownerLeaderId, effect: "valbrak", text: `${ownerLeaderId}: Valbrak ativou e comprou 1 carta ao convocar ${cardId}.` });
-				}
-			}
-		}
-		if (lane === "field" && isBlackSpiders) {
-			awardAdemaisSpiderMarkOnSummon(state, slot, cardId, broadcast);
-		}
-	} catch (e) {
-		// swallow errors to avoid breaking core play flow
-	}
-	game.seq += 1;
+	finalizeLanePlay(finalPos);
 	broadcast("card_played", { slot, lane, cardId, targetPos: finalPos, cost, p1Fragments: game.p1.fragments, p2Fragments: game.p2.fragments, seq: game.seq });
 }
 
@@ -3041,8 +3121,9 @@ export function attack(
 				destroyAttachedSupports(state, enemySlot, finalTargetLocal.targetPos, broadcast);
 				const removed = clearFieldSlotWithAuras(state, enemySlot, finalTargetLocal.targetPos);
 				if (removed) {
-					enemy.grave.push(removed);
+					if (moveRemovedFieldCardOutOfPlay(enemy, removed) === "grave") {
 						handleDestroyedAllyTriggers(state, enemySlot, removed, broadcast, askChoice, { fromCombat: true });
+					}
 					killedTargetAlly = true;
 				}
 			}
@@ -3234,8 +3315,9 @@ export function attack(
 				destroyAttachedSupports(state, enemySlot, finalTarget.targetPos, broadcast);
 				const removed = clearFieldSlotWithAuras(state, enemySlot, finalTarget.targetPos);
 				if (removed) {
-					enemy.grave.push(removed);
+					if (moveRemovedFieldCardOutOfPlay(enemy, removed) === "grave") {
 						handleDestroyedAllyTriggers(state, enemySlot, removed, broadcast, askChoice, { fromCombat: true });
+					}
 					killedTargetAlly = true;
 				}
 			}

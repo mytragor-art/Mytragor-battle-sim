@@ -125,6 +125,12 @@
       gap: 18px;
     }
 
+    .manualCount {
+      color: var(--gold);
+      font-size: 14px;
+      font-weight: 600;
+    }
+
     .manualCard {
       display: grid;
       gap: 12px;
@@ -198,26 +204,65 @@
         <a class="navButton" href="./index.html">Voltar</a>
       </div>
       <p class="subtitle">Manual visual do Mytragor em ordem de leitura. A capa vem primeiro, seguida pelas páginas numeradas.</p>
+      <div class="manualCount" id="manualCount"></div>
     </section>
 
-    <section class="manualList">
-      <article class="manualCard"><div class="manualHeading"><h2>Capa</h2></div><img class="manualFrame" src="/manual/manual_capa.png" alt="Capa do manual" loading="lazy" decoding="async" /></article>
-      <article class="manualCard"><div class="manualHeading"><h2>Página 1</h2></div><img class="manualFrame" src="/manual/manual_pg1.png" alt="Página 1 do manual" loading="lazy" decoding="async" /></article>
-      <article class="manualCard"><div class="manualHeading"><h2>Página 2</h2></div><img class="manualFrame" src="/manual/manual_pg2.png" alt="Página 2 do manual" loading="lazy" decoding="async" /></article>
-      <article class="manualCard"><div class="manualHeading"><h2>Página 3</h2></div><img class="manualFrame" src="/manual/manual_pg3.png" alt="Página 3 do manual" loading="lazy" decoding="async" /></article>
-      <article class="manualCard"><div class="manualHeading"><h2>Página 4</h2></div><img class="manualFrame" src="/manual/manual_pg4.png" alt="Página 4 do manual" loading="lazy" decoding="async" /></article>
-      <article class="manualCard"><div class="manualHeading"><h2>Página 5</h2></div><img class="manualFrame" src="/manual/manual_pg5.png?v=20260426-1" alt="Página 5 do manual" loading="lazy" decoding="async" /></article>
-      <article class="manualCard"><div class="manualHeading"><h2>Página 6</h2></div><img class="manualFrame" src="/manual/manual_pg6.png" alt="Página 6 do manual" loading="lazy" decoding="async" /></article>
-      <article class="manualCard"><div class="manualHeading"><h2>Página 7</h2></div><img class="manualFrame" src="/manual/manual_pg7.png" alt="Página 7 do manual" loading="lazy" decoding="async" /></article>
-      <article class="manualCard"><div class="manualHeading"><h2>Página 8</h2></div><img class="manualFrame" src="/manual/manual_pg8.png" alt="Página 8 do manual" loading="lazy" decoding="async" /></article>
-      <article class="manualCard"><div class="manualHeading"><h2>Página 9</h2></div><img class="manualFrame" src="/manual/manual_pg9.png" alt="Página 9 do manual" loading="lazy" decoding="async" /></article>
-      <article class="manualCard"><div class="manualHeading"><h2>Página 10</h2></div><img class="manualFrame" src="/manual/manual_pg10.png" alt="Página 10 do manual" loading="lazy" decoding="async" /></article>
-      <article class="manualCard"><div class="manualHeading"><h2>Página 11</h2></div><img class="manualFrame" src="/manual/manual_pg11.png" alt="Página 11 do manual" loading="lazy" decoding="async" /></article>
-      <article class="manualCard"><div class="manualHeading"><h2>Página 12</h2></div><img class="manualFrame" src="/manual/manual_pg12.png" alt="Página 12 do manual" loading="lazy" decoding="async" /></article>
-      <article class="manualCard"><div class="manualHeading"><h2>Página 13</h2></div><img class="manualFrame" src="/manual/manual_pg13.png" alt="Página 13 do manual" loading="lazy" decoding="async" /></article>
-      <article class="manualCard"><div class="manualHeading"><h2>Página 14</h2></div><img class="manualFrame" src="/manual/manual_pg14.png" alt="Página 14 do manual" loading="lazy" decoding="async" /></article>
-      <article class="manualCard"><div class="manualHeading"><h2>Página 15</h2></div><img class="manualFrame" src="/manual/manual_pg15.png" alt="Página 15 do manual" loading="lazy" decoding="async" /></article>
-    </section>
+    <section class="manualList" id="manualList"></section>
   </main>
+
+  <script>
+    const MANUAL_CACHE_VERSION = "2026-05-11-1";
+    const MANUAL_PAGE_COUNT = 16;
+
+    function manualAssetPath(path) {
+      const separator = path.includes("?") ? "&" : "?";
+      return `${path}${separator}v=${encodeURIComponent(MANUAL_CACHE_VERSION)}`;
+    }
+
+    function manualEntries() {
+      const entries = [{ title: "Capa", src: "/manual/manual_capa.png", alt: "Capa do manual" }];
+      for (let page = 1; page <= MANUAL_PAGE_COUNT; page += 1) {
+        entries.push({
+          title: `Página ${page}`,
+          src: `/manual/manual_pg${page}.png`,
+          alt: `Página ${page} do manual`
+        });
+      }
+      return entries;
+    }
+
+    function renderManual() {
+      const manualList = document.getElementById("manualList");
+      const manualCount = document.getElementById("manualCount");
+      if (!manualList) return;
+      const entries = manualEntries();
+      manualList.innerHTML = "";
+      if (manualCount) manualCount.textContent = `${entries.length} imagens em ordem (${MANUAL_PAGE_COUNT} páginas + capa)`;
+
+      for (const entry of entries) {
+        const article = document.createElement("article");
+        article.className = "manualCard";
+
+        const heading = document.createElement("div");
+        heading.className = "manualHeading";
+        const title = document.createElement("h2");
+        title.textContent = entry.title;
+        heading.appendChild(title);
+
+        const image = document.createElement("img");
+        image.className = "manualFrame";
+        image.src = manualAssetPath(entry.src);
+        image.alt = entry.alt;
+        image.loading = "lazy";
+        image.decoding = "async";
+
+        article.appendChild(heading);
+        article.appendChild(image);
+        manualList.appendChild(article);
+      }
+    }
+
+    renderManual();
+  </script>
 </body>
 </html>

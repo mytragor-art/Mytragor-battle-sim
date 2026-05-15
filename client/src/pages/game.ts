@@ -79,6 +79,7 @@ type LaneTransferSnapshot = {
 const cardDefs = (window as Window & { CARD_DEFS?: CardDef[] }).CARD_DEFS ?? [];
 const cardLookup = new Map<string, CardDef>();
 const CARD_BACK_ASSET = "ui/layout-background.ai.png";
+const ASSET_CACHE_VERSION = "2026-05-11-1";
 
 function envAliasesForCard(card: CardDef): string[] {
 	const normalizedName = normalizeCardId(String(card?.name || ""));
@@ -134,6 +135,7 @@ let selectedTargetType: "leader" | "ally" = "leader";
 let selectedTargetPos: number | null = null;
 let isJoining = false;
 let currentPhase = "INITIAL";
+let isMatchFinished = false;
 let isMyTurn = false;
 let currentMyField: string[] = [];
 let currentMyFieldHp: number[] = [];
@@ -182,6 +184,9 @@ let currentEnemyBanished: string[] = [];
 let activeChoiceId: string | null = null;
 let activeChoiceTimer: number | null = null;
 let activeWaitingTimer: number | null = null;
+let activeChoiceHighlightedElements: HTMLElement[] = [];
+let activeChoiceIsMinimized = false;
+let activeChoiceTitleText = "Escolha pendente";
 let activePileSide: BattleSide = "you";
 let activePileWhich: "deck" | "grave" | "banished" = "deck";
 let myTurnCount = 0;
@@ -974,10 +979,14 @@ function previewTextLine(cardId: string, card: CardDef | undefined): string {
 function asAssetPath(path: string | undefined): string {
 	if (!path) return "";
 	if (/^(https?:|data:|file:|\/\/)/i.test(path)) return path;
-	if (path.startsWith("/")) return path;
+	const appendVersion = (value: string) => {
+		const separator = value.includes("?") ? "&" : "?";
+		return `${value}${separator}v=${encodeURIComponent(ASSET_CACHE_VERSION)}`;
+	};
+	if (path.startsWith("/")) return appendVersion(path);
 	let normalized = String(path).replace(/\\/g, "/").replace(/^\.\//, "").replace(/^\.\.\//, "");
 	if (normalized.startsWith("assets/")) normalized = normalized.slice("assets/".length);
-	return `/${normalized}`;
+	return appendVersion(`/${normalized}`);
 }
 
 function cardKeywords(cardId: string): string[] {
@@ -1820,7 +1829,7 @@ function renderPileModal(): void {
 		const cardId = String(cards[index] || "").trim();
 		if (!cardId) continue;
 		const card = resolveCard(cardId);
-		const hideFace = activePileWhich === "deck" && activePileSide === "ai";
+		const hideFace = activePileWhich === "deck" && !isMatchFinished;
 		const button = document.createElement("button");
 		button.type = "button";
 		button.className = "card slotCard";
@@ -1907,10 +1916,78 @@ function bindPileSlots(): void {
 	}
 }
 
+function clearChoiceBoardHighlights() {
+	for (const element of activeChoiceHighlightedElements) element.classList.remove("choiceBoardHighlight");
+	activeChoiceHighlightedElements = [];
+}
+
+function resolveChoiceHighlightElement(option: any): HTMLElement | null {
+	const serverSide = String(option?.side || "") as "p1" | "p2";
+	const side = sideFromServerSlot(serverSide);
+	const lane = String(option?.lane || "").toLowerCase();
+	const pos = Number(option?.pos);
+	if (!side) return null;
+	if ((lane === "field" || lane === "ally") && Number.isInteger(pos) && pos >= 0) {
+		return document.getElementById(`${side}-ally-${pos}`) as HTMLElement | null;
+	}
+	if (lane === "support" && Number.isInteger(pos) && pos >= 0) {
+		return document.getElementById(`${side}-support-${pos}`) as HTMLElement | null;
+	}
+	if (lane === "leader") {
+		return document.getElementById(side === "you" ? "you-leader" : "ai-leader") as HTMLElement | null;
+	}
+	return null;
+}
+
+function applyChoiceBoardHighlights(payload: any) {
+	clearChoiceBoardHighlights();
+	const seen = new Set<HTMLElement>();
+	for (const option of Array.isArray(payload?.options) ? payload.options : []) {
+		if (option?.disabled) continue;
+		const element = resolveChoiceHighlightElement(option);
+		if (!element || seen.has(element)) continue;
+		seen.add(element);
+		element.classList.add("choiceBoardHighlight");
+		activeChoiceHighlightedElements.push(element);
+	}
+}
+
+function hideChoiceRestoreDock() {
+	const dock = document.getElementById("cardChoiceRestoreDock") as HTMLElement | null;
+	if (dock) dock.style.display = "none";
+}
+
+function showChoiceRestoreDock() {
+	const dock = document.getElementById("cardChoiceRestoreDock") as HTMLElement | null;
+	const title = document.getElementById("cardChoiceRestoreTitle");
+	if (!dock || !activeChoiceId) return;
+	if (title) title.textContent = activeChoiceTitleText || "Escolha pendente";
+	dock.style.display = "block";
+}
+
+function minimizeCardChoiceModal() {
+	const modal = document.getElementById("cardChoiceModal") as HTMLElement | null;
+	if (!modal || !activeChoiceId) return;
+	activeChoiceIsMinimized = true;
+	modal.style.display = "none";
+	showChoiceRestoreDock();
+}
+
+function restoreCardChoiceModal() {
+	const modal = document.getElementById("cardChoiceModal") as HTMLElement | null;
+	if (!modal || !activeChoiceId) return;
+	activeChoiceIsMinimized = false;
+	hideChoiceRestoreDock();
+	modal.style.display = "flex";
+}
+
 function hideCardChoiceModal(sendCancel: boolean = true) {
 	const modal = document.getElementById("cardChoiceModal") as HTMLElement | null;
 	if (!modal) return;
 	modal.style.display = "none";
+	activeChoiceIsMinimized = false;
+	hideChoiceRestoreDock();
+	clearChoiceBoardHighlights();
 	if (activeChoiceTimer) {
 		window.clearInterval(activeChoiceTimer);
 		activeChoiceTimer = null;
@@ -1919,6 +1996,10 @@ function hideCardChoiceModal(sendCancel: boolean = true) {
 	if (countdown) {
 		countdown.style.display = "none";
 		countdown.classList.remove("is-danger");
+	}
+	const restoreCountdown = document.getElementById("cardChoiceRestoreCountdown") as HTMLElement | null;
+	if (restoreCountdown) {
+		restoreCountdown.classList.remove("is-danger");
 	}
 	const grid = document.getElementById("cardChoiceGrid");
 	if (grid) grid.innerHTML = "";
@@ -1933,12 +2014,18 @@ function startCountdown(containerId: string, valueId: string, timeoutMs: number,
 	const valueEl = document.getElementById(valueId) as HTMLElement | null;
 	if (!container || !valueEl || timeoutMs <= 0) return;
 	container.style.display = "block";
+	const restoreContainer = store === "choice" ? document.getElementById("cardChoiceRestoreCountdown") as HTMLElement | null : null;
+	const restoreValueEl = store === "choice" ? document.getElementById("cardChoiceRestoreCountdownValue") as HTMLElement | null : null;
 	const endAt = Date.now() + timeoutMs;
 	const render = () => {
 		const remainingMs = Math.max(0, endAt - Date.now());
 		const remaining = Math.max(0, Math.ceil(remainingMs / 1000));
 		valueEl.textContent = String(remaining);
-		container.classList.toggle("is-danger", remaining <= 5);
+		container.classList.toggle("is-danger", remaining <= 10);
+		if (restoreContainer && restoreValueEl) {
+			restoreValueEl.textContent = String(remaining);
+			restoreContainer.classList.toggle("is-danger", remaining <= 10);
+		}
 		if (remainingMs <= 0) {
 			if (store === "choice" && activeChoiceTimer) {
 				window.clearInterval(activeChoiceTimer);
@@ -2105,16 +2192,24 @@ function showEffectChoiceModal(payload: any) {
 	const title = document.getElementById("cardChoiceTitle");
 	const grid = document.getElementById("cardChoiceGrid") as HTMLElement | null;
 	if (!modal || !title || !grid) return;
+	const options = Array.isArray(payload?.options) ? payload.options : [];
+	const denseChoiceCards = options.length >= 12;
+	const choiceCardWidth = denseChoiceCards ? 68 : 72;
+	const choiceCardHeight = denseChoiceCards ? 94 : 100;
 	activeChoiceId = String(payload?.choiceId || "");
-	title.textContent = String(payload?.title || "Escolha uma opção");
+	activeChoiceTitleText = String(payload?.title || "Escolha pendente");
+	title.textContent = activeChoiceTitleText;
+	activeChoiceIsMinimized = false;
+	hideChoiceRestoreDock();
 	hideChoiceWaitingModal();
+	applyChoiceBoardHighlights(payload);
 	grid.innerHTML = "";
 	grid.style.display = "block";
 
 	const layout = document.createElement("div");
 	layout.style.display = "grid";
-	layout.style.gridTemplateColumns = "minmax(0, 1.9fr) minmax(260px, 300px)";
-	layout.style.gap = "12px";
+	layout.style.gridTemplateColumns = window.innerWidth <= 980 ? "1fr" : "minmax(0, 1fr) minmax(180px, 220px)";
+	layout.style.gap = "10px";
 	layout.style.alignItems = "start";
 
 	const choicesWrap = document.createElement("div");
@@ -2123,12 +2218,12 @@ function showEffectChoiceModal(payload: any) {
 
 	const previewWrap = document.createElement("div");
 	previewWrap.style.display = "grid";
-	previewWrap.style.gap = "8px";
+	previewWrap.style.gap = "6px";
 	previewWrap.style.alignContent = "start";
 	previewWrap.style.minWidth = "0";
 	const previewImg = document.createElement("img");
 	previewImg.style.width = "100%";
-	previewImg.style.maxWidth = "280px";
+	previewImg.style.maxWidth = window.innerWidth <= 980 ? "160px" : "220px";
 	previewImg.style.borderRadius = "8px";
 	previewImg.style.border = "1px solid rgba(255,255,255,.16)";
 	previewImg.src = asAssetPath(CARD_BACK_ASSET);
@@ -2167,7 +2262,6 @@ function showEffectChoiceModal(payload: any) {
 	previewWrap.appendChild(previewImg);
 	previewWrap.appendChild(previewMeta);
 
-	const options = Array.isArray(payload?.options) ? payload.options : [];
 	const isMultiSelect = payload?.multiSelect === true;
 	const selectedOptionIds = new Set<string>();
 	const minSelections = Math.max(0, Number(payload?.minSelections || 0));
@@ -2213,7 +2307,7 @@ function showEffectChoiceModal(payload: any) {
 
 		const groupGrid = document.createElement("div");
 		groupGrid.style.display = "grid";
-		groupGrid.style.gridTemplateColumns = "repeat(auto-fill, minmax(84px, 1fr))";
+		groupGrid.style.gridTemplateColumns = `repeat(auto-fill, minmax(${choiceCardWidth}px, 1fr))`;
 		groupGrid.style.gap = "8px";
 
 		for (const option of group.options) {
@@ -2224,8 +2318,8 @@ function showEffectChoiceModal(payload: any) {
 		const button = document.createElement("button");
 		button.type = "button";
 		button.className = "card slotCard";
-		button.style.width = "84px";
-		button.style.height = "118px";
+		button.style.width = `${choiceCardWidth}px`;
+		button.style.height = `${choiceCardHeight}px`;
 		const disabled = !!option?.disabled;
 		button.style.cursor = disabled ? "not-allowed" : "pointer";
 		if (disabled) button.style.opacity = "0.45";
@@ -2282,10 +2376,10 @@ function showEffectChoiceModal(payload: any) {
 		};
 		item.appendChild(button);
 		const optionText = document.createElement("div");
-		optionText.style.fontSize = "11px";
+		optionText.style.fontSize = denseChoiceCards ? "10px" : "11px";
 		optionText.style.lineHeight = "1.2";
 		optionText.style.opacity = "0.95";
-		optionText.style.minHeight = "28px";
+		optionText.style.minHeight = denseChoiceCards ? "22px" : "24px";
 		optionText.style.whiteSpace = "pre-line";
 		optionText.textContent = String(option?.description || option?.label || "");
 		item.appendChild(optionText);
@@ -2373,6 +2467,7 @@ function tryPlayCard(cardId: string, targetPos?: number): void {
 	}
 	const firstEmpty = getFirstEmptyFieldPos(laneState);
 	if (firstEmpty >= 0) room.send("play_card", { cardId, targetPos: firstEmpty, cardKind });
+	else if (lane === "field") room.send("play_card", { cardId, cardKind });
 }
 
 function renderEnvSlot(slotId: "you-env" | "ai-env", envCardId: string | null, allowDrop: boolean): void {
@@ -2904,6 +2999,7 @@ function bindActiveMatchRoom() {
 			else if (name === "MATCH_ENDED") {
 				const winner = ownerLabel(String(msg?.winner || ""));
 				logText(`🏁 Partida encerrada. Vencedor: ${winner}.`);
+				isMatchFinished = true;
 				hideCardChoiceModal(false);
 				hideChoiceWaitingModal();
 				const seq = Number(msg?.seq ?? -1);
@@ -3072,6 +3168,7 @@ function bindActiveMatchRoom() {
 			const enemyShadowPenalty = hasShadowPenaltyForPlayer(enemy, currentEnemyLeader, enemyEnv, currentMyEnv);
 			const enemyHandCount = Number(enemy?.hand?.length ?? 0);
 			const myTurn = !isSpectator && String(state?.game?.turnSlot || "") === slot;
+			isMatchFinished = String(state?.phase || "IN_MATCH") === "FINISHED";
 			const phase = String(state?.game?.phase || "");
 			if (phase !== currentPhase) {
 				resetBoardAttackSelection();
@@ -3308,6 +3405,7 @@ async function joinMatch() {
 				else if (name === "MATCH_ENDED") {
 					const winner = ownerLabel(String(msg?.winner || ""));
 					logText(`🏁 Partida encerrada. Vencedor: ${winner}.`);
+					isMatchFinished = true;
 					hideCardChoiceModal(false);
 					hideChoiceWaitingModal();
 					const seq = Number(msg?.seq ?? -1);
@@ -3494,6 +3592,7 @@ async function joinMatch() {
 				const enemyShadowPenalty = hasShadowPenaltyForPlayer(enemy, currentEnemyLeader, enemyEnv, currentMyEnv);
 				const enemyHandCount = Number(enemy?.hand?.length ?? 0);
 				const myTurn = !isSpectator && String(state?.game?.turnSlot || "") === slot;
+				isMatchFinished = String(state?.phase || "IN_MATCH") === "FINISHED";
 				const phase = String(state?.game?.phase || "");
 				if (phase !== currentPhase) {
 					resetBoardAttackSelection();
@@ -3685,8 +3784,12 @@ window.addEventListener("keydown", (event) => {
 });
 
 (window as any).hideCardChoice = () => hideCardChoiceModal(true);
+(window as any).minimizeCardChoice = () => minimizeCardChoiceModal();
 (window as any).hidePile = () => hidePile();
 (window as any).hideVictory = hideVictory;
+
+const cardChoiceRestoreButton = document.getElementById("cardChoiceRestoreButton") as HTMLButtonElement | null;
+if (cardChoiceRestoreButton) cardChoiceRestoreButton.onclick = () => restoreCardChoiceModal();
 bindPileSlots();
 
 const params = new URLSearchParams(window.location.search);

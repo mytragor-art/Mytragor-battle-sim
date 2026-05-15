@@ -203,10 +203,16 @@
     }
 
     function withAssetVersion(dir, file){
-      if (dir === '../spell/' && (file === 'layout-bomfruto.ai.png' || file === 'layout-frutoabencoado.ai.png')) {
-        return `${dir}${file}?v=20260426-1`;
-      }
-      return dir + file;
+      const versionedFiles = new Map([
+        ['../spell/layout-bomfruto.ai.png', '20260426-1'],
+        ['../spell/layout-frutoabencoado.ai.png', '20260426-1'],
+        ['../allies/layout-goblinsabotador.ai.png', '2026-05-11-1'],
+        ['../allies/layout-hienacarniceira.ai.png', '2026-05-11-1'],
+        ['../allies/layout-toupeiraescavadora.ai.png', '2026-05-11-1']
+      ]);
+      const key = `${dir}${file}`;
+      const version = versionedFiles.get(key);
+      return version ? `${key}?v=${encodeURIComponent(version)}` : key;
     }
 
     function showCollection(title, files){

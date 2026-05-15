@@ -206,17 +206,27 @@
   </div>
 </div>
 
-<div id="cardChoiceModal" class="modal" style="display:none;align-items:center;justify-content:center;z-index:10000;">
-  <div class="modalBox" style="max-width: 1000px;">
+<div id="cardChoiceModal" class="modal choiceSheetModal" style="display:none;z-index:10000;">
+  <div class="modalBox choiceSheetBox">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
       <div>
         <h3 id="cardChoiceTitle" style="margin:0">Escolha uma carta</h3>
         <div id="cardChoiceCountdown" class="choiceCountdown" style="display:none;">Tempo restante: <span id="cardChoiceCountdownValue">40</span>s</div>
       </div>
-      <button class="btn" onclick="hideCardChoice()">Fechar</button>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn" onclick="minimizeCardChoice()">Minimizar</button>
+        <button class="btn" onclick="hideCardChoice()">Fechar</button>
+      </div>
     </div>
     <div class="gridMini" id="cardChoiceGrid"></div>
   </div>
+</div>
+
+<div id="cardChoiceRestoreDock" class="choiceRestoreDock" style="display:none;">
+  <button id="cardChoiceRestoreButton" type="button" class="choiceRestoreButton">
+    <span id="cardChoiceRestoreTitle">Escolha pendente</span>
+    <span id="cardChoiceRestoreCountdown" class="choiceCountdown">Tempo restante: <span id="cardChoiceRestoreCountdownValue">40</span>s</span>
+  </button>
 </div>
 
 <div id="choiceWaitingModal" class="modal" style="display:none;align-items:center;justify-content:center;z-index:10001;">

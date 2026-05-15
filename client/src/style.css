@@ -296,7 +296,8 @@ label{
   margin-top: 6px;
   font-size: 14px;
   font-weight: 700;
-  color: #f3e6ba;
+  color: #4ade80;
+  text-shadow: 0 0 10px rgba(74, 222, 128, 0.22);
   letter-spacing: .2px;
 }
 

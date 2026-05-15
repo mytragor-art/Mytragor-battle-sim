@@ -3,7 +3,7 @@
 import { Room, Client } from "colyseus";
 import { findCardDef } from "../game/cardCatalog";
 import { MatchState, MatchPlayerState } from "./schema/MatchState";
-import { buildSpectatorSnapshot, publishSpectatorSnapshot, relaySpectatorEvent } from "./spectatorBridge";
+import { buildSpectatorSnapshot, disposeSpectatorChannel, publishSpectatorSnapshot, relaySpectatorEvent } from "./spectatorBridge";
 import {
 	type Slot,
 	type AttackTarget,
@@ -309,6 +309,10 @@ export class MatchRoom extends Room<MatchState> {
 			p.displayName = this.sanitizeDisplayName(msg?.name);
 			this.publishSpectatorState();
 		});
+		} catch (err) {
+			console.error(`[ROOM ERROR] room=${this.roomId} onCreate`, err && (err.stack || err));
+			throw err;
+		}
 	}
 
 	onJoin(client: Client, options?: any, auth?: ReservedSeat) {

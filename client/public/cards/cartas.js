@@ -91,7 +91,7 @@ const CARD_DEFS = [
     effect: 'ban_on_enter', effectValue: 1, auraTarget: { nameIncludes: 'Aranhas Negras' }, auraScope: 'allies', auraProp: 'atk', text: 'Quando este aliado for convocado, você pode deslocar uma carta em campo. Aliados que você controla com "Aranhas Negras" no nome recebem +1 de Ataque.'
   },
   {
-    name: 'Goblin Sabotador', kind: 'ally', img: '/allies/layout-goblinsabotador.ai.png', cost: 3, classe: 'Criatura', tipo: 'Humanoide', filiacao: 'Neutra', ac: 1, hp: 4, maxHp: 4, damage: 2, atkBonus: 2, keywords: [], effect: 'destroy_equip_on_enter', text: 'Ao entrar em campo, destrua um equipamento inimigo.'
+    name: 'Goblin Sabotador', kind: 'ally', img: '/allies/layout-goblinsabotador.ai.png', cost: 3, classe: 'Criatura', tipo: 'Humanoide', filiacao: 'Neutra', ac: 1, hp: 4, maxHp: 4, damage: 2, atkBonus: 2, keywords: [], effect: 'destroy_equip_on_enter', text: 'Quando este aliado for convocado, você pode destruir 1 equipamento inimigo.'
   },
   {
   name: 'Thorn, o Martelo da Montanha', kind: 'ally', img: '/allies/layout-thornmartelomontanha.ai.png', cost: 6, classe: 'Guerreiro', tipo: 'Anão', filiacao: 'Neutra', ac: 1, hp: 8, maxHp: 8, damage: 6, atkBonus: 6, keywords: ['atropelar'], effect: '', text: 'Atropelar — O excesso de dano em um combate atinge diretamente a vida do Escolhido inimigo.'
@@ -127,7 +127,7 @@ name: 'Tamanduá Guardião', kind: 'ally', img: '/allies/layout-tamanduaguardiao
   },
 
   {
-  name: 'Informante do Beco', kind: 'ally', img: '/allies/layout-informantebeco.ai.png', cost: 2, classe: 'Cidadão', tipo: 'Elfo', filiacao: 'Neutra', ac: 1, hp: 3, maxHp: 3, damage: 2, atkBonus: 2, keywords: [], effect: 'informante_beco',text: 'Quando entra no campo, revele para ambos a carta do topo do deck do oponente. Depois, coloque-a de volta no topo.'
+  name: 'Informante do Beco', kind: 'ally', img: '/allies/layout-informantebeco.ai.png', cost: 2, classe: 'Cidadão', tipo: 'Elfo', filiacao: 'Neutra', ac: 1, hp: 3, maxHp: 3, damage: 2, atkBonus: 2, keywords: [], effect: 'informante_beco',text: 'Quando este aliado for convocado, revele para ambos a carta do topo do deck do oponente. Depois, coloque-a de volta no topo.'
   },
   {
     name: 'Gamboa, a Caçadora',
@@ -161,14 +161,14 @@ name: 'Tamanduá Guardião', kind: 'ally', img: '/allies/layout-tamanduaguardiao
   name: 'Xamã Kobold', kind: 'ally', img: '/allies/layout-xamakobold.ai.png', cost: 2, classe: 'Mago', tipo: 'Humanoide', filiacao: 'Sombras', ac: 0, hp: 2, maxHp: 2, damage: 1, atkBonus: 1, keywords: [], effect: 'xama_kobold', text: 'Quando este Aliado for convocado, você pode Deslocar 1 aliado com "Kobold" no nome, que estiver no seu cemitério. Se o fizer, compre 1 carta.'
   },
 {
-  name: 'Toupeira Escavadora', kind: 'ally', img: '/allies/layout-toupeiraescavadora.ai.png', cost: 1, classe: 'Criatura', tipo: 'Animal', filiacao: 'Neutra', ac: 0, hp: 3, maxHp: 3, damage: 1, atkBonus: 1, keywords: [], effect: 'olhar_topo', text: 'Ao entrar em campo, olhe a carta do topo do seu deck. Você pode mantê-la no topo ou colocá-la no fundo.'
+  name: 'Toupeira Escavadora', kind: 'ally', img: '/allies/layout-toupeiraescavadora.ai.png', cost: 1, classe: 'Criatura', tipo: 'Animal', filiacao: 'Neutra', ac: 0, hp: 3, maxHp: 3, damage: 1, atkBonus: 1, keywords: [], effect: 'olhar_topo', text: 'Quando este aliado for convocado, olhe a carta do topo do seu baralho, você deve colocá-la no topo ou no fundo do seu baralho.'
 },
   {
     name: 'Porco-espinho Furioso', kind: 'ally', img: '/allies/layout-porcoespinhofurioso.ai.png', cost: 3, classe: 'Criatura', tipo: 'Animal', filiacao: 'Religioso', ac: 0, hp: 4, maxHp: 4, damage: 2, atkBonus: 2, keywords: [], effect: 'ally_heal_buff', text: 'Sempre que um personagem que você controla for curado, coloque 1 marcador "Elo Vital" neste aliado. Este aliado +1 de Ataque e +1 de Vida para cada marcador de Elo Vital nele.'
   },
   {
     name: 'Hiena Carniceira', kind: 'ally', img: '/allies/layout-hienacarniceira.ai.png', cost: 3, classe: 'Criatura', tipo: 'Animal', filiacao: 'Neutra', ac: 0, hp: 4, maxHp: 4, damage: 3, atkBonus: 3, keywords: [],
-    text: 'Quando este aliado for derrotado em combate e enviado para o cemitério, escolha 1 aliado no seu cemitério com custo 3 ou menos e convoque-o para o campo.',
+    text: 'Quando este aliado for destruído em combate, convoque 1 Aliado custo 3 ou menos, que não seja "Hiena Carniceira", para o campo.',
     // Configuração para o mecanismo genérico de "chamar especial" usado por outras cartas
     chamarEspecial: { origem: ['grave'], maxCost: 3 }
   },

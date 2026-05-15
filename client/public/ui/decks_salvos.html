@@ -689,11 +689,25 @@ function updateDeckCount(n){
 	if (el) el.textContent = `${n} deck${n === 1 ? '' : 's'} salvo${n === 1 ? '' : 's'}`;
 }
 
+const ASSET_CACHE_VERSION = '2026-05-11-1';
+
+function withAssetVersion(url) {
+	try {
+		const resolved = new URL(url, window.location.href);
+		if (!/^https?:$/i.test(resolved.protocol)) return resolved.href;
+		if (resolved.origin !== window.location.origin) return resolved.href;
+		resolved.searchParams.set('v', ASSET_CACHE_VERSION);
+		return resolved.href;
+	} catch (e) {
+		return url;
+	}
+}
+
 function resolveImg(path) {
 	if (!path) return CARD_BACK_IMAGE;
 	try {
-		if (/^(https?:|data:|file:|\/\/)/i.test(path)) return path;
-		let normalized = String(path).replace(/\\/g, '/').replace(/^\.\//, '').replace(/^\.\.\//, '');
+		if (/^(data:|file:|\/\/)/i.test(path)) return path;
+		let normalized = String(path).replace(/\\/g, '/').replace(/[?#].*$/, '').replace(/^\.\//, '').replace(/^\.\.\//, '');
 		const href = (window.location && window.location.href) || '';
 		const pathname = (window.location && window.location.pathname) || '';
 		const inLegacyAssetsUi = pathname.includes('/assets/ui/');
@@ -712,7 +726,7 @@ function resolveImg(path) {
 		}
 
 		const candidate = inLegacyAssetsUi || inUi ? ('../' + normalized) : normalized;
-		return new URL(candidate, href).href;
+		return withAssetVersion(new URL(candidate, href).href);
 	} catch (e) {
 		return path;
 	}
@@ -721,7 +735,7 @@ function resolveImg(path) {
 function resolveThumbImg(path) {
 	if (!path) return resolveImg(CARD_BACK_IMAGE);
 	try {
-		let normalized = String(path).replace(/\\/g, '/').replace(/^\.\//, '').replace(/^\.\.\//, '');
+		let normalized = String(path).replace(/\\/g, '/').replace(/[?#].*$/, '').replace(/^\.\//, '').replace(/^\.\.\//, '');
 		if (normalized.startsWith('assets/')) {
 			normalized = normalized.slice('assets/'.length);
 		}

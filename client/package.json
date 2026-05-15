@@ -6,9 +6,9 @@
 		"dev": "vite",
 		"dev:test": "vite --mode test",
 		"assets:thumbs": "node scripts/build-thumbnails.mjs",
-		"build": "vite build",
-		"build:test": "vite build --mode test",
-		"build:prod": "vite build --mode production",
+		"build": "npm run assets:thumbs && vite build",
+		"build:test": "npm run assets:thumbs && vite build --mode test",
+		"build:prod": "npm run assets:thumbs && vite build --mode production",
 		"preview": "vite preview",
 		"smoke:spectator": "node scripts/spectator-smoke.mjs"
 	},

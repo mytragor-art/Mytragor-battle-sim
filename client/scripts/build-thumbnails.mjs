@@ -80,6 +80,19 @@ async function ensureDir(dirPath) {
 	await fs.mkdir(dirPath, { recursive: true });
 }
 
+async function replaceFile(tempFile, outputFile) {
+	try {
+		await fs.rename(tempFile, outputFile);
+		return;
+	} catch (error) {
+		const code = error && typeof error === "object" ? error.code : "";
+		if (code !== "EACCES" && code !== "EPERM") throw error;
+	}
+
+	await fs.rm(outputFile, { force: true });
+	await fs.rename(tempFile, outputFile);
+}
+
 async function main() {
 	const options = parseArgs(process.argv.slice(2));
 	const publicRoot = path.resolve(process.cwd(), options.publicRoot);
@@ -105,20 +118,27 @@ async function main() {
 			const relativePath = path.relative(publicRoot, file);
 			const parsed = path.parse(relativePath);
 			const outputFile = path.join(outputRoot, parsed.dir, `${parsed.name}.thumb.webp`);
+			const tempOutputFile = path.join(outputRoot, parsed.dir, `${parsed.name}.thumb.tmp-${process.pid}.webp`);
 			await ensureDir(path.dirname(outputFile));
 
 			const sourceStat = await fs.stat(file);
 			originalBytes += sourceStat.size;
 
-			await sharp(file)
-				.resize({
-					width: options.width,
-					height: options.height,
-					fit: "inside",
-					withoutEnlargement: true,
-				})
-				.webp({ quality: options.quality })
-				.toFile(outputFile);
+			try {
+				await sharp(file)
+					.resize({
+						width: options.width,
+						height: options.height,
+						fit: "inside",
+						withoutEnlargement: true,
+					})
+					.webp({ quality: options.quality })
+					.toFile(tempOutputFile);
+
+				await replaceFile(tempOutputFile, outputFile);
+			} finally {
+				await fs.rm(tempOutputFile, { force: true }).catch(() => {});
+			}
 
 			const thumbStat = await fs.stat(outputFile);
 			thumbBytes += thumbStat.size;

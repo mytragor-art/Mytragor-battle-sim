@@ -877,11 +877,25 @@
       return String(value || '');
     }
 
+    const ASSET_CACHE_VERSION = '2026-05-11-1';
+
+    function withAssetVersion(url) {
+      try {
+        const resolved = new URL(url, window.location.href);
+        if (!/^https?:$/i.test(resolved.protocol)) return resolved.href;
+        if (resolved.origin !== window.location.origin) return resolved.href;
+        resolved.searchParams.set('v', ASSET_CACHE_VERSION);
+        return resolved.href;
+      } catch {
+        return url;
+      }
+    }
+
     function resolveImg(path) {
       if (!path) return CARD_BACK_IMAGE;
       try {
-        if (/^(https?:|data:|file:|\/\/)/i.test(path)) return path;
-        let normalized = String(path).replace(/\\/g, '/').replace(/^\.\//, '').replace(/^\.\.\//, '');
+        if (/^(data:|file:|\/\/)/i.test(path)) return path;
+        let normalized = String(path).replace(/\\/g, '/').replace(/[?#].*$/, '').replace(/^\.\//, '').replace(/^\.\.\//, '');
         const pathname = (window.location && window.location.pathname) || '';
         const inLegacyAssetsUi = pathname.includes('/assets/ui/');
         const inUi = pathname.includes('/ui/');
@@ -891,7 +905,7 @@
         }
 
         const candidate = inLegacyAssetsUi || inUi ? ('../' + normalized) : normalized;
-        return new URL(candidate, window.location.href).href;
+        return withAssetVersion(new URL(candidate, window.location.href).href);
       } catch {
         return path;
       }
@@ -900,7 +914,7 @@
     function resolveThumbImg(path) {
       if (!path) return resolveImg(CARD_BACK_IMAGE);
       try {
-        let normalized = String(path).replace(/\\/g, '/').replace(/^\.\//, '').replace(/^\.\.\//, '');
+        let normalized = String(path).replace(/\\/g, '/').replace(/[?#].*$/, '').replace(/^\.\//, '').replace(/^\.\.\//, '');
         if (normalized.startsWith('assets/')) {
           normalized = normalized.slice('assets/'.length);
         }
@@ -1335,6 +1349,17 @@
       return `deck_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     }
 
+    function openLobbyWithDeck(deckId) {
+      const href = (window.location && window.location.href) || '';
+      try {
+        const url = new URL('../lobby.html', href);
+        if (deckId) url.searchParams.set('deckId', String(deckId));
+        return url.href;
+      } catch {
+        return deckId ? `../lobby.html?deckId=${encodeURIComponent(String(deckId))}` : '../lobby.html';
+      }
+    }
+
     function showSaveChoiceModal() {
       return new Promise((resolve) => {
         const overlay = document.createElement('div');
@@ -1420,8 +1445,9 @@
         return;
       }
       const deckName = (deckNameInput.value || '').trim();
+      const deckId = buildDeckId();
       const payload = {
-        deckId: buildDeckId(),
+        deckId,
         deckName,
         leader: chosenLeader.name,
         leaderName: chosenLeader.name,
@@ -1431,7 +1457,7 @@
         fragImg: chosenFragImg || null
       };
       localStorage.setItem('mytragor_play_deck', JSON.stringify(payload));
-      window.open('../../mytragor_simulador.html', '_blank');
+      window.location.href = openLobbyWithDeck(deckId);
     };
 
     btnLimpar.onclick = function () {

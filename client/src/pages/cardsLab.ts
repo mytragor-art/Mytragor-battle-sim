@@ -47,6 +47,7 @@ const normalizedKind = (value: string | undefined): string => {
 };
 
 const cardDefs = (window as Window & { CARD_DEFS?: CardDef[] }).CARD_DEFS;
+const ASSET_CACHE_VERSION = "2026-05-11-1";
 
 const cards: LabCard[] = Array.isArray(cardDefs)
 	? cardDefs.map((def: CardDef, index: number) => ({ id: `c-${index}`, def }))
@@ -79,8 +80,13 @@ function setActiveFragments(value: number): void {
 
 function withAssetsPath(imgPath: string | undefined): string {
 	if (!imgPath) return "";
-	if (imgPath.startsWith("http://") || imgPath.startsWith("https://") || imgPath.startsWith("/")) return imgPath;
-	return `/${imgPath.replace(/^\.?\//, "")}`;
+	const appendVersion = (value: string) => {
+		const separator = value.includes("?") ? "&" : "?";
+		return `${value}${separator}v=${encodeURIComponent(ASSET_CACHE_VERSION)}`;
+	};
+	if (imgPath.startsWith("http://") || imgPath.startsWith("https://")) return imgPath;
+	if (imgPath.startsWith("/")) return appendVersion(imgPath);
+	return appendVersion(`/${imgPath.replace(/^\.?\//, "")}`);
 }
 
 function cardMeta(card: CardDef): string {
