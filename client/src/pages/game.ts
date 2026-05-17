@@ -79,7 +79,7 @@ type LaneTransferSnapshot = {
 const cardDefs = (window as Window & { CARD_DEFS?: CardDef[] }).CARD_DEFS ?? [];
 const cardLookup = new Map<string, CardDef>();
 const CARD_BACK_ASSET = "ui/layout-background.ai.png";
-const ASSET_CACHE_VERSION = "2026-05-11-1";
+const ASSET_CACHE_VERSION = "2026-05-17-1";
 
 function envAliasesForCard(card: CardDef): string[] {
 	const normalizedName = normalizeCardId(String(card?.name || ""));

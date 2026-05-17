@@ -47,7 +47,7 @@ const normalizedKind = (value: string | undefined): string => {
 };
 
 const cardDefs = (window as Window & { CARD_DEFS?: CardDef[] }).CARD_DEFS;
-const ASSET_CACHE_VERSION = "2026-05-11-1";
+const ASSET_CACHE_VERSION = "2026-05-17-1";
 
 const cards: LabCard[] = Array.isArray(cardDefs)
 	? cardDefs.map((def: CardDef, index: number) => ({ id: `c-${index}`, def }))

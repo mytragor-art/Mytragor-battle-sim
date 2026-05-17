@@ -760,7 +760,7 @@
     </div>
   </div>
 
-  <script src="../cards/cartas.js?v=3"></script>
+  <script src="../cards/cartas.js?v=2026-05-17-1"></script>
   <script>
     const CARD_BACK_IMAGE = 'layout-background.ai.png';
     const BASE_CARD_POOL = (window.CARD_DEFS || []).filter(card => {
@@ -831,7 +831,7 @@
     const CHOSEN_POOL = LEADERS.map(leader => ({
       ...leader,
       kind: 'chosen',
-      tipo: 'Escolhido'
+      tipo: leader && leader.tipo ? leader.tipo : ''
     }));
 
     const FRAGMENT_POOL = FRAG_OPTIONS.map((opt, index) => ({
@@ -879,7 +879,7 @@
       return String(value || '');
     }
 
-    const ASSET_CACHE_VERSION = '2026-05-11-1';
+    const ASSET_CACHE_VERSION = '2026-05-17-1';
 
     function withAssetVersion(url) {
       try {
