@@ -38,7 +38,7 @@ const CARD_DEFS = [
     key: 'leafae',
     kind: 'leader',
     img: '/chosens/layout-leafaefloresta.ai.png',
-    classe: 'Durido',
+    classe: 'Druida',
     tipo: 'Elfo',
     filiacao: 'Religioso',
     hp: 30,
