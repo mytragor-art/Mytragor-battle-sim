@@ -103,8 +103,17 @@ function cardSubclassLine(card: CardDef): string {
 	return [String(card.classe || "").trim(), String(card.tipo || "").trim()].filter(Boolean).join(" • ");
 }
 
+function previewMetaLine(card: CardDef): string {
+	return cardSubclassLine(card) || cardMeta(card);
+}
+
+function previewDetailsLine(card: CardDef): string {
+	const parts = [typeof card.cost === "number" ? `Custo: ${card.cost}` : "", card.filiacao ? `Filiação: ${card.filiacao}` : ""].filter(Boolean);
+	return parts.join(" • ");
+}
+
 function previewBody(card: CardDef): string {
-	return [cardSubclassLine(card), String(card.text || "Sem texto de efeito.").trim()].filter(Boolean).join("\n");
+	return [previewDetailsLine(card), String(card.text || "Sem texto de efeito.").trim()].filter(Boolean).join("\n");
 }
 
 function setPreview(card: LabCard | null): void {
@@ -120,7 +129,7 @@ function setPreview(card: LabCard | null): void {
 		previewImg.alt = card.def.name;
 	}
 	if (previewName) previewName.textContent = card.def.name;
-	if (previewMeta) previewMeta.textContent = cardMeta(card.def);
+	if (previewMeta) previewMeta.textContent = previewMetaLine(card.def);
 	if (previewText) previewText.textContent = previewBody(card.def);
 }
 

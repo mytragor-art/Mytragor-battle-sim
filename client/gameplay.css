@@ -1350,7 +1350,7 @@ html,body{height:100%;font-family:-apple-system,system-ui,'Segoe UI',Roboto,'Hel
 .bigMetaTitle{color:var(--gold);font-size:17px;font-weight:900;line-height:1.2;letter-spacing:.2px}
 .bigMetaLine{font-size:12px;line-height:1.3}
 .bigMetaFiliation{color:#e8d7a3;font-weight:800;text-transform:uppercase;letter-spacing:.45px}
-.bigMetaSubclass{color:#cbd5e1;font-weight:700}
+.bigMetaSubclass{color:#ffe58a;font-weight:700;text-shadow:0 0 10px rgba(255,229,138,.16)}
 .bigMetaText{color:#e5edf7;font-size:14px;line-height:1.5;white-space:pre-line;font-weight:500}
 
 @keyframes chosenReadyGlow{

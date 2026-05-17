@@ -246,9 +246,11 @@
     }
 
     .preview-sub {
-      color: var(--muted);
+      color: #ffe58a;
       margin-bottom: 6px;
       font-size: 12px;
+      font-weight: 700;
+      text-shadow: 0 0 10px rgba(255,229,138,.16);
     }
 
     .preview-stats {
@@ -950,15 +952,23 @@
       return cardF === 'neutra' || cardF === String(leaderF).toLowerCase();
     }
 
+    function cardSubclassLine(card) {
+      return [String(card && card.classe || '').trim(), String(card && card.tipo || '').trim()].filter(Boolean).join(' • ');
+    }
+
+    function cardDetailsLine(card) {
+      return [card && card.filiacao ? `Filiação: ${card.filiacao}` : '', card && card.cost != null ? `Custo: ${card.cost}` : ''].filter(Boolean).join(' • ');
+    }
+
     function setPreview(card) {
       if (!card) return;
       const name = card.name || 'Sem nome';
-      const fil = card.filiacao || '';
-      const cost = card.cost != null ? `• Custo ${card.cost}` : '';
+      const subclass = cardSubclassLine(card);
+      const details = cardDetailsLine(card);
       previewImg.src = resolveImg(card.img);
       previewImg.onerror = () => { previewImg.src = CARD_BACK_IMAGE; };
       previewTitle.textContent = name;
-      previewSub.textContent = `${fil} ${cost}`.trim();
+      previewSub.textContent = subclass || details || 'Carta selecionada';
       previewStats.innerHTML = '';
       if (card.kind === 'chosen' || card.kind === 'leader') {
         const vida = card.hp ?? card.maxHp;
@@ -982,7 +992,10 @@
           previewStats.appendChild(item);
         });
       }
-      previewText.innerHTML = String(card.text || card.description || card.tipo || '').replace(/\n/g, '<br>') || 'Sem descrição';
+      previewText.innerHTML = [details, String(card.text || card.description || '').trim() || 'Sem descrição']
+        .filter(Boolean)
+        .join('<br><br>')
+        .replace(/\n/g, '<br>');
     }
 
     function attachPreview(el, card) {
