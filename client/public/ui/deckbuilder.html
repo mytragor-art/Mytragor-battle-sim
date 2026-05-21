@@ -193,6 +193,38 @@
       font-weight: 600;
     }
 
+    #btnApplyPresetDeck {
+      background: linear-gradient(180deg, #67e8f9 0%, #0ea5e9 100%);
+      color: #042033;
+      border-color: rgba(103,232,249,.5);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 10px 24px rgba(14,165,233,.26);
+      text-shadow: 0 1px 0 rgba(255,255,255,.22);
+      font-weight: 800;
+    }
+
+    #btnApplyPresetDeck:hover:not(:disabled) {
+      filter: brightness(1.06);
+      transform: translateY(-1px);
+    }
+
+    #btnApplyPresetDeck:disabled {
+      background: linear-gradient(180deg, rgba(71,85,105,.9), rgba(51,65,85,.9));
+      color: #cbd5e1;
+      border-color: rgba(148,163,184,.2);
+      box-shadow: none;
+      transform: none;
+    }
+
+    #presetDeckSelect {
+      background: #05070b !important;
+      color: var(--txt);
+    }
+
+    #presetDeckSelect option {
+      background: #05070b;
+      color: var(--txt);
+    }
+
     #btnLimpar,
     #btnVerDecks {
       background: linear-gradient(180deg, #e6ebf0 0%, #aeb8c4 100%);
@@ -693,6 +725,12 @@
           <input id="importCodeInput" type="text" placeholder="Colar código do deck..." style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.14);background:rgba(0,0,0,.25);color:var(--txt);font-size:12px;">
           <button id="btnImportDeck" class="btn">Importar deck</button>
         </div>
+        <div style="margin-top:6px;display:flex;gap:6px;align-items:center;">
+          <select id="presetDeckSelect" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.14);background:rgba(0,0,0,.25);color:var(--txt);font-size:12px;">
+            <option value="">Baralho pronto...</option>
+          </select>
+          <button id="btnApplyPresetDeck" class="btn ghost">Usar pronto</button>
+        </div>
       </section>
 
       <section class="panel">
@@ -761,8 +799,10 @@
   </div>
 
   <script src="../cards/cartas.js?v=2026-05-17-2"></script>
+  <script src="./deckShared.js"></script>
+  <script src="./presetDeckCatalog.js"></script>
   <script>
-    const CARD_BACK_IMAGE = 'layout-background.ai.png';
+    const { CARD_BACK_IMAGE, attachGridThumb, matchesCardName, resolveImg } = window.MytragorDeckShared;
     const BASE_CARD_POOL = (window.CARD_DEFS || []).filter(card => {
       if (!['ally','spell','equip','env','truque'].includes(card.kind)) return false;
       const key = String(card.key || '');
@@ -804,7 +844,10 @@
 
     const btnImportDeck = document.getElementById('btnImportDeck');
     const importCodeInput = document.getElementById('importCodeInput');
+    const presetDeckSelect = document.getElementById('presetDeckSelect');
+    const btnApplyPresetDeck = document.getElementById('btnApplyPresetDeck');
     const DECK_EDIT_DRAFT_KEY = 'mytragor_deck_edit_draft';
+    const PRESET_DECKS = Array.isArray(window.MytragorPresetDeckCatalog) ? window.MytragorPresetDeckCatalog : [];
 
     const FRAG_OPTIONS = [
       { label: 'Arcano', img: '../fragments/layout-fragmento_arcano.png' },
@@ -862,85 +905,10 @@
       pageSize: 12
     };
 
-    function normalizeText(s) {
-      return String(s || '').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
-    }
-
-    function matchesCardName(card, value) {
-      const expected = normalizeText(value || '');
-      if (!expected || !card) return false;
-      if (normalizeText(card.name || '') === expected) return true;
-      return Array.isArray(card.aliases) && card.aliases.some(alias => normalizeText(alias) === expected);
-    }
-
     function formatFilterLabel(value) {
       const normalized = String(value || '').trim().toLowerCase();
       if (normalized === 'arcana') return 'Arcano';
       return String(value || '');
-    }
-
-    const ASSET_CACHE_VERSION = '2026-05-17-2';
-
-    function withAssetVersion(url) {
-      try {
-        const resolved = new URL(url, window.location.href);
-        if (!/^https?:$/i.test(resolved.protocol)) return resolved.href;
-        if (resolved.origin !== window.location.origin) return resolved.href;
-        resolved.searchParams.set('v', ASSET_CACHE_VERSION);
-        return resolved.href;
-      } catch {
-        return url;
-      }
-    }
-
-    function resolveImg(path) {
-      if (!path) return CARD_BACK_IMAGE;
-      try {
-        if (/^(data:|file:|\/\/)/i.test(path)) return path;
-        let normalized = String(path).replace(/\\/g, '/').replace(/[?#].*$/, '').replace(/^\.\//, '').replace(/^\.\.\//, '');
-        const pathname = (window.location && window.location.pathname) || '';
-        const inLegacyAssetsUi = pathname.includes('/assets/ui/');
-        const inUi = pathname.includes('/ui/');
-
-        if (normalized.startsWith('assets/')) {
-          normalized = normalized.slice('assets/'.length);
-        }
-
-        const candidate = inLegacyAssetsUi || inUi ? ('../' + normalized) : normalized;
-        return withAssetVersion(new URL(candidate, window.location.href).href);
-      } catch {
-        return path;
-      }
-    }
-
-    function resolveThumbImg(path) {
-      if (!path) return resolveImg(CARD_BACK_IMAGE);
-      try {
-        let normalized = String(path).replace(/\\/g, '/').replace(/[?#].*$/, '').replace(/^\.\//, '').replace(/^\.\.\//, '');
-        if (normalized.startsWith('assets/')) {
-          normalized = normalized.slice('assets/'.length);
-        }
-        const thumbPath = 'publicadas/' + normalized.replace(/\.(png|jpe?g|webp|avif)$/i, '.thumb.webp');
-        return resolveImg(thumbPath);
-      } catch {
-        return resolveImg(path);
-      }
-    }
-
-    function attachGridThumb(imgEl, assetPath) {
-      if (!imgEl) return;
-      const fallbackSrc = resolveImg(assetPath || CARD_BACK_IMAGE);
-      imgEl.loading = 'lazy';
-      imgEl.decoding = 'async';
-      imgEl.dataset.fallbackSrc = fallbackSrc;
-      imgEl.src = resolveThumbImg(assetPath || CARD_BACK_IMAGE);
-      imgEl.onerror = function(){
-        if (this.dataset.fallbackSrc && this.src !== this.dataset.fallbackSrc) {
-          this.src = this.dataset.fallbackSrc;
-          return;
-        }
-        this.src = CARD_BACK_IMAGE;
-      };
     }
 
     function isCardAllowed(card) {
@@ -1002,6 +970,14 @@
       if (!el || !card) return;
       el.addEventListener('mouseenter', () => setPreview(card));
       el.addEventListener('touchstart', () => setPreview(card), { passive: true });
+    }
+
+    function normalizeText(value) {
+      return String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim();
     }
 
     function applyFilters(pool) {
@@ -1488,6 +1464,7 @@
         const data = JSON.parse(atob(code.slice(4)));
         return {
           leaderName: data.leader || '',
+          leaderKey: data.leaderKey || '',
           cards: data.cards || [],
           fragImg: data.fragImg || null,
           deckName: data.deckName || ''
@@ -1497,18 +1474,21 @@
       }
     }
 
-    btnImportDeck.onclick = function () {
-      const code = (importCodeInput.value || '').trim();
-      if (!code) return alert('Cole um código válido.');
-      const data = decodeDeck(code);
-      if (!data) return alert('Código inválido.');
+    function applyImportedDeck(data, options = {}) {
+      if (!data) return false;
 
       deck = [];
       chosenLeader = null;
       chosenFragImg = data.fragImg || null;
 
-      if (data.leaderName) {
-        const leader = LEADERS.find(l => String(l.name).toLowerCase() === String(data.leaderName).toLowerCase());
+      if (data.leaderKey || data.leaderName) {
+        const normalizedLeaderKey = String(data.leaderKey || '').trim().toLowerCase();
+        const normalizedLeaderName = normalizeText(data.leaderName);
+        const leader = LEADERS.find((item) => {
+          if (normalizedLeaderKey && String(item.key || '').trim().toLowerCase() === normalizedLeaderKey) return true;
+          if (normalizeText(item.name) === normalizedLeaderName) return true;
+          return Array.isArray(item.aliases) && item.aliases.some(alias => normalizeText(alias) === normalizedLeaderName);
+        });
         if (leader) chosenLeader = leader;
       }
 
@@ -1518,12 +1498,58 @@
       });
 
       if (data.deckName) deckNameInput.value = data.deckName;
-      importCodeInput.value = '';
 
       renderPool();
       renderDeck();
-      alert(`Deck importado: ${deck.length} cartas${chosenLeader ? ', líder: ' + chosenLeader.name : ''}`);
+
+      const importedFrom = options.sourceLabel ? ` de ${options.sourceLabel}` : '';
+      alert(`Deck importado${importedFrom}: ${deck.length} cartas${chosenLeader ? ', líder: ' + chosenLeader.name : ''}`);
+      return true;
+    }
+
+    function populatePresetDecks() {
+      if (!presetDeckSelect) return;
+
+      presetDeckSelect.innerHTML = '<option value="">Baralho pronto...</option>';
+
+      PRESET_DECKS.forEach((preset, index) => {
+        if (!preset || !preset.code) return;
+        const option = document.createElement('option');
+        option.value = String(index);
+        option.textContent = preset.category ? `${preset.category} - ${preset.label || preset.id || 'Sem nome'}` : (preset.label || preset.id || `Deck ${index + 1}`);
+        presetDeckSelect.appendChild(option);
+      });
+
+      const hasPresets = PRESET_DECKS.some(preset => preset && preset.code);
+      presetDeckSelect.disabled = !hasPresets;
+      btnApplyPresetDeck.disabled = !hasPresets;
+      btnApplyPresetDeck.textContent = hasPresets ? 'Usar pronto' : 'Sem prontos';
+    }
+
+    btnImportDeck.onclick = function () {
+      const code = (importCodeInput.value || '').trim();
+      if (!code) return alert('Cole um código válido.');
+      const data = decodeDeck(code);
+      if (!data) return alert('Código inválido.');
+      importCodeInput.value = '';
+      applyImportedDeck(data);
     };
+
+    btnApplyPresetDeck.onclick = function () {
+      const selectedIndex = Number(presetDeckSelect.value);
+      if (!Number.isInteger(selectedIndex) || selectedIndex < 0) return alert('Escolha um baralho pronto.');
+      const preset = PRESET_DECKS[selectedIndex];
+      const data = decodeDeck((preset && preset.code) || '');
+      if (!data) return alert('Código do baralho pronto está inválido.');
+      applyImportedDeck(data, { sourceLabel: preset.label || 'baralho pronto' });
+    };
+
+    presetDeckSelect.addEventListener('change', () => {
+      if (!presetDeckSelect.value) return;
+      btnApplyPresetDeck.disabled = false;
+    });
+
+    populatePresetDecks();
 
     editSession = readEditDraft();
     if (editSession && editSession.deck) {

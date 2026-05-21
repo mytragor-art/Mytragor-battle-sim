@@ -559,245 +559,32 @@
 	</div>
 
 	<script src="../cards/cartas.js?v=2026-05-17-2"></script>
+	<script src="./deckShared.js"></script>
 	<script src="../mobile.js"></script>
 	<script>
-function initFirebaseCompatLocal(){
-	try{
-		if(window._mytragor_firebase_init_local) return;
-		if(typeof FIREBASE_CONFIG === 'undefined') return;
-		if(window.firebase && firebase.initializeApp){
-			firebase.initializeApp(FIREBASE_CONFIG);
-			window._mytragor_firebase_init_local = true;
-		}
-	}catch(e){ console.warn('initFirebaseCompatLocal failed', e); }
-}
+const {
+	CARD_BACK_IMAGE,
+	deleteDeckFromFirestoreLocal,
+	encodeDeck,
+	getCardImg,
+	getDeckKey,
+	getDeckName,
+	getGridCardImg,
+	getLeaderName,
+	getSavedDecks,
+	normalizeDeck,
+	openDeckInEditor,
+	resolveImg,
+	resolveLeaderImage,
+	resolveThumbImg,
+	updateDeckCount
+} = window.MytragorDeckShared;
 
-async function loadUserDecksFromFirestoreLocal(){
-	try{
-		initFirebaseCompatLocal();
-		if(!window.firebase || !firebase.auth) return [];
-		const user = firebase.auth().currentUser;
-		if(!user) return [];
-		const db = firebase.firestore();
-		const snap = await db.collection('users').doc(user.uid).collection('decks').get();
-		return snap.docs.map(d => ({ _id: d.id, ...(d.data() || {}) }));
-	}catch(e){ console.warn('loadUserDecksFromFirestoreLocal failed', e); return []; }
-}
-
-async function deleteDeckFromFirestoreLocal(id){
-	try{
-		initFirebaseCompatLocal();
-		if(!window.firebase || !firebase.auth) return false;
-		const user = firebase.auth().currentUser;
-		if(!user) return false;
-		const db = firebase.firestore();
-		await db.collection('users').doc(user.uid).collection('decks').doc(id).delete();
-		return true;
-	}catch(e){ console.warn('deleteDeckFromFirestoreLocal failed', e); return false; }
-}
-
-const CHOSEN_IMAGES = {
-	katsu: '../chosens/layout-katsuvingador.ai.png',
-	valbrak: '../chosens/layout-valbrak.ai.png',
-	leafae: '../chosens/layout-leafaefloresta.ai.png',
-	ademais: '../chosens/layout-ademais.ai.png'
-};
-
-const CARD_BACK_IMAGE = 'layout-background.ai.png';
-const DECK_EDIT_DRAFT_KEY = 'mytragor_deck_edit_draft';
 const deckState = {
 	all: [],
 	filtered: [],
 	activeKey: ''
 };
-
-function normalizeDeck(raw, index) {
-	const cards = Array.isArray(raw && raw.cards)
-		? raw.cards.map(card => {
-			if (typeof card === 'string') return card;
-			if (card && typeof card.name === 'string') return card.name;
-			return String(card || '').trim();
-		}).filter(Boolean)
-		: [];
-	const deckName = String(raw && (raw.deckName || raw.leader || raw.leaderName) || `Deck ${index + 1}`);
-	const leaderName = String(raw && (raw.leader || raw.leaderName) || 'Desconhecido');
-	return {
-		...(raw || {}),
-		deckName,
-		leader: leaderName,
-		leaderName,
-		leaderKey: raw && raw.leaderKey ? String(raw.leaderKey) : '',
-		leaderImg: raw && raw.leaderImg ? String(raw.leaderImg) : '',
-		fragImg: raw && raw.fragImg ? String(raw.fragImg) : '',
-		tags: Array.isArray(raw && raw.tags) ? raw.tags.map(tag => String(tag)) : [],
-		cards
-	};
-}
-
-function normalizeLeaderKey(value){
-	return String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '');
-}
-
-function normalizeCardName(value){
-	return String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-}
-
-function matchesCardName(card, value) {
-	const expected = normalizeCardName(value);
-	if (!expected || !card) return false;
-	if (normalizeCardName(card.name) === expected) return true;
-	return Array.isArray(card.aliases) && card.aliases.some(alias => normalizeCardName(alias) === expected);
-}
-
-function getDeckName(deck){
-	return deck.deckName || deck.leader || deck.leaderName || 'Deck';
-}
-
-function getLeaderName(deck){
-	return deck.leader || deck.leaderName || 'Desconhecido';
-}
-
-function getDeckKey(deck){
-	if(deck._id) return `remote:${deck._id}`;
-	return [getDeckName(deck), getLeaderName(deck), deck.fragImg || '', (deck.cards || []).join('|')].join('::');
-}
-
-function openDeckInEditor(deck) {
-	try {
-		localStorage.setItem(DECK_EDIT_DRAFT_KEY, JSON.stringify({
-			mode: deck && deck._id ? 'copy' : 'edit',
-			deck: normalizeDeck(deck, 0)
-		}));
-	} catch (error) {
-		console.warn('openDeckInEditor failed', error);
-	}
-	window.location.href = 'deckbuilder.html?edit=1';
-}
-
-function resolveLeaderImage(deck){
-	if (deck.leaderImg) return deck.leaderImg;
-	const leaderKey = normalizeLeaderKey(deck.leaderKey || deck.leader || deck.leaderName || '');
-	if (leaderKey.includes('ademais')) return CHOSEN_IMAGES.ademais;
-	if (leaderKey.includes('katsu')) return CHOSEN_IMAGES.katsu;
-	if (leaderKey.includes('valbrak')) return CHOSEN_IMAGES.valbrak;
-	if (leaderKey.includes('leafae')) return CHOSEN_IMAGES.leafae;
-	return CARD_BACK_IMAGE;
-}
-
-function updateDeckCount(n){
-	const el = document.getElementById('deckCount');
-	if (el) el.textContent = `${n} deck${n === 1 ? '' : 's'} salvo${n === 1 ? '' : 's'}`;
-}
-
-const ASSET_CACHE_VERSION = '2026-05-17-2';
-
-function withAssetVersion(url) {
-	try {
-		const resolved = new URL(url, window.location.href);
-		if (!/^https?:$/i.test(resolved.protocol)) return resolved.href;
-		if (resolved.origin !== window.location.origin) return resolved.href;
-		resolved.searchParams.set('v', ASSET_CACHE_VERSION);
-		return resolved.href;
-	} catch (e) {
-		return url;
-	}
-}
-
-function resolveImg(path) {
-	if (!path) return CARD_BACK_IMAGE;
-	try {
-		if (/^(data:|file:|\/\/)/i.test(path)) return path;
-		let normalized = String(path).replace(/\\/g, '/').replace(/[?#].*$/, '').replace(/^\.\//, '').replace(/^\.\.\//, '');
-		const href = (window.location && window.location.href) || '';
-		const pathname = (window.location && window.location.pathname) || '';
-		const inLegacyAssetsUi = pathname.includes('/assets/ui/');
-		const inUi = pathname.includes('/ui/');
-
-		if (normalized.startsWith('assets/')) {
-			if (inLegacyAssetsUi) {
-				const marker = '/assets/ui/';
-				const idx = href.indexOf(marker);
-				if (idx >= 0) {
-					const root = href.slice(0, idx + 1);
-					return new URL(normalized, root).href;
-				}
-			}
-			normalized = normalized.slice('assets/'.length);
-		}
-
-		const candidate = inLegacyAssetsUi || inUi ? ('../' + normalized) : normalized;
-		return withAssetVersion(new URL(candidate, href).href);
-	} catch (e) {
-		return path;
-	}
-}
-
-function resolveThumbImg(path) {
-	if (!path) return resolveImg(CARD_BACK_IMAGE);
-	try {
-		let normalized = String(path).replace(/\\/g, '/').replace(/[?#].*$/, '').replace(/^\.\//, '').replace(/^\.\.\//, '');
-		if (normalized.startsWith('assets/')) {
-			normalized = normalized.slice('assets/'.length);
-		}
-		const thumbPath = 'publicadas/' + normalized.replace(/\.(png|jpe?g|webp|avif)$/i, '.thumb.webp');
-		return resolveImg(thumbPath);
-	} catch (e) {
-		return resolveImg(path);
-	}
-}
-
-function getCardDef(cardName) {
-	if (!window.CARD_DEFS) return null;
-	return window.CARD_DEFS.find(c => matchesCardName(c, cardName)) || null;
-}
-
-function getCardImg(cardName) {
-	const def = getCardDef(cardName);
-	return resolveImg(def && def.img ? def.img : CARD_BACK_IMAGE);
-}
-
-function getGridCardImg(cardName) {
-	const def = getCardDef(cardName);
-	return resolveThumbImg(def && def.img ? def.img : CARD_BACK_IMAGE);
-}
-
-function encodeDeck(deck) {
-	try {
-		const deckData = {
-			leader: deck.leaderName || deck.leader || '',
-			leaderKey: deck.leaderKey || '',
-			cards: deck.cards || [],
-			fragImg: deck.fragImg || null,
-			deckName: deck.deckName || ''
-		};
-		return 'MTG:' + btoa(JSON.stringify(deckData));
-	} catch (e) {
-		console.warn('encodeDeck failed', e);
-		return '';
-	}
-}
-
-async function getSavedDecks() {
-	let remote = [];
-	try { remote = await loadUserDecksFromFirestoreLocal(); } catch (e) {}
-	if (Array.isArray(remote) && remote.length) {
-		const normalizedRemote = remote.map((deck, index) => normalizeDeck(deck, index));
-		try {
-			localStorage.setItem('mytragor_decks', JSON.stringify(normalizedRemote));
-		} catch (e) {
-			console.warn('sync remote decks to localStorage failed', e);
-		}
-		return normalizedRemote;
-	}
-	const raw = localStorage.getItem('mytragor_decks');
-	if (!raw) return [];
-	try {
-		const parsed = JSON.parse(raw);
-		return Array.isArray(parsed) ? parsed.map((deck, index) => normalizeDeck(deck, index)) : [];
-	} catch {
-		return [];
-	}
-}
 
 function showEmptyState() {
 	const emptyState = document.getElementById('emptyState');

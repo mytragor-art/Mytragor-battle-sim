@@ -4,7 +4,8 @@
 const CARD_DEFS = [
   // --- Escolhidos / Líderes ---
   {
-    name: 'Valbrak, Heroi do Povo',
+    name: 'Valbrak, O Mago Popular',
+    aliases: ['Valbrak, Heroi do Povo'],
     key: 'valbrak',
     kind: 'leader',
     img: '/chosens/layout-valbrak.ai.png',
