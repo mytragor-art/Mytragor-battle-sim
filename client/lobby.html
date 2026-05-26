@@ -4,6 +4,7 @@
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width,initial-scale=1" />
 	<title>Mytragor Lobby</title>
+	<link rel="stylesheet" href="/mobile.css" media="(max-width:880px)" />
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -22,7 +23,7 @@
 								<div class="lobbyHeroCopy">
 									<div class="lobbyEyebrow">Salão de guerra online</div>
 									<h2>Lobby de Desafios</h2>
-									<p>Escolha seu deck, marque presença na arena e acompanhe as salas abertas sem roubar o centro visual da arte de batalha.</p>
+									<p>Escolha seu baralho, marque presença na arena e acompanhe as salas abertas sem roubar o centro visual da arte de batalha.</p>
 								</div>
 							</div>
 						</div>
@@ -34,20 +35,20 @@
 					<section class="card cardPad panel lobbyLeft lobbyDeckPanel">
 						<div class="lobbySectionEyebrow">Preparação do duelo</div>
 						<div class="lobbySectionHead">
-							<h3>Deck, líder e prontidão</h3>
+							<h3>Baralho, líder e prontidão</h3>
 						</div>
 
 						<div class="grid2 lobbyChoiceGrid">
 							<div>
-								<label>Selecione o deck</label>
+								<label>Selecione o baralho</label>
 								<select id="deck">
-									<option value="">(carregando decks salvos...)</option>
+									<option value="">(carregando baralhos salvos...)</option>
 								</select>
 							</div>
 							<div>
 								<label>Líder</label>
 								<select id="leader" disabled>
-									<option value="">(auto pelo deck salvo)</option>
+									<option value="">(auto pelo baralho salvo)</option>
 								</select>
 							</div>
 						</div>
@@ -119,5 +120,6 @@
 	</div>
 
 	<script type="module" src="/src/lobby.ts"></script>
+	<script src="/mobile.js"></script>
 </body>
 </html>

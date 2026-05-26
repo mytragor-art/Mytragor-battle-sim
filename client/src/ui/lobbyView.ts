@@ -94,7 +94,7 @@ export function renderPlayers(players: LobbyPlayer[], mySlot: Slot = null) {
 					</div>
 					<div class="playerMeta playerMetaCompact">
 						<span class="metaChip"><span class="metaKey">Nome</span><span class="metaVal">aguardando jogador</span></span>
-						<span class="metaChip"><span class="metaKey">Deck</span><span class="metaVal">-</span></span>
+						<span class="metaChip"><span class="metaKey">Baralho</span><span class="metaVal">-</span></span>
 						<span class="metaChip"><span class="metaKey">Líder</span><span class="metaVal">-</span></span>
 					</div>
 				</article>
@@ -115,7 +115,7 @@ export function renderPlayers(players: LobbyPlayer[], mySlot: Slot = null) {
 					<span class="statusBadge ${statusClass}">${statusText === "PRONTO" ? "Pronto" : "Esperando"}</span>
 				</div>
 				<div class="playerMeta playerMetaCompact">
-					<span class="metaChip"><span class="metaKey">Deck</span><span class="metaVal">${player.deckId || "-"}</span></span>
+					<span class="metaChip"><span class="metaKey">Baralho</span><span class="metaVal">${player.deckId || "-"}</span></span>
 					<span class="metaChip"><span class="metaKey">Líder</span><span class="metaVal">${player.leaderId || "-"}</span></span>
 				</div>
 			</article>

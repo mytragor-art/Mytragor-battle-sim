@@ -86,7 +86,7 @@
 			if (source.leaderKey && String(card.key || "").toLowerCase() === String(source.leaderKey || "").toLowerCase()) return true;
 			return matchesCardName(card, source.leader || source.leaderName || "");
 		}) || null;
-		const deckName = String(source.deckName || source.leader || source.leaderName || `Deck ${index + 1}`);
+		const deckName = String(source.deckName || source.leader || source.leaderName || `Baralho ${index + 1}`);
 		const leaderName = String((leaderDef && leaderDef.name) || source.leader || source.leaderName || "Desconhecido");
 		return {
 			...source,
@@ -102,7 +102,7 @@
 	}
 
 	function getDeckName(deck) {
-		return deck.deckName || deck.leader || deck.leaderName || "Deck";
+		return deck.deckName || deck.leader || deck.leaderName || "Baralho";
 	}
 
 	function getLeaderName(deck) {
@@ -146,7 +146,7 @@
 
 	function updateDeckCount(count) {
 		const element = global.document.getElementById("deckCount");
-		if (element) element.textContent = `${count} deck${count === 1 ? "" : "s"} salvo${count === 1 ? "" : "s"}`;
+		if (element) element.textContent = `${count} baralho${count === 1 ? "" : "s"} salvo${count === 1 ? "" : "s"}`;
 	}
 
 	function withAssetVersion(url) {

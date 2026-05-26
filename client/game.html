@@ -85,7 +85,7 @@
                   </div>
 
                   <div class="slot" id="ai-deck">
-                    <span class="slotLabel">Deck</span>
+                    <span class="slotLabel">Baralho</span>
                     <span class="slotCount" id="aiDeckCount">0</span>
                   </div>
                 </div>
@@ -146,7 +146,7 @@
                   </div>
 
                   <div class="slot" id="you-deck">
-                    <span class="slotLabel">Deck</span>
+                    <span class="slotLabel">Baralho</span>
                     <span class="slotCount" id="youDeckCount">0</span>
                   </div>
                 </div>
@@ -163,7 +163,7 @@
   <div class="col" id="previewCol">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
       <h3 style="margin:0">Carta</h3>
-      <button class="btn" id="btnTogglePreview">Voltar</button>
+      <button class="btn" id="btnTogglePreview">Fechar</button>
     </div>
 
     <div class="inspector">
@@ -172,13 +172,18 @@
         <div class="bigStats" id="bigStats"></div>
       </div>
       <div class="bigMeta" id="bigMeta">
-        <div class="bigMetaTitle" id="bigMetaTitle">Passe o mouse em uma carta</div>
+        <div class="bigMetaTitle" id="bigMetaTitle">Toque em uma carta</div>
         <div class="bigMetaLine bigMetaFiliation" id="bigMetaFiliation">para ver detalhes.</div>
         <div class="bigMetaLine bigMetaSubclass" id="bigMetaSubclass"></div>
         <div class="bigMetaText" id="bigMetaText"></div>
       </div>
     </div>
   </div>
+
+  <button class="btn" id="mobilePreviewFab" type="button" aria-controls="previewCol" aria-expanded="false" aria-label="Ver detalhes da carta">
+    <span class="mobilePreviewFabLabel">Ver</span>
+    <span class="mobilePreviewFabIcon" aria-hidden="true">👁</span>
+  </button>
 </div>
 
 <div class="modal" id="logModal">

@@ -43,6 +43,7 @@ const view = getGameInputs();
 setupBoardScale();
 setupArenaSlots();
 setupAttackArrow();
+setupMobilePreviewToggle();
 
 const previousLaneCards: Record<"you-field" | "ai-field" | "you-support" | "ai-support", string[]> = {
 	"you-field": [],
@@ -80,6 +81,7 @@ const cardDefs = (window as Window & { CARD_DEFS?: CardDef[] }).CARD_DEFS ?? [];
 const cardLookup = new Map<string, CardDef>();
 const CARD_BACK_ASSET = "ui/layout-background.ai.png";
 const ASSET_CACHE_VERSION = "2026-05-17-2";
+const MOBILE_PREVIEW_FAB_POSITION_KEY = "mytragor_mobile_preview_fab_position";
 
 function envAliasesForCard(card: CardDef): string[] {
 	const normalizedName = normalizeCardId(String(card?.name || ""));
@@ -1263,6 +1265,223 @@ function setHoveredInspector(target: string | InspectorView | null): void {
 	renderInspector(fallback);
 }
 
+function isMobileGameplay(): boolean {
+	return window.matchMedia("(max-width: 980px)").matches;
+}
+
+function syncMobilePreviewState(): void {
+	const button = document.getElementById("btnTogglePreview") as HTMLButtonElement | null;
+	const fab = document.getElementById("mobilePreviewFab") as HTMLButtonElement | null;
+	const isOpen = document.body.classList.contains("mobile-preview-open");
+	const isMobile = isMobileGameplay();
+	if (button) {
+		button.textContent = isMobile ? "Fechar" : "Minimizar";
+		button.setAttribute("aria-expanded", isOpen ? "true" : "false");
+	}
+	if (fab) {
+		fab.hidden = !isMobile;
+		fab.setAttribute("aria-expanded", isOpen ? "true" : "false");
+		fab.classList.toggle("is-active", isOpen);
+		fab.setAttribute("aria-label", isOpen ? "Fechar detalhes da carta" : "Ver detalhes da carta");
+	}
+}
+
+function openMobilePreview(target?: string | InspectorView | null): void {
+	const nextTarget = target || (isMobileGameplay()
+		? (selectedInspectorView || (selectedHandCardId ? { cardId: selectedHandCardId, side: "you", lane: "hand" } : null) || hoveredInspectorView)
+		: (hoveredInspectorView || selectedInspectorView || (selectedHandCardId ? { cardId: selectedHandCardId } : null)));
+	if (nextTarget) setInspector(nextTarget);
+	if (!isMobileGameplay()) return;
+	document.body.classList.add("mobile-preview-open");
+	syncMobilePreviewState();
+}
+
+function closeMobilePreview(): void {
+	document.body.classList.remove("mobile-preview-open");
+	syncMobilePreviewState();
+}
+
+function toggleMobilePreview(): void {
+	if (!isMobileGameplay()) return;
+	if (document.body.classList.contains("mobile-preview-open")) {
+		closeMobilePreview();
+		return;
+	}
+	openMobilePreview();
+}
+
+function attachMobilePreviewGesture(element: HTMLElement, inspectorTarget?: string | InspectorView | null): void {
+	let holdTimer: number | null = null;
+	let holdTriggered = false;
+
+	const clearHold = () => {
+		if (holdTimer !== null) {
+			window.clearTimeout(holdTimer);
+			holdTimer = null;
+		}
+	};
+
+	element.addEventListener("touchstart", (event) => {
+		if (!isMobileGameplay() || event.touches.length !== 1) return;
+		holdTriggered = false;
+		clearHold();
+		holdTimer = window.setTimeout(() => {
+			holdTriggered = true;
+			openMobilePreview(inspectorTarget || null);
+			try {
+				window.navigator.vibrate?.(12);
+			} catch {
+				// Ignore unsupported vibration APIs.
+			}
+		}, 420);
+	}, { passive: true });
+
+	for (const eventName of ["touchend", "touchcancel", "touchmove"]) {
+		element.addEventListener(eventName, clearHold, { passive: true });
+	}
+
+	element.addEventListener("contextmenu", (event) => {
+		if (!isMobileGameplay()) return;
+		event.preventDefault();
+	});
+
+	element.addEventListener("click", (event) => {
+		if (!holdTriggered) return;
+		event.preventDefault();
+		event.stopImmediatePropagation();
+		holdTriggered = false;
+	}, true);
+}
+
+function setupMobilePreviewToggle(): void {
+	const button = document.getElementById("btnTogglePreview") as HTMLButtonElement | null;
+	const fab = document.getElementById("mobilePreviewFab") as HTMLButtonElement | null;
+	if (!button) return;
+	let suppressFabClick = false;
+
+	const saveFabPosition = (left: number, top: number) => {
+		try {
+			localStorage.setItem(MOBILE_PREVIEW_FAB_POSITION_KEY, JSON.stringify({ left, top }));
+		} catch {
+			// Ignore storage failures.
+		}
+	};
+
+	const clampFabPosition = (left: number, top: number) => {
+		if (!fab) return { left, top };
+		const margin = 8;
+		const maxLeft = Math.max(margin, window.innerWidth - fab.offsetWidth - margin);
+		const maxTop = Math.max(margin, window.innerHeight - fab.offsetHeight - margin);
+		return {
+			left: Math.min(Math.max(margin, left), maxLeft),
+			top: Math.min(Math.max(margin, top), maxTop),
+		};
+	};
+
+	const applyFabPosition = (left: number, top: number, persist = false) => {
+		if (!fab) return;
+		const next = clampFabPosition(left, top);
+		fab.style.left = `${Math.round(next.left)}px`;
+		fab.style.top = `${Math.round(next.top)}px`;
+		fab.style.bottom = "auto";
+		if (persist) saveFabPosition(next.left, next.top);
+	};
+
+	const restoreFabPosition = () => {
+		if (!fab) return;
+		try {
+			const raw = localStorage.getItem(MOBILE_PREVIEW_FAB_POSITION_KEY);
+			if (!raw) return;
+			const parsed = JSON.parse(raw) as { left?: unknown; top?: unknown };
+			const left = Number(parsed?.left);
+			const top = Number(parsed?.top);
+			if (!Number.isFinite(left) || !Number.isFinite(top)) return;
+			applyFabPosition(left, top);
+		} catch {
+			// Ignore invalid persisted position.
+		}
+	};
+
+	button.onclick = () => {
+		if (!isMobileGameplay()) return;
+		closeMobilePreview();
+	};
+	if (fab) {
+		fab.onclick = () => {
+			if (suppressFabClick) {
+				suppressFabClick = false;
+				return;
+			}
+			toggleMobilePreview();
+		};
+
+		let pointerId: number | null = null;
+		let dragStartX = 0;
+		let dragStartY = 0;
+		let originLeft = 0;
+		let originTop = 0;
+		let moved = false;
+
+		fab.addEventListener("pointerdown", (event) => {
+			if (!isMobileGameplay()) return;
+			pointerId = event.pointerId;
+			dragStartX = event.clientX;
+			dragStartY = event.clientY;
+			const rect = fab.getBoundingClientRect();
+			originLeft = rect.left;
+			originTop = rect.top;
+			moved = false;
+			fab.classList.add("is-dragging");
+			fab.setPointerCapture?.(event.pointerId);
+			event.preventDefault();
+		});
+
+		fab.addEventListener("pointermove", (event) => {
+			if (pointerId !== event.pointerId) return;
+			const deltaX = event.clientX - dragStartX;
+			const deltaY = event.clientY - dragStartY;
+			if (!moved && Math.hypot(deltaX, deltaY) < 6) return;
+			moved = true;
+			applyFabPosition(originLeft + deltaX, originTop + deltaY);
+			event.preventDefault();
+		});
+
+		const finishDrag = (event: PointerEvent) => {
+			if (pointerId !== event.pointerId) return;
+			fab.classList.remove("is-dragging");
+			fab.releasePointerCapture?.(event.pointerId);
+			pointerId = null;
+			if (!moved) return;
+			suppressFabClick = true;
+			const rect = fab.getBoundingClientRect();
+			applyFabPosition(rect.left, rect.top, true);
+			window.setTimeout(() => {
+				suppressFabClick = false;
+			}, 180);
+		};
+
+		fab.addEventListener("pointerup", finishDrag);
+		fab.addEventListener("pointercancel", finishDrag);
+
+		restoreFabPosition();
+	}
+
+	window.addEventListener("resize", () => {
+		if (!isMobileGameplay()) document.body.classList.remove("mobile-preview-open");
+		if (fab && fab.style.left && fab.style.top) {
+			const rect = fab.getBoundingClientRect();
+			applyFabPosition(rect.left, rect.top, true);
+		}
+		syncMobilePreviewState();
+	});
+
+	document.addEventListener("keydown", (event) => {
+		if (event.key === "Escape") closeMobilePreview();
+	});
+
+	syncMobilePreviewState();
+}
+
 function buildHandCard(cardId: string, selected: boolean, onClick?: () => void, inspectorView?: InspectorView | null): HTMLButtonElement {
 	const button = document.createElement("button");
 	button.type = "button";
@@ -1288,6 +1507,7 @@ function buildHandCard(cardId: string, selected: boolean, onClick?: () => void, 
 		button.appendChild(fallback);
 	}
 	if (inspectorView?.lane === "hand") appendCostBadge(button, card?.cost);
+	attachMobilePreviewGesture(button, inspectorView || cardId);
 
 	button.onmouseenter = () => setHoveredInspector(inspectorView || cardId);
 	button.onfocus = () => setHoveredInspector(inspectorView || cardId);
@@ -1515,7 +1735,7 @@ function queueLanePileFlights(zoneId: "you-field" | "ai-field" | "you-support" |
 		if (!cardId) continue;
 		queue.set(cardId, (queue.get(cardId) || 0) + 1);
 	}
-}
+	}
 
 function consumeLanePileFlight(zoneId: "you-field" | "ai-field" | "you-support" | "ai-support", cardId: string): boolean {
 	const queue = pendingLanePileFlights[zoneId];
@@ -1771,7 +1991,7 @@ function appendChosenStatsBar(cardEl: HTMLElement, values: { hp: number; maxHp: 
 }
 
 function pileLabel(which: "deck" | "grave" | "banished"): string {
-	if (which === "deck") return "Deck";
+	if (which === "deck") return "Baralho";
 	if (which === "grave") return "Cemitério";
 	return "Deslocadas";
 }
@@ -2419,7 +2639,7 @@ function renderDeckSlot(slotId: "you-deck" | "ai-deck", countId: "youDeckCount" 
 	const image = document.createElement("img");
 	image.className = "slotCardImg";
 	image.src = asAssetPath(CARD_BACK_ASSET);
-	image.alt = "Deck";
+	image.alt = "Baralho";
 	back.appendChild(image);
 	slotEl.appendChild(back);
 }
@@ -2516,6 +2736,10 @@ function renderEnvSlot(slotId: "you-env" | "ai-env", envCardId: string | null, a
 	cardEl.style.margin = "0";
 	slotEl.onmousemove = () => setHoveredInspector({ cardId, side, lane: "env" });
 	slotEl.onmouseleave = () => setHoveredInspector(null);
+	slotEl.onclick = () => {
+		const target = { cardId, side, lane: "env" } as const;
+		setInspector(target);
+	};
 	slotEl.appendChild(cardEl);
 }
 
@@ -2537,6 +2761,7 @@ function renderSideHand(containerId: "youHand" | "aiHand", cards: string[], sele
 		if (selectable) {
 			const selected = cardId === selectedHandCardId;
 			const cardEl = buildHandCard(cardId, selected, () => {
+					setInspector({ cardId, side: "you", lane: "hand" });
 					selectedHandCardId = cardId;
 					if (view.selectedCardEl) view.selectedCardEl.textContent = selectedHandCardId;
 					if (room && isMyTurn && currentPhase === "PREP") {
@@ -2660,11 +2885,24 @@ function renderLane(zoneId: "you-field" | "ai-field" | "you-support" | "ai-suppo
 				: (zoneId !== "you-field" || currentPhase !== "COMBAT" || canSelectCombatAttacker(index));
 			if (allowClick) {
 				slotEl.classList.add("clickable");
-				slotEl.onclick = () => onClick(index);
+				slotEl.onclick = () => {
+					const target = { cardId, side, lane, index } as const;
+					if (isMobileGameplay() && currentPhase !== "COMBAT") {
+						setInspector(target);
+						return;
+					}
+					onClick(index);
+				};
 				if (zoneId === "ai-field" && isMyTurn && currentPhase === "COMBAT" && selectedAttackerPos !== null && canSelectCombatTarget({ type: "ally", side: "ai", index })) {
 					(slotEl as HTMLElement & { __attackHoverCleanup?: (() => void) | null }).__attackHoverCleanup = bindAttackTargetHover(slotEl);
 				}
 			}
+		} else {
+			slotEl.classList.add("clickable");
+			slotEl.onclick = () => {
+				const target = { cardId, side, lane, index } as const;
+				setInspector(target);
+			};
 		}
 	}
 	previousLaneCards[zoneId] = cards.slice();
@@ -2698,6 +2936,10 @@ function renderLeaderSlot(slotId: "you-leader" | "ai-leader", leaderId: string, 
 	appendEquipAttachTag(cardEl, side, null);
 	slotEl.onmousemove = () => setHoveredInspector({ cardId: leader, side, lane: "leader" });
 	slotEl.onmouseleave = () => setHoveredInspector(null);
+	slotEl.onclick = () => {
+		const target = { cardId: leader, side, lane: "leader" } as const;
+		setInspector(target);
+	};
 
 	slotEl.appendChild(cardEl);
 }

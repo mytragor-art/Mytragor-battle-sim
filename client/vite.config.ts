@@ -18,7 +18,6 @@ export default defineConfig({
 				index: resolve(__dirname, "index.html"),
 				lobby: resolve(__dirname, "lobby.html"),
 				game: resolve(__dirname, "game.html"),
-				cardsLab: resolve(__dirname, "cards-lab.html"),
 				manual: resolve(__dirname, "manual.html")
 			}
 		},

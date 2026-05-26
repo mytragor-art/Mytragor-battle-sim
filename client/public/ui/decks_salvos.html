@@ -3,7 +3,7 @@
 <head>
 	<meta charset="utf-8"/>
 	<meta name="viewport" content="width=device-width, initial-scale=1"/>
-	<title>Decks Salvos — Mytragor</title>
+	<title>Baralhos Salvos — Mytragor</title>
 	<style>
 	:root {
 		color-scheme: dark;
@@ -461,28 +461,91 @@
 			height: 208px;
 		}
 	}
-	@media (max-width: 860px) {
+	@media (max-width: 900px) {
 		.topbar {
 			flex-direction: column;
 			align-items: stretch;
+			gap: 12px;
+			padding: 12px;
+		}
+		.logoImg {
+			width: min(42vw, 132px);
 		}
 		.topbarMeta {
 			justify-content: stretch;
+			gap: 10px;
+			display: grid;
+			grid-template-columns: 1fr;
 		}
-		.searchInput,
-		.btn {
+		.topbarHeading {
+			margin-right: 0;
+		}
+		.topbarTitle {
+			font-size: 18px;
+		}
+		.topbarSubtitle {
+			font-size: 11px;
+		}
+		.searchInput {
 			width: 100%;
 			box-sizing: border-box;
 		}
+		.topbar .btn {
+			width: auto;
+			justify-self: start;
+			padding: 8px 16px;
+			font-size: 13px;
+		}
 		.appShell {
 			grid-template-columns: 1fr;
-			padding: 14px;
+			padding: 12px;
+			gap: 12px;
+		}
+		.detailPanel {
+			order: 2;
 		}
 		.sidebarPanel {
+			order: 1;
 			max-height: 42vh;
+		}
+		.emptyState {
+			min-height: auto;
+			padding: 18px;
+		}
+		.emptyStateBox {
+			padding: 24px 18px;
+		}
+		body.no-active-deck .detailPanel {
+			order: 2;
+		}
+		body.no-active-deck .sidebarPanel {
+			order: 1;
 		}
 	}
 	@media (max-width: 640px) {
+		.topbar {
+			padding: 10px;
+		}
+		.topbarMeta {
+			display: grid;
+			grid-template-columns: 1fr;
+		}
+		.searchInput {
+			width: 100%;
+		}
+		.appShell {
+			padding: 12px;
+		}
+		.emptyState {
+			padding: 14px;
+		}
+		.emptyStateBox {
+			padding: 20px 16px;
+		}
+		.sidebarHeader,
+		.detailHeaderShell {
+			padding: 16px;
+		}
 		.detailHeader {
 			grid-template-columns: 1fr;
 		}
@@ -507,10 +570,10 @@
 		<div class="logoWrap"><img class="logoImg" src="/logo/logomytragor.png" alt="Mytragor" onerror="this.src='../logo/logomytragor.png'" /></div>
 		<div class="topbarMeta">
 			<div class="topbarHeading">
-				<span class="topbarTitle">Decks Salvos</span>
-				<span class="topbarSubtitle" id="deckCount">0 decks salvos</span>
+				<span class="topbarTitle">Baralhos Salvos</span>
+				<span class="topbarSubtitle" id="deckCount">0 baralhos salvos</span>
 			</div>
-			<input id="searchDecks" class="searchInput" placeholder="Buscar decks ou líder..." />
+			<input id="searchDecks" class="searchInput" placeholder="Buscar baralhos ou líder..." />
 			<a href="deckbuilder.html" class="btn">Voltar</a>
 		</div>
 	</div>
@@ -519,7 +582,7 @@
 		<aside class="sidebarPanel">
 			<div class="sidebarHeader">
 				<div class="sidebarTitle">Biblioteca</div>
-				<div class="sidebarSubtitle">Escolha um deck na lateral para abrir a lista completa no centro da tela.</div>
+				<div class="sidebarSubtitle">Escolha um baralho primeiro. Depois, role para baixo para ver a lista completa no centro da tela.</div>
 			</div>
 			<div id="deckList" class="deckList"></div>
 		</aside>
@@ -527,17 +590,17 @@
 		<section class="detailPanel">
 			<div id="emptyState" class="emptyState">
 				<div class="emptyStateBox">
-					<h2 class="detailTitle" style="font-size:28px;margin:0 0 10px;">Nenhum deck selecionado</h2>
-					<div>Use a busca ou clique em um deck salvo para ver o líder e todas as cartas com tamanho confortável.</div>
+					<h2 class="detailTitle" style="font-size:28px;margin:0 0 10px;">Nenhum baralho selecionado</h2>
+					<div>Use a busca ou clique em um baralho salvo para ver o líder e todas as cartas com tamanho confortável.</div>
 				</div>
 			</div>
 
 			<div id="deckDetail" class="detailContent" hidden>
 				<div class="detailHeaderShell">
 					<div class="detailHeader">
-						<img id="detailLeader" class="detailLeader" alt="Líder do deck" />
+						<img id="detailLeader" class="detailLeader" alt="Líder do baralho" />
 						<div class="detailText">
-							<div class="detailEyebrow">Deck Selecionado</div>
+							<div class="detailEyebrow">Baralho Selecionado</div>
 							<h1 id="detailTitle" class="detailTitle"></h1>
 							<div id="detailLeaderName" class="detailLeaderName"></div>
 							<div id="detailSummary" class="detailSummary"></div>
@@ -549,7 +612,7 @@
 
 				<div class="deckCardsWrap">
 					<div class="deckCardsHeader">
-						<div class="deckCardsTitle">Lista do Deck</div>
+						<div class="deckCardsTitle">Lista do Baralho</div>
 						<div id="deckCardsNote" class="deckCardsNote"></div>
 					</div>
 					<div id="selectedDeckGrid" class="selectedDeckGrid"></div>
@@ -589,6 +652,7 @@ const deckState = {
 function showEmptyState() {
 	const emptyState = document.getElementById('emptyState');
 	const detail = document.getElementById('deckDetail');
+	document.body.classList.add('no-active-deck');
 	emptyState.hidden = false;
 	emptyState.style.display = 'grid';
 	detail.hidden = true;
@@ -598,6 +662,7 @@ function showEmptyState() {
 function showDetailState() {
 	const emptyState = document.getElementById('emptyState');
 	const detail = document.getElementById('deckDetail');
+	document.body.classList.remove('no-active-deck');
 	emptyState.hidden = true;
 	emptyState.style.display = 'none';
 	detail.hidden = false;
@@ -628,7 +693,7 @@ function renderDeckList(decks) {
 	if (!decks.length) {
 		const empty = document.createElement('div');
 		empty.className = 'emptyList';
-		empty.textContent = 'Nenhum deck encontrado com esse nome.';
+		empty.textContent = 'Nenhum baralho encontrado com esse nome.';
 		list.appendChild(empty);
 		return;
 	}
@@ -742,7 +807,7 @@ function renderDeckCards(deck) {
 		const empty = document.createElement('div');
 		empty.className = 'emptyList';
 		empty.style.gridColumn = '1 / -1';
-		empty.textContent = 'Esse deck ainda não tem cartas salvas.';
+		empty.textContent = 'Esse baralho ainda não tem cartas salvas.';
 		grid.appendChild(empty);
 		return;
 	}
@@ -834,10 +899,10 @@ function renderDeckDetail(deck) {
 		actions.appendChild(createActionButton('Copiar código', 'isMuted', () => {
 			const deckCode = encodeDeck(deck);
 			if (navigator.clipboard) navigator.clipboard.writeText(deckCode);
-			alert('Código do deck copiado! Cole no montador para importar.');
+			alert('Código do baralho copiado! Cole no montador para importar.');
 		}));
 		actions.appendChild(createActionButton('Excluir', 'isDanger', async () => {
-			if (!confirm('Excluir este deck salvo?')) return;
+			if (!confirm('Excluir este baralho salvo?')) return;
 			if (deck._id) {
 				const ok = await deleteDeckFromFirestoreLocal(deck._id).catch(() => false);
 				if (!ok) {

@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Mytragor — Como Jogar</title>
+  <link rel="stylesheet" href="/mobile.css" media="(max-width:880px)" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&display=swap" rel="stylesheet">
@@ -179,15 +180,57 @@
       color: var(--gold);
     }
 
-    @media (max-width: 720px) {
+    @media (max-width: 900px) {
       .page {
         width: min(calc(100% - 20px), var(--content-max));
         padding-top: 16px;
+        padding-bottom: 28px;
+      }
+
+      .hero {
+        gap: 10px;
+      }
+
+      .heroTop {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .navButton {
+        align-self: flex-start;
       }
 
       .hero,
       .manualCard {
         padding: 14px;
+      }
+
+      .manualCard {
+        gap: 10px;
+      }
+
+      .manualFrame {
+        width: min(100%, 560px);
+      }
+    }
+
+    @media (max-width: 720px) {
+      .page {
+        width: min(calc(100% - 16px), var(--content-max));
+        padding-top: 12px;
+      }
+
+      h1 {
+        font-size: clamp(24px, 7vw, 34px);
+      }
+
+      .subtitle {
+        font-size: 14px;
+        line-height: 1.4;
+      }
+
+      .manualHeading h2 {
+        font-size: 18px;
       }
 
       .manualFrame {
@@ -265,4 +308,5 @@
     renderManual();
   </script>
 </body>
+<script src="/mobile.js"></script>
 </html>

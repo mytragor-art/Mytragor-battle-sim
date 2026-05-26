@@ -34,7 +34,7 @@ function normalizeSavedDeck(input: unknown, index: number): SavedDeck {
 	const remoteId = String(deck._id || "").trim();
 	const id = String(deck.deckId || deck.id || remoteId || `local_${index}`);
 	const leaderName = String(deck.leaderName || deck.leader || deck.leaderId || "").trim();
-	const deckName = String(deck.deckName || leaderName || `Deck ${index + 1}`).trim();
+	const deckName = String(deck.deckName || leaderName || `Baralho ${index + 1}`).trim();
 	const cards = normalizeCards(deck.cards);
 	return {
 		id,
@@ -73,7 +73,7 @@ function readPlayDeck(): SavedDeck[] {
 	if (!leaderName || cards.length === 0) return [];
 	return [{
 		id: String(deck?.deckId || deck?.id || "play_deck"),
-		deckName: String(deck?.deckName || "Deck de Teste"),
+		deckName: String(deck?.deckName || "Baralho de Teste"),
 		leaderName,
 		leaderKey: String(deck?.leaderKey || "").trim(),
 		leaderImg: String(deck?.leaderImg || "").trim(),

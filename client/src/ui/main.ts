@@ -53,7 +53,7 @@ mp.onLobbyState = (s) => {
 
 	const list = s.players
 		.sort((a, b) => a.slot.localeCompare(b.slot))
-		.map((p) => `${p.slot} ${p.ready ? "✅" : "⏳"} deck=${p.deckId || "-"} leader=${p.leaderId || "-"}`)
+		.map((p) => `${p.slot} ${p.ready ? "✅" : "⏳"} baralho=${p.deckId || "-"} leader=${p.leaderId || "-"}`)
 		.join("\n");
 
 	$("players").textContent = list || "—";
@@ -114,7 +114,7 @@ $("btnReady").onclick = () => {
 		const deckId = $("deck").value;
 		const leaderId = $("leader").value;
 		if (!deckId || !leaderId) {
-			log("ERROR", { text: "Selecione deck e líder antes de ficar pronto." });
+			log("ERROR", { text: "Selecione baralho e líder antes de ficar pronto." });
 			return;
 		}
 		syncLoadoutFromUI();

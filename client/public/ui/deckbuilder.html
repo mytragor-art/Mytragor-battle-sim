@@ -2,7 +2,8 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <title>Montador de Deck - Simulador Mytragor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Montador de Baralho - Simulador Mytragor</title>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
@@ -304,6 +305,21 @@
       font-weight: 700;
     }
 
+    .preview-toggle {
+      border: 0;
+      margin: 0;
+      padding: 0;
+    }
+
+    .preview-toggle > summary {
+      list-style: none;
+      cursor: pointer;
+    }
+
+    .preview-toggle > summary::-webkit-details-marker {
+      display: none;
+    }
+
     .deck-header {
       display: flex;
       justify-content: space-between;
@@ -522,6 +538,21 @@
       padding: 8px 10px;
     }
 
+    .filters-toggle {
+      border: 0;
+      margin: 0 0 10px;
+      padding: 0;
+    }
+
+    .filters-toggle > summary {
+      list-style: none;
+      cursor: pointer;
+    }
+
+    .filters-toggle > summary::-webkit-details-marker {
+      display: none;
+    }
+
     .chip {
       border: 1px solid rgba(255,255,255,.1);
       background: rgba(255,255,255,.03);
@@ -582,16 +613,274 @@
       .panel { padding: 8px; }
     }
 
-    .pool-card {
-      border-radius: 9px;
-      background: linear-gradient(180deg, rgba(16,32,57,.62), rgba(8,18,32,.62));
-      border: 1px solid rgba(255,255,255,.08);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-start;
-      gap: 2px;
-      padding: 4px;
+    @media (max-width: 900px) {
+      body {
+        height: auto;
+        min-height: 100dvh;
+      }
+
+      #btnBackMenu {
+        position: sticky;
+        top: 8px;
+        left: 8px;
+        z-index: 20;
+        width: calc(100% - 16px);
+        margin: 8px;
+      }
+
+      .container {
+        height: auto;
+        min-height: calc(100dvh - 56px);
+        padding: 8px;
+      }
+
+      .top {
+        grid-template-columns: 1fr;
+        justify-items: center;
+        gap: 8px;
+        min-height: auto;
+        text-align: center;
+      }
+
+      .top .logoWrap,
+      h1 {
+        grid-column: auto;
+        justify-self: center;
+        text-align: center;
+      }
+
+      .top .brandLogo {
+        width: min(46vw, 168px);
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+
+      .board {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+
+      .panel {
+        overflow: visible;
+      }
+
+      .board > .panel:nth-child(2) {
+        order: 1;
+      }
+
+      .board > .panel:nth-child(3) {
+        order: 2;
+      }
+
+      .board > .panel:nth-child(1) {
+        order: 3;
+      }
+
+      .deck-header,
+      .choices-head {
+        gap: 8px;
+      }
+
+      .deck-header {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .deck-actions,
+      .filtersBar {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .deck-actions > input,
+      .filterSearchInput,
+      .filterDropdown,
+      .deck-actions > button,
+      .filtersBar > button {
+        width: 100%;
+        min-width: 0;
+      }
+
+      .deck-actions > input,
+      .filterSearchInput {
+        grid-column: 1 / -1;
+      }
+
+      .deck-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-rows: none;
+        max-height: 42vh;
+        overflow: auto;
+        align-content: start;
+      }
+
+      .deck-slot,
+      .deck-card {
+        min-height: 52px;
+        font-size: 9px;
+        padding: 3px;
+      }
+
+      .deck-card img {
+        width: 40px;
+        height: 60px;
+      }
+
+      .pool-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-rows: none;
+        max-height: none;
+      }
+
+      .pool-card {
+        gap: 4px;
+        padding: 6px 4px;
+        font-size: 10px;
+      }
+
+      .pool-card img {
+        width: 46px;
+        height: 69px;
+      }
+
+      .filters-toggle > summary {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 4px 0 8px;
+      }
+
+      .filters-toggle > summary::after {
+        content: 'Abrir';
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--gold-a);
+      }
+
+      .filters-toggle[open] > summary::after {
+        content: 'Fechar';
+      }
+
+      .filters-toggle:not([open]) .filtersBar {
+        display: none;
+      }
+
+      .preview-card {
+        flex-direction: row;
+        align-items: flex-start;
+      }
+
+      .preview-toggle > summary {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 4px 0 8px;
+      }
+
+      .preview-toggle > summary::after {
+        content: 'Abrir';
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--gold-a);
+      }
+
+      .preview-toggle[open] > summary::after {
+        content: 'Fechar';
+      }
+
+      .preview-toggle:not([open]) .preview-card {
+        display: none;
+      }
+
+      .preview-card img {
+        width: 108px;
+        height: 162px;
+        flex: 0 0 auto;
+      }
+
+      .preview-meta {
+        width: 100%;
+        min-width: 0;
+      }
+
+      .preview-title {
+        font-size: 15px;
+      }
+
+      .preview-sub,
+      #previewText {
+        font-size: 12px;
+      }
+
+      .pager span {
+        min-width: 56px;
+      }
+
+      .board > .panel:nth-child(2) > div[style*="justify-content:space-between"],
+      .board > .panel:nth-child(2) > div[style*="border-top:1px solid"],
+      .board > .panel:nth-child(2) > div[style*="margin-top:6px"] {
+        flex-direction: column;
+        align-items: stretch !important;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .deck-actions,
+        <details id="filtersDetails" class="filters-toggle" open>
+          <summary><span>Buscar e filtrar</span></summary>
+          <details id="filtersDetails" class="filters-toggle" open>
+            <summary><span>Buscar e filtrar</span></summary>
+            <div class="filtersBar">
+              <input id="filterSearch" class="filterSearchInput" placeholder="Buscar carta...">
+
+              <div class="filterDropdown" data-filter-group="kind">
+                <button id="kindFilterToggle" class="filterToggle" type="button">Tipo</button>
+                <div class="filterMenu" id="kindFilterMenu">
+                  <div class="filterMenuTitle">Tipo de carta</div>
+                  <div class="filterChipWrap">
+                    <div class="chip" data-kind="ally">Aliado</div>
+                    <div class="chip" data-kind="spell">Magia</div>
+                    <div class="chip" data-kind="equip">Equipamento</div>
+                    <div class="chip" data-kind="env">Ambiente</div>
+                    <div class="chip" data-kind="truque">Truque</div>
+                    <div class="chip" data-kind="chosen">Escolhido</div>
+                    <div class="chip" data-kind="fragment">Fragmento</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="filterDropdown" data-filter-group="filiation">
+                <button id="filiationFilterToggle" class="filterToggle" type="button">Filiação</button>
+                <div class="filterMenu" id="filiationFilterMenu">
+                  <div class="filterMenuTitle">Filiação</div>
+                  <div class="filterChipWrap" id="filiationChips"></div>
+                </div>
+              </div>
+
+              <div class="filterDropdown" data-filter-group="cost">
+                <button id="costFilterToggle" class="filterToggle" type="button">Custo</button>
+                <div class="filterMenu" id="costFilterMenu">
+                  <div class="filterMenuTitle">Custo</div>
+                  <div class="filterChipWrap">
+                    <div class="chip" data-cost="0">0</div>
+                    <div class="chip" data-cost="1">1</div>
+                    <div class="chip" data-cost="2">2</div>
+                    <div class="chip" data-cost="3">3</div>
+                    <div class="chip" data-cost="4">4</div>
+                    <div class="chip" data-cost="5">5+</div>
+                  </div>
+                </div>
+              </div>
+
+              <button id="btnClearFilters" class="btn ghost filterClearBtn">Limpar filtros</button>
+            </div>
+          </details>
+        </details>
       cursor: pointer;
       text-align: center;
       overflow: hidden;
@@ -685,32 +974,34 @@
       <div class="logoWrap">
         <img class="brandLogo" src="/logo/logomytragor.png" alt="Logo Mytragor" onerror="this.src='../logo/logomytragor.png'">
       </div>
-      <h1>Montador de Deck</h1>
+      <h1>Montador de Baralho</h1>
     </div>
 
     <div class="board">
-      <section class="panel">
-        <h2>Pré-visualização</h2>
-        <div id="fixedPreview" class="preview-card">
-          <img src="layout-background.ai.png" alt="Prévia" id="previewImg">
-          <div class="preview-meta">
-            <div class="preview-title" id="previewTitle">Passe o mouse</div>
-            <div class="preview-sub" id="previewSub">Carta selecionada</div>
-            <div class="preview-stats" id="previewStats"></div>
-            <div id="previewText">A prévia da carta aparecerá aqui.</div>
+      <section class="panel preview-panel">
+        <details id="previewDetails" class="preview-toggle" open>
+          <summary><h2>Pré-visualização</h2></summary>
+          <div id="fixedPreview" class="preview-card">
+            <img src="layout-background.ai.png" alt="Prévia" id="previewImg">
+            <div class="preview-meta">
+              <div class="preview-title" id="previewTitle">Passe o mouse</div>
+              <div class="preview-sub" id="previewSub">Carta selecionada</div>
+              <div class="preview-stats" id="previewStats"></div>
+              <div id="previewText">A prévia da carta aparecerá aqui.</div>
+            </div>
           </div>
-        </div>
+        </details>
       </section>
 
-      <section class="panel">
+      <section class="panel deck-panel">
         <div class="deck-header">
-          <h2>Seu deck (41 slots)</h2>
+          <h2>Seu baralho (41 espaços)</h2>
           <div class="deck-actions">
-            <input id="deckNameInput" type="text" placeholder="Nome do deck">
+            <input id="deckNameInput" type="text" placeholder="Nome do baralho">
             <button id="btnSalvar" class="btn" disabled>Salvar</button>
             <button id="btnPlay" class="btn" disabled>Jogar</button>
             <button id="btnLimpar" class="btn ghost">Limpar</button>
-            <button id="btnVerDecks" class="btn ghost">Ver decks</button>
+            <button id="btnVerDecks" class="btn ghost">Ver baralhos</button>
           </div>
         </div>
 
@@ -722,8 +1013,8 @@
         <div id="deckList" class="deck-grid"></div>
 
         <div style="margin-top:8px;border-top:1px solid rgba(255,255,255,.08);padding-top:8px;display:flex;gap:6px;">
-          <input id="importCodeInput" type="text" placeholder="Colar código do deck..." style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.14);background:rgba(0,0,0,.25);color:var(--txt);font-size:12px;">
-          <button id="btnImportDeck" class="btn">Importar deck</button>
+          <input id="importCodeInput" type="text" placeholder="Colar código do baralho..." style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.14);background:rgba(0,0,0,.25);color:var(--txt);font-size:12px;">
+          <button id="btnImportDeck" class="btn">Importar baralho</button>
         </div>
         <div style="margin-top:6px;display:flex;gap:6px;align-items:center;">
           <select id="presetDeckSelect" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.14);background:rgba(0,0,0,.25);color:var(--txt);font-size:12px;">
@@ -733,7 +1024,7 @@
         </div>
       </section>
 
-      <section class="panel">
+      <section class="panel pool-panel">
         <div class="choices-head">
           <h2>Cartas disponíveis</h2>
           <div style="display:flex;gap:6px;align-items:center;">
@@ -830,6 +1121,8 @@
     const previewSub = document.getElementById('previewSub');
     const previewStats = document.getElementById('previewStats');
     const previewText = document.getElementById('previewText');
+    const previewDetails = document.getElementById('previewDetails');
+    const filtersDetails = document.getElementById('filtersDetails');
 
     const filterSearch = document.getElementById('filterSearch');
     const filiationChips = document.getElementById('filiationChips');
@@ -980,6 +1273,35 @@
         .trim();
     }
 
+    function syncPreviewCollapse() {
+      if (!previewDetails) return;
+      if (window.matchMedia('(max-width: 900px)').matches) previewDetails.removeAttribute('open');
+      else previewDetails.setAttribute('open', 'open');
+    }
+
+    function syncPreviewPlaceholderCopy() {
+      const narrow = window.matchMedia('(max-width: 900px)').matches;
+      if (previewTitle && previewTitle.textContent === 'Passe o mouse') {
+        previewTitle.textContent = narrow ? 'Toque em uma carta' : 'Passe o mouse';
+      }
+      if (previewText && previewText.textContent === 'A prévia da carta aparecerá aqui.') {
+        previewText.textContent = narrow ? 'A prévia da carta tocada aparecerá aqui.' : 'A prévia da carta aparecerá aqui.';
+      }
+    }
+
+    function syncFiltersCollapse() {
+      if (!filtersDetails) return;
+      if (window.matchMedia('(max-width: 900px)').matches) filtersDetails.removeAttribute('open');
+      else filtersDetails.setAttribute('open', 'open');
+    }
+
+    syncPreviewCollapse();
+    syncPreviewPlaceholderCopy();
+    syncFiltersCollapse();
+    window.addEventListener('resize', syncPreviewCollapse);
+    window.addEventListener('resize', syncPreviewPlaceholderCopy);
+    window.addEventListener('resize', syncFiltersCollapse);
+
     function applyFilters(pool) {
       const q = normalizeText(filterState.query);
 
@@ -1116,7 +1438,7 @@
         } else {
           tile.onclick = () => {
             const lf = chosenLeader ? (LEADER_FILIACAO[chosenLeader.name] || '?') : '?';
-            alert(`Deck fixado para ${lf}. Só cartas ${lf} ou Neutras.`);
+            alert(`Baralho fixado para ${lf}. Só cartas ${lf} ou Neutras.`);
           };
         }
 
@@ -1169,7 +1491,7 @@
       const box = document.createElement('div');
       box.className = 'modalBox';
       box.innerHTML = `
-        <h3 style="margin:0 0 8px;">Escolha o líder do deck</h3>
+        <h3 style="margin:0 0 8px;">Escolha o líder do baralho</h3>
         <p style="margin:0 0 6px;color:#cbd5e1;">Para adicionar <b>${requestedCard.name}</b>, escolha um líder da mesma filiação.</p>
         <div class="leader-modal-grid" id="leaderModalGrid"></div>
         <div style="text-align:right;margin-top:10px;"><button class="btn ghost" id="leaderModalCancel">Cancelar</button></div>
@@ -1210,7 +1532,7 @@
         const leaderF = String(LEADER_FILIACAO[chosenLeader.name] || '').toLowerCase();
         const cardF = String(card.filiacao || '').toLowerCase();
         if (leaderF && cardF !== 'neutra' && cardF !== leaderF) {
-          alert(`Este deck aceita apenas cartas ${LEADER_FILIACAO[chosenLeader.name]} ou Neutras.`);
+          alert(`Este baralho aceita apenas cartas ${LEADER_FILIACAO[chosenLeader.name]} ou Neutras.`);
           return;
         }
       } else {
@@ -1283,11 +1605,11 @@
         return;
       }
       if (editSession.mode === 'edit') {
-        if (deckMeta) deckMeta.textContent = 'Editando deck salvo • salvar pode sobrescrever o original';
+        if (deckMeta) deckMeta.textContent = 'Editando baralho salvo • salvar pode sobrescrever o original';
         btnSalvar.textContent = 'Salvar alterações';
         return;
       }
-      if (deckMeta) deckMeta.textContent = 'Editando cópia de deck salvo • será salvo como novo deck local';
+      if (deckMeta) deckMeta.textContent = 'Editando cópia de baralho salvo • será salvo como novo baralho local';
       btnSalvar.textContent = 'Salvar cópia';
     }
 
@@ -1358,13 +1680,13 @@
         box.className = 'modalBox';
         box.style.width = 'min(520px, 92vw)';
         box.innerHTML = `
-          <h3 style="margin:0 0 10px;color:var(--gold-a);">Salvar alterações do deck</h3>
+          <h3 style="margin:0 0 10px;color:var(--gold-a);">Salvar alterações do baralho</h3>
           <p style="margin:0 0 14px;color:#cbd5e1;line-height:1.5;">
-            Você está editando um deck salvo. Escolha como deseja concluir este salvamento.
+            Você está editando um baralho salvo. Escolha como deseja concluir este salvamento.
           </p>
           <div style="display:grid;gap:10px;">
-            <button type="button" class="btn" id="saveChoiceOverwrite" style="width:100%;justify-content:center;">Sobrescrever deck original</button>
-            <button type="button" class="btn ghost" id="saveChoiceCopy" style="width:100%;justify-content:center;">Salvar como novo deck</button>
+            <button type="button" class="btn" id="saveChoiceOverwrite" style="width:100%;justify-content:center;">Sobrescrever baralho original</button>
+            <button type="button" class="btn ghost" id="saveChoiceCopy" style="width:100%;justify-content:center;">Salvar como novo baralho</button>
             <button type="button" class="btn ghost" id="saveChoiceCancel" style="width:100%;justify-content:center;border-color:rgba(220,109,91,.35);color:#ffd8d1;">Cancelar</button>
           </div>
         `;
@@ -1425,7 +1747,7 @@
         updateEditModeUi();
       }
 
-      alert(`Deck salvo: ${payload.deckName || chosenLeader.name}`);
+      alert(`Baralho salvo: ${payload.deckName || chosenLeader.name}`);
     };
 
     btnPlay.onclick = function () {
@@ -1503,7 +1825,7 @@
       renderDeck();
 
       const importedFrom = options.sourceLabel ? ` de ${options.sourceLabel}` : '';
-      alert(`Deck importado${importedFrom}: ${deck.length} cartas${chosenLeader ? ', líder: ' + chosenLeader.name : ''}`);
+      alert(`Baralho importado${importedFrom}: ${deck.length} cartas${chosenLeader ? ', líder: ' + chosenLeader.name : ''}`);
       return true;
     }
 

@@ -14,18 +14,23 @@ function recalcArenaScale() {
 
 		const scaleX = safeWidth / arenaW;
 		const scaleY = safeHeight / arenaH;
+		const isMobileBoard = window.matchMedia("(max-width: 980px)").matches;
+		const isShortMobile = isMobileBoard && window.innerHeight <= 500;
 
 		let scale = Math.min(scaleX, scaleY);
 		if (!Number.isFinite(scale) || scale <= 0) scale = 1;
-		scale = Math.max(0.6, Math.min(scale, 1.2));
+		const minScale = isShortMobile ? 0.42 : isMobileBoard ? 0.5 : 0.6;
+		scale = Math.max(minScale, Math.min(scale, 1.2));
 
 		root.style.setProperty("--scale", String(scale));
 		stage.style.transform = `scale(${scale})`;
 
 		const baseCardW = parseFloat(getComputedStyle(root).getPropertyValue("--cardW-base")) || 75;
 		const baseCardH = parseFloat(getComputedStyle(root).getPropertyValue("--cardH-base")) || 106;
-		root.style.setProperty("--cardW", `${Math.round(baseCardW * scale)}px`);
-		root.style.setProperty("--cardH", `${Math.round(baseCardH * scale)}px`);
+		const cardW = isMobileBoard ? baseCardW : Math.round(baseCardW * scale);
+		const cardH = isMobileBoard ? baseCardH : Math.round(baseCardH * scale);
+		root.style.setProperty("--cardW", `${cardW}px`);
+		root.style.setProperty("--cardH", `${cardH}px`);
 	} catch (error) {
 		console.warn("recalcArenaScale error", error);
 	}

@@ -265,7 +265,7 @@ name: 'Tamanduá Guardião', kind: 'ally', img: '/allies/layout-tamanduaguardiao
     name: 'Catedral Ensolarada', kind: 'env', img: '/envs/layout-catedralensolarada.ai.png', cost: 3, classe: '', tipo: 'Ambiente', filiacao: 'Religioso', effect: 'religioso_protecao', text: 'Enquanto esta carta estiver em campo, jogadores com Escolhido "Religioso" escolhem 1 Aliado em sua fase inicial. O Aliado selecionado recebe +2 de vida até o inicio do próximo turno do jogador. Se ao perder o bônus concedido por este Ambiente o Aliado chegar a 0 ou menos de vida, ele é enviado para o cemitério.'
   },
   {
-    name: 'Lâmina Serralhada', kind: 'equip', img: '/equip/layout-laminaserrilhada.ai.png', cost: 1, classe: '', tipo: 'Equipamento', filiacao: 'Marcial', atkBonus: 2, text: 'O Aliado equipado recebe +2 de Ataque.'
+    name: 'Lâmina Serralhada', kind: 'equip', img: '/equip/layout-laminaserrilhada.ai.png', cost: 2, classe: '', tipo: 'Equipamento', filiacao: 'Marcial', atkBonus: 2, text: 'O Aliado equipado recebe +2 de Ataque.'
   },
   {
   name: 'Manto de Couro', kind: 'equip', img: '/equip/layout-mantocouro.ai.png', cost: 1, classe: '', tipo: 'Equipamento', filiacao: 'Neutra', acBonus: 1, hpBonus: 1, text: 'O personagem equipado recebe +1 de Resistência e +1 de Vida.'
