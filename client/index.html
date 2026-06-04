@@ -491,6 +491,112 @@
       .gold-btn{ min-width:210px; padding:12px 22px; font-size:16px; }
       .startStack{ width:min(100%, 320px); }
     }
+
+    .gold-btn.aiChallengeBtn{
+      color:#1f232c;
+      background:
+        linear-gradient(to bottom, rgba(255,255,255,0.42), rgba(255,255,255,0.08)),
+        linear-gradient(180deg, #d9dee6 0%, #aeb6c2 52%, #7f8896 100%);
+      border:1px solid rgba(229, 235, 242, 0.52);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.48),
+        inset 0 -1px 0 rgba(53,61,74,0.4),
+        0 8px 22px rgba(0,0,0,0.42),
+        0 0 18px rgba(187, 198, 214, 0.22);
+      text-shadow:0 1px 0 rgba(255,255,255,0.24);
+    }
+
+    .gold-btn.aiChallengeBtn::before{
+      border:1px solid rgba(255,255,255,0.28);
+    }
+
+    .gold-btn.aiChallengeBtn:hover{
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.52),
+        inset 0 -1px 0 rgba(53,61,74,0.4),
+        0 10px 26px rgba(0,0,0,0.5),
+        0 0 24px rgba(205, 214, 226, 0.3);
+      filter:brightness(1.05);
+    }
+
+    #btnProfile{
+      color:#f5f7fb;
+      background:
+        linear-gradient(to bottom, rgba(255,255,255,0.08), rgba(255,255,255,0.02)),
+        linear-gradient(180deg, #17191f 0%, #050608 100%);
+      border:1px solid rgba(255,255,255,0.18);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.10),
+        inset 0 -1px 0 rgba(0,0,0,0.65),
+        0 8px 22px rgba(0,0,0,0.5);
+      text-shadow:0 1px 0 rgba(0,0,0,0.55);
+    }
+
+    #btnProfile::before{
+      border:1px solid rgba(255,255,255,0.10);
+    }
+
+    #btnProfile:hover{
+      filter:brightness(1.08);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.14),
+        inset 0 -1px 0 rgba(0,0,0,0.72),
+        0 10px 26px rgba(0,0,0,0.58);
+    }
+
+    .gold-btn.deckBuilderBtn{
+      color:#eef6ff;
+      background:
+        linear-gradient(to bottom, rgba(255,255,255,0.18), rgba(255,255,255,0.04)),
+        linear-gradient(180deg, #4f8fe8 0%, #1e56c9 56%, #143581 100%);
+      border:1px solid rgba(169, 209, 255, 0.48);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.24),
+        inset 0 -1px 0 rgba(13,28,74,0.42),
+        0 8px 22px rgba(0,0,0,0.42),
+        0 0 18px rgba(94, 154, 255, 0.28);
+      text-shadow:0 1px 0 rgba(7,18,54,0.42);
+    }
+
+    .gold-btn.deckBuilderBtn::before{
+      border:1px solid rgba(227,240,255,0.22);
+    }
+
+    .gold-btn.deckBuilderBtn:hover{
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.28),
+        inset 0 -1px 0 rgba(13,28,74,0.42),
+        0 10px 26px rgba(0,0,0,0.5),
+        0 0 24px rgba(110, 173, 255, 0.36);
+      filter:brightness(1.06);
+    }
+
+    .gold-btn.manualBtn{
+      color:#05252d;
+      background:
+        linear-gradient(to bottom, rgba(255,255,255,0.26), rgba(255,255,255,0.06)),
+        linear-gradient(180deg, #7cecff 0%, #28c8df 54%, #0c7f93 100%);
+      border:1px solid rgba(183, 247, 255, 0.5);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.34),
+        inset 0 -1px 0 rgba(5,59,70,0.38),
+        0 8px 22px rgba(0,0,0,0.42),
+        0 0 18px rgba(73, 229, 255, 0.26);
+      text-shadow:0 1px 0 rgba(255,255,255,0.24);
+    }
+
+    .gold-btn.manualBtn::before{
+      border:1px solid rgba(232,255,255,0.24);
+    }
+
+    .gold-btn.manualBtn:hover{
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.38),
+        inset 0 -1px 0 rgba(5,59,70,0.38),
+        0 10px 26px rgba(0,0,0,0.5),
+        0 0 24px rgba(110, 240, 255, 0.34);
+      filter:brightness(1.05);
+    }
   </style>
 </head>
 
@@ -521,9 +627,10 @@
       <div class="actions">
         <button class="gold-btn secondary" id="btnProfile" type="button">Meu nome</button>
         <div class="startStack">
-  	          <button class="gold-btn primary" onclick="location.href='lobby.html'">INICIAR PARTIDA</button>
-          <button class="gold-btn secondary" onclick="location.href='ui/deckbuilder.html'">Montar baralho</button>
-          <button class="gold-btn secondary" onclick="location.href='manual.html'">Como jogar</button>
+            <button class="gold-btn primary" onclick="location.href='lobby.html'">DESAFIAR JOGADOR</button>
+              <button class="gold-btn secondary aiChallengeBtn" onclick="location.href='solo-lobby.html'">DESAFIAR A IA</button>
+          <button class="gold-btn secondary deckBuilderBtn" onclick="location.href='ui/deckbuilder.html'">Montar baralho</button>
+          <button class="gold-btn secondary manualBtn" onclick="location.href='manual.html'">MANUAL DE JOGO</button>
         </div>
       </div>
     </main>

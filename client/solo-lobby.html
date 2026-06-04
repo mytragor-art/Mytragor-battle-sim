@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width,initial-scale=1" />
+	<title>Mytragor Solo</title>
+	<link rel="stylesheet" href="/mobile.css" media="(max-width:880px)" />
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:wght@400;500;600;700&display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="/src/style.css" />
+</head>
+<body class="lobbyBody">
+	<div class="page lobbyPage">
+		<div class="lobbyStage">
+			<div class="lobbyReserveColumn" aria-hidden="true"></div>
+			<main class="lobbyCenterColumn">
+				<header class="panel cardPad lobbyTopBar">
+					<div class="roomHeader lobbyHeader">
+						<div class="title">
+							<div class="lobbyBrand">
+								<img class="lobbyLogo" src="/logo/logomytragor.png" alt="Mytragor" />
+								<div class="lobbyHeroCopy">
+									<div class="lobbyEyebrow">Arena isolada contra IA</div>
+									<h2>Lobby Solo</h2>
+									<p>Monte seu duelo contra a IA em uma fila própria. Nada desta sala aparece nem interfere no fluxo PvP.</p>
+								</div>
+							</div>
+						</div>
+						<button class="btnGhost lobbyBackBtn" onclick="location.href='index.html'" type="button">Voltar</button>
+					</div>
+				</header>
+
+				<div class="lobbyGrid lobbyGridRefined">
+					<section class="card cardPad panel lobbyLeft lobbyDeckPanel">
+						<div class="lobbySectionEyebrow">Preparação solo</div>
+						<div class="lobbySectionHead">
+							<h3>Baralho, líder e prontidão</h3>
+						</div>
+
+						<div class="grid2 lobbyChoiceGrid">
+							<div>
+								<label>Selecione o baralho</label>
+								<select id="deck">
+									<option value="">(carregando baralhos salvos...)</option>
+								</select>
+							</div>
+							<div>
+								<label>Líder</label>
+								<select id="leader" disabled>
+									<option value="">(auto pelo baralho salvo)</option>
+								</select>
+							</div>
+							<div>
+								<label>Deck da IA</label>
+								<select id="botDeck">
+									<option value="">(carregando baralhos salvos...)</option>
+								</select>
+							</div>
+							<div>
+								<label>Líder da IA</label>
+								<select id="botLeader" disabled>
+									<option value="">(auto pelo baralho salvo)</option>
+								</select>
+							</div>
+						</div>
+
+						<div class="lobbyReadyBlock">
+							<button class="btnGold readyPrimary" id="btnReady" type="button">Iniciar desafio solo</button>
+							<div class="lobbyReadyMeta">
+								<span class="pill">Status: <b id="ready" class="bad">NÃO PRONTO</b></span>
+								<p class="readyHint">Ao confirmar prontidão, a sala solo cria uma partida exclusiva contra a IA.</p>
+							</div>
+						</div>
+
+						<details class="advancedPanel">
+							<summary>Configurações avançadas</summary>
+							<div class="advancedBody">
+								<label>Endpoint (ws)</label>
+								<input class="input" id="endpoint" value="ws://localhost:2567" />
+
+								<label>Room ID (vazio = criar)</label>
+								<input class="input" id="roomId" placeholder="ex: SOLO123" />
+
+								<div class="actionsRow advancedActions">
+									<button class="btnGold secondary" id="btnJoinSelected" type="button">Entrar selecionada</button>
+								</div>
+
+								<div class="zoneTitle">Eventos</div>
+								<pre class="log" id="log"></pre>
+							</div>
+						</details>
+					</section>
+
+					<section class="card cardPad panel lobbyRight lobbyRoomsPanel">
+						<div class="lobbySectionEyebrow">Corredor solo</div>
+						<div class="lobbySectionHead">
+							<h3>Sala atual e arenas solo</h3>
+							<p>Acompanhe sua sala solo, veja outros desafios contra IA e observe partidas solo ativas sem cruzar dados com o lobby PvP.</p>
+						</div>
+
+						<div class="actionsRow roomStateRow lobbyCompactState">
+							<span class="pill">Slot: <b id="slot">—</b></span>
+							<span class="pill">Fase: <b id="phase">—</b></span>
+						</div>
+
+						<div class="lobbySubPanel">
+							<div class="zoneTitle">Jogadores na sala</div>
+							<div id="players" class="playersMount">—</div>
+						</div>
+
+						<div class="lobbySubPanel">
+							<div class="roomsHeader">
+								<div class="zoneTitle">Salas solo abertas</div>
+								<button class="btnGhost lobbyUtilityBtn" id="btnRefreshRooms" type="button">Atualizar</button>
+							</div>
+							<div id="roomList" class="roomList"></div>
+						</div>
+
+						<div class="lobbySubPanel">
+							<div class="roomsHeader">
+								<div class="zoneTitle">Partidas solo em andamento</div>
+								<button class="btnGhost lobbyUtilityBtn" id="btnRefreshMatches" type="button">Atualizar</button>
+							</div>
+							<div id="matchList" class="roomList"></div>
+						</div>
+					</section>
+				</div>
+			</main>
+			<div class="lobbyReserveColumn" aria-hidden="true"></div>
+		</div>
+	</div>
+
+	<script type="module" src="/src/solo-lobby.ts"></script>
+	<script src="/mobile.js"></script>
+</body>
+</html>

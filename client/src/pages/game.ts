@@ -620,6 +620,8 @@ function getChoiceSourceCardId(payload: any): string {
 		const candidate = String(option?.cardId || option?.label || "").trim();
 		if (candidate && resolveCard(candidate)) return candidate;
 	}
+	const titleLead = String(payload?.title || "").split(":")[0]?.trim();
+	if (titleLead && resolveCard(titleLead)) return titleLead;
 	return "";
 }
 
@@ -3140,7 +3142,9 @@ function updateArenaTurnPriority(myTurn: boolean): void {
 
 function goLobby() {
 	const endpoint = view.endpointEl?.value?.trim() || resolveServerEndpoint(window.location.search);
-	window.location.href = `./lobby.html?endpoint=${encodeURIComponent(endpoint)}`;
+	const search = new URLSearchParams(window.location.search);
+	const lobbyPath = search.get("solo") === "1" ? "./solo-lobby.html" : "./lobby.html";
+	window.location.href = `${lobbyPath}?endpoint=${encodeURIComponent(endpoint)}`;
 }
 
 function clearSpectatorReconnectTimer() {

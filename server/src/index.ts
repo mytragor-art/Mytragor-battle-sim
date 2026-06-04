@@ -18,6 +18,8 @@ process.on("unhandledRejection", (reason) => {
 
 import { LobbyRoom } from "./rooms/LobbyRoom";
 import { MatchRoom } from "./rooms/MatchRoom";
+import { SoloLobbyRoom } from "./rooms/SoloLobbyRoom";
+import { SoloMatchRoom } from "./rooms/SoloMatchRoom";
 import { SpectatorRoom } from "./rooms/SpectatorRoom";
 
 dotenv.config();
@@ -45,6 +47,8 @@ async function main() {
 
 	gameServer.define("lobby", LobbyRoom);
 	gameServer.define("match", MatchRoom);
+	gameServer.define("solo_lobby", SoloLobbyRoom);
+	gameServer.define("solo_match", SoloMatchRoom);
 	gameServer.define("spectator", SpectatorRoom);
 
 	app.get("/lobbies", async (_req, res) => {
@@ -100,6 +104,55 @@ async function main() {
 		} catch (error) {
 			console.error("[SERVER] Failed to list matches", error);
 			res.status(500).json({ rooms: [], error: "failed_to_list_matches" });
+		}
+	});
+
+	app.get("/solo-lobbies", async (_req, res) => {
+		try {
+			const rooms = await matchMaker.query({ name: "solo_lobby" });
+			const openRooms = rooms
+				.filter((room: any) => !room.locked)
+				.map((room: any) => ({
+					roomId: String(room.roomId || ""),
+					clients: Number(room.clients || 0),
+					maxClients: Number(room.maxClients || 1),
+					locked: !!room.locked,
+					metadata: {
+						title: String(room.metadata?.title || ""),
+						deckName: String(room.metadata?.deckName || ""),
+						leaderId: String(room.metadata?.leaderId || ""),
+						botName: String(room.metadata?.botName || "IA"),
+						botLeaderId: String(room.metadata?.botLeaderId || "")
+					}
+				}));
+
+			res.json({ rooms: openRooms });
+		} catch (error) {
+			console.error("[SERVER] Failed to list solo lobbies", error);
+			res.status(500).json({ rooms: [], error: "failed_to_list_solo_lobbies" });
+		}
+	});
+
+	app.get("/solo-matches", async (_req, res) => {
+		try {
+			const matches = await matchMaker.query({ name: "solo_match" });
+			const activeMatches = matches.map((room: any) => ({
+				roomId: String(room.roomId || ""),
+				clients: Number(room.clients || 0),
+				maxClients: Number(room.maxClients || 1),
+				locked: !!room.locked,
+				metadata: {
+					title: String(room.metadata?.title || ""),
+					p1Name: String(room.metadata?.p1Name || ""),
+					p2Name: String(room.metadata?.p2Name || ""),
+					p1LeaderId: String(room.metadata?.p1LeaderId || ""),
+					p2LeaderId: String(room.metadata?.p2LeaderId || "")
+				}
+			}));
+			res.json({ rooms: activeMatches });
+		} catch (error) {
+			console.error("[SERVER] Failed to list solo matches", error);
+			res.status(500).json({ rooms: [], error: "failed_to_list_solo_matches" });
 		}
 	});
 

@@ -106,6 +106,11 @@ function isSpellOrTrickKind(kind: string | undefined): boolean {
 	return normalized === "spell" || normalized === "magia" || normalized === "truque" || normalized === "trick";
 }
 
+function isTrickKind(kind: string | undefined): boolean {
+	const normalized = normalizeKind(kind);
+	return normalized === "truque" || normalized === "trick";
+}
+
 function isTokenCardId(cardId: string): boolean {
 	const card = findCardDef(cardId) as any;
 	const key = String(card?.key || "").trim();
@@ -520,7 +525,8 @@ function placeAllyOnField(
 	cardId: string,
 	pos: number,
 	broadcast?: (name: string, payload: any) => void,
-	askChoice?: AskChoiceFn
+	askChoice?: AskChoiceFn,
+	summoned?: Record<Slot, Set<number>>
 ): void {
 	owner.field[pos] = cardId;
 	(owner as any).fieldHp[pos] = getCardDynamicMaxHp(state, ownerSlot, cardId);
@@ -534,7 +540,7 @@ function placeAllyOnField(
 	(owner as any).fieldBloodMarks[pos] = 0;
 	(owner as any).fieldVitalMarks[pos] = 0;
 	applyAuraHpBonusFromSource(state, ownerSlot, cardId, pos);
-	if (broadcast && askChoice) triggerFieldEntryEffects(state, ownerSlot, cardId, pos, broadcast, askChoice);
+	if (broadcast && askChoice) triggerFieldEntryEffects(state, ownerSlot, cardId, pos, broadcast, askChoice, summoned);
 }
 
 function awardAdemaisSpiderMarkOnSummon(
@@ -564,9 +570,11 @@ function summonGeneratedToken(
 	cardId: string,
 	pos: number,
 	broadcast: (name: string, payload: any) => void,
+	summoned: Record<Slot, Set<number>> | undefined,
 	askChoice: AskChoiceFn
 ): void {
-	placeAllyOnField(state, slot, owner, cardId, pos, broadcast, askChoice);
+	placeAllyOnField(state, slot, owner, cardId, pos, broadcast, askChoice, summoned);
+	summoned?.[slot].add(pos);
 	const tokenDef = findCardDef(cardId);
 	if (!cardHasKeyword(tokenDef, "investida")) {
 		owner.fieldPinnedUntilTurn[pos] = Math.max(Number(owner.fieldPinnedUntilTurn[pos] || 0), Number(state.game.turn || 0));
@@ -591,7 +599,8 @@ function triggerFieldEntryEffects(
 	cardId: string,
 	pos: number,
 	broadcast: (name: string, payload: any) => void,
-	askChoice: AskChoiceFn
+	askChoice: AskChoiceFn,
+	summoned?: Record<Slot, Set<number>>
 ): void {
 	const cardDef = findCardDef(cardId);
 	let shouldTriggerAuto = true;
@@ -616,7 +625,7 @@ function triggerFieldEntryEffects(
 			owner[triggerKey] = turnToken;
 		}
 	}
-	if (shouldTriggerAuto) triggerAutoEffects(state, slot, cardId, cardDef, broadcast, askChoice, { lane: "field", pos });
+	if (shouldTriggerAuto) triggerAutoEffects(state, slot, cardId, cardDef, broadcast, askChoice, { lane: "field", pos }, summoned);
 }
 
 function applyAuraHpBonusFromSource(state: MatchState, ownerSlot: Slot, sourceCardId: string, sourcePos?: number): void {
@@ -1117,7 +1126,7 @@ function isFieldTapped(player: any, pos: number): boolean {
 	return !!player?.fieldTapped?.[pos];
 }
 
-function canAttackServer(
+export function canAttackServer(
 	state: MatchState,
 	slot: Slot,
 	attackerPos: number,
@@ -1131,6 +1140,7 @@ function canAttackServer(
 	const attackerId = String(me.field[attackerPos] || "");
 	const attackerDef = findCardDef(attackerId);
 	if (attackerPos >= 0 && isFieldTapped(me as any, attackerPos)) return false;
+	if (attackerPos >= 0 && isFieldPinned(state, slot, attackerPos) && !cardHasKeyword(attackerDef, "investida")) return false;
 	if (attackerPos >= 0 && summoned[slot].has(attackerPos) && !cardHasKeyword(attackerDef, "investida")) return false;
 	if (attacked[slot].has(attackerPos)) return false;
 	return true;
@@ -1239,7 +1249,8 @@ function triggerAutoEffects(
 	cardDef: CardDef | undefined,
 	broadcast: (name: string, payload: any) => void,
 	askChoice: AskChoiceFn,
-	context?: { lane?: "field" | "support" | "env"; pos?: number }
+	context?: { lane?: "field" | "support" | "env"; pos?: number },
+	summoned?: Record<Slot, Set<number>>
 ) {
 	const effect = String(cardDef?.effect || "").trim();
 	if (!effect) return;
@@ -1751,7 +1762,7 @@ function triggerAutoEffects(
 		for (let pos = 0; pos < me.field.length; pos += 1) {
 			if (created >= 2) break;
 			if (String(me.field[pos] || "")) continue;
-			summonGeneratedToken(state, slot, me as any, tokenId, pos, broadcast, askChoice);
+			summonGeneratedToken(state, slot, me as any, tokenId, pos, broadcast, summoned, askChoice);
 			created += 1;
 		}
 		broadcast("effect_log", { slot, cardId, effect, text: `${cardId}: criou ${created} ficha(s) de Aranhas Negras.` });
@@ -1778,7 +1789,7 @@ function triggerAutoEffects(
 		let created = 0;
 		for (let pos = 0; pos < me.field.length && created < 2; pos += 1) {
 			if (String(me.field[pos] || "")) continue;
-			summonGeneratedToken(state, slot, me as any, tokenId, pos, broadcast, askChoice);
+			summonGeneratedToken(state, slot, me as any, tokenId, pos, broadcast, summoned, askChoice);
 			created += 1;
 		}
 		broadcast("effect_log", { slot, cardId, effect, text: `${cardId}: criou ${created} ficha(s) de ${tokenId}.` });
@@ -2052,7 +2063,7 @@ function triggerAutoEffects(
 			shuffleAfter: true,
 			title: `${cardId}: escolha um aliado Animal do deck`
 		} as CardDef;
-		triggerAutoEffects(state, slot, cardId, searchDef, broadcast, askChoice, context);
+			triggerAutoEffects(state, slot, cardId, searchDef, broadcast, askChoice, context, summoned);
 		broadcast("effect_log", { slot, cardId, effect, text: `${cardId}: seus aliados Animal recebem +1 de ataque enquanto permanecer em campo.` });
 		return;
 	}
@@ -2064,7 +2075,7 @@ function triggerAutoEffects(
 
 	if (effect === "aranhas_observadora") {
 		const searchDef = { ...(cardDef as any), effect: "search_deck", shuffleAfter: true } as CardDef;
-		triggerAutoEffects(state, slot, cardId, searchDef, broadcast, askChoice, context);
+			triggerAutoEffects(state, slot, cardId, searchDef, broadcast, askChoice, context, summoned);
 		return;
 	}
 
@@ -2532,6 +2543,35 @@ export function playCard(state: MatchState, slot: Slot, cardId: string, targetPo
 		broadcast("error", { text: "Contrição é um truque reativo: ela ativa da mão quando um inimigo declara um ataque." });
 		return;
 	}
+	if (isTrickKind(actualKind)) {
+		broadcast("error", { text: `${cardId} é um truque reativo: ele só pode ser ativado quando o gatilho da carta acontecer.` });
+		return;
+	}
+	if (String(cardDef?.effect || "") === "destroy_env") {
+		const hasEnvInPlay = [game.p1, game.p2].some((player) => !!String(player.env || ""));
+		if (!hasEnvInPlay) {
+			broadcast("error", { text: `${cardId} precisa de um ambiente em jogo para ser ativada.` });
+			return;
+		}
+	}
+	if (String(cardDef?.effect || "") === "destroy_equip") {
+		const hasEquipInPlay = [game.p1, game.p2].some((player) => player.support.some((supportId: string) => {
+			if (!supportId) return false;
+			const supportDef = findCardDef(String(supportId || ""));
+			return isEquipKind(supportDef?.kind || supportDef?.tipo);
+		}));
+		if (!hasEquipInPlay) {
+			broadcast("error", { text: `${cardId} precisa de um equipamento em jogo para ser ativada.` });
+			return;
+		}
+	}
+	if (String(cardDef?.effect || "") === "destroy_enemy_ally") {
+		const foe = slot === "p1" ? game.p2 : game.p1;
+		if (!foe.field.some((enemyCardId: string) => !!enemyCardId)) {
+			broadcast("error", { text: `${cardId} precisa de um aliado inimigo em campo para ser ativada.` });
+			return;
+		}
+	}
 	const lane: "field" | "support" | "env" = isEnvKind(actualKind) ? "env" : (isAllyKind(actualKind) ? "field" : "support");
 	const describeChoiceAction = (action: any): string => {
 		const actionType = String(action?.type || "").trim();
@@ -2683,7 +2723,7 @@ export function playCard(state: MatchState, slot: Slot, cardId: string, targetPo
 			return;
 		}
 		if (actionType === "ban_on_enter") {
-			triggerAutoEffects(state, slot, cardId, { ...(cardDef as any), effect: "ban_on_enter" } as CardDef, broadcast, askChoice, { lane: "support" });
+			triggerAutoEffects(state, slot, cardId, { ...(cardDef as any), effect: "ban_on_enter" } as CardDef, broadcast, askChoice, { lane: "support" }, summoned);
 			done();
 			return;
 		}
@@ -2754,7 +2794,7 @@ export function playCard(state: MatchState, slot: Slot, cardId: string, targetPo
 			return;
 		}
 		if (actionType === "search_deck") {
-			triggerAutoEffects(state, slot, cardId, { ...(cardDef as any), effect: "search_deck", query: action?.query, max: action?.max, shuffleAfter: action?.shuffleAfter } as CardDef, broadcast, askChoice, { lane: "support" });
+			triggerAutoEffects(state, slot, cardId, { ...(cardDef as any), effect: "search_deck", query: action?.query, max: action?.max, shuffleAfter: action?.shuffleAfter } as CardDef, broadcast, askChoice, { lane: "support" }, summoned);
 			done();
 			return;
 		}
@@ -2793,7 +2833,7 @@ export function playCard(state: MatchState, slot: Slot, cardId: string, targetPo
 		}
 		pg.env = cardId;
 		clampAllPlayersFragmentsToEffectiveCap(state);
-		triggerAutoEffects(state, slot, cardId, cardDef, broadcast, askChoice, { lane: "env" });
+		triggerAutoEffects(state, slot, cardId, cardDef, broadcast, askChoice, { lane: "env" }, summoned);
 		if (state.phase === "FINISHED") return;
 		game.seq += 1;
 		broadcast("card_played", { slot, lane: "env", cardId, cost, p1Fragments: game.p1.fragments, p2Fragments: game.p2.fragments, seq: game.seq });
@@ -2805,7 +2845,7 @@ export function playCard(state: MatchState, slot: Slot, cardId: string, targetPo
 		pg.hand.splice(idx, 1);
 		maybeCounterSpellOrTrick(
 			() => {
-				triggerAutoEffects(state, slot, cardId, cardDef, broadcast, askChoice, { lane: "support" });
+				triggerAutoEffects(state, slot, cardId, cardDef, broadcast, askChoice, { lane: "support" }, summoned);
 				if (String(cardDef?.effect || "") === "ajuda_do_povo") maybeTriggerValbrakFromCitizenSummon("Cidadãos Unidos");
 				finishSpellResolved();
 			},
@@ -2817,7 +2857,7 @@ export function playCard(state: MatchState, slot: Slot, cardId: string, targetPo
 	const targetLane = lane === "field" ? pg.field : pg.support;
 	const finalizeLanePlay = (finalPos: number): void => {
 		if (lane === "field") {
-			placeAllyOnField(state, slot, pg as any, cardId, finalPos, broadcast, askChoice);
+			placeAllyOnField(state, slot, pg as any, cardId, finalPos, broadcast, askChoice, summoned);
 		} else {
 			targetLane[finalPos] = cardId;
 		}
@@ -2826,7 +2866,7 @@ export function playCard(state: MatchState, slot: Slot, cardId: string, targetPo
 			(pg as any).supportCounters[finalPos] = 0;
 		}
 		if (lane === "field") summoned[slot].add(finalPos);
-		if (lane !== "field") triggerAutoEffects(state, slot, cardId, cardDef, broadcast, askChoice, { lane, pos: finalPos });
+		if (lane !== "field") triggerAutoEffects(state, slot, cardId, cardDef, broadcast, askChoice, { lane, pos: finalPos }, summoned);
 		if (state.phase === "FINISHED") return;
 
 		try {
@@ -2935,7 +2975,7 @@ export function playCard(state: MatchState, slot: Slot, cardId: string, targetPo
 				if (optionId === "equip-leader") pg.hp = Number(pg.hp || 0) + hpBonus;
 				else if (typeof pick.pos === "number") (pg as any).fieldHp[pick.pos] = Number((pg as any).fieldHp[pick.pos] || 0) + hpBonus;
 			}
-			triggerAutoEffects(state, slot, cardId, cardDef, broadcast, askChoice, { lane, pos: finalPos });
+			triggerAutoEffects(state, slot, cardId, cardDef, broadcast, askChoice, { lane, pos: finalPos }, summoned);
 			if (state.phase === "FINISHED") return;
 			game.seq += 1;
 			broadcast("card_played", { slot, lane, cardId, targetPos: finalPos, cost, p1Fragments: game.p1.fragments, p2Fragments: game.p2.fragments, seq: game.seq });
@@ -3185,6 +3225,7 @@ export function attack(
 			if (hasTauntTapped && !enemyTauntTapped[target.targetPos]) return;
 			if (!katsuWarrior && !isFieldTapped(enemy as any, target.targetPos)) return;
 		} else if (hasTauntTapped) {
+			return;
 		}
 
 		if (!hasTauntTapped && (finalTarget.type === "leader" || finalTarget.type === "ally")) {

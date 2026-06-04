@@ -1916,6 +1916,17 @@ body.lobbyBody::before{
   box-shadow:0 0 0 3px rgba(241, 209, 138, 0.10);
 }
 
+.lobbyBody #botDeck{
+  background:#ffffff;
+  color:#111111;
+  border-color:rgba(17, 17, 17, 0.18);
+}
+
+.lobbyBody #botDeck:focus{
+  border-color:rgba(17, 17, 17, 0.34);
+  box-shadow:0 0 0 3px rgba(255, 255, 255, 0.22);
+}
+
 .lobbyInfoTiles{
   display:grid;
   grid-template-columns:repeat(2, minmax(0, 1fr));
