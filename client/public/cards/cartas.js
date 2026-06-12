@@ -136,7 +136,7 @@ name: 'Tamanduá Guardião', kind: 'ally', img: '/allies/layout-tamanduaguardiao
   },
 
   {
-  name: 'Informante do Beco', kind: 'ally', img: '/allies/layout-informantebeco.ai.png', cost: 2, classe: 'Cidadão', tipo: 'Elfo', filiacao: 'Neutra', ac: 1, hp: 3, maxHp: 3, damage: 2, atkBonus: 2, keywords: [], effect: 'informante_beco',text: 'Quando este aliado for convocado, revele para ambos a carta do topo do deck do oponente. Depois, coloque-a de volta no topo.'
+  name: 'Informante do Beco', kind: 'ally', img: '/allies/layout-informantebeco.ai.png', cost: 2, classe: 'Cidadão', tipo: 'Elfo', filiacao: 'Neutra', ac: 1, hp: 3, maxHp: 3, damage: 2, atkBonus: 2, keywords: [], effect: 'informante_beco',text: 'Quando este aliado for convocado, revele a carta do topo do baralho de um oponente, depois volte a carta para o topo.'
   },
   {
     name: 'Gamboa, a Caçadora',
@@ -170,14 +170,14 @@ name: 'Tamanduá Guardião', kind: 'ally', img: '/allies/layout-tamanduaguardiao
   name: 'Xamã Kobold', kind: 'ally', img: '/allies/layout-xamakobold.ai.png', cost: 2, classe: 'Mago', tipo: 'Humanoide', filiacao: 'Sombras', ac: 0, hp: 2, maxHp: 2, damage: 1, atkBonus: 1, keywords: [], effect: 'xama_kobold', text: 'Quando este Aliado for convocado, você pode Deslocar 1 aliado com "Kobold" no nome, que estiver no seu cemitério. Se o fizer, compre 1 carta.'
   },
 {
-  name: 'Toupeira Escavadora', kind: 'ally', img: '/allies/layout-toupeiraescavadora.ai.png', cost: 1, classe: 'Criatura', tipo: 'Animal', filiacao: 'Neutra', ac: 0, hp: 3, maxHp: 3, damage: 1, atkBonus: 1, keywords: [], effect: 'olhar_topo', text: 'Quando este aliado for convocado, olhe a carta do topo do seu baralho, você deve colocá-la no topo ou no fundo do seu baralho.'
+    name: 'Toupeira Escavadora', kind: 'ally', img: '/allies/layout-toupeiraescavadora.ai.png', cost: 1, classe: 'Criatura', tipo: 'Animal', filiacao: 'Neutra', ac: 0, hp: 3, maxHp: 3, damage: 1, atkBonus: 1, keywords: [], effect: 'olhar_topo', text: 'Quando este aliado for convocado, olhe a carta do topo do seu baralho, você deve colocá-la no fundo ou voltá-la para o topo do seu baralho.'
 },
   {
     name: 'Porco-espinho Furioso', kind: 'ally', img: '/allies/layout-porcoespinhofurioso.ai.png', cost: 3, classe: 'Criatura', tipo: 'Animal', filiacao: 'Religioso', ac: 0, hp: 4, maxHp: 4, damage: 2, atkBonus: 2, keywords: [], effect: 'ally_heal_buff', text: 'Sempre que um personagem que você controla for curado, coloque 1 marcador "Elo Vital" neste aliado. Este aliado +1 de Ataque e +1 de Vida para cada marcador de Elo Vital nele.'
   },
   {
     name: 'Hiena Carniceira', kind: 'ally', img: '/allies/layout-hienacarniceira.ai.png', cost: 3, classe: 'Criatura', tipo: 'Animal', filiacao: 'Neutra', ac: 0, hp: 4, maxHp: 4, damage: 3, atkBonus: 3, keywords: [],
-    text: 'Quando este aliado for destruído em combate, convoque 1 Aliado custo 3 ou menos, que não seja "Hiena Carniceira", para o campo.',
+    text: 'Quando este aliado for destruído em combate, escolha 1 Aliado no seu cemitério com custo 3 ou menos, que não seja "Hiena Carniceira", convoque-o para o campo.',
     // Configuração para o mecanismo genérico de "chamar especial" usado por outras cartas
     chamarEspecial: { origem: ['grave'], maxCost: 3 }
   },
@@ -244,7 +244,7 @@ name: 'Tamanduá Guardião', kind: 'ally', img: '/allies/layout-tamanduaguardiao
     {
       name: 'Alerta de Fuga',
       kind: 'truque',
-      img: '/spell/layout-alertafuga.ai.png',
+      img: '/trick/layout-alertafuga.ai.png',
       cost: 2,
       classe: '',
       tipo: 'Truque',
@@ -334,7 +334,7 @@ name: 'Tamanduá Guardião', kind: 'ally', img: '/allies/layout-tamanduaguardiao
   name: 'Yohan, Ronin Vigilante', aliases: ['Yoran, Ronin Vigilante'], kind: 'ally', img: '/allies/layout-yohanronin.ai.png', cost: 2, classe: 'Guerreiro', tipo: 'Humano', filiacao: 'Marcial', ac: 0, hp: 3, maxHp: 3, damage: 2, atkBonus: 2, keywords: [], effect: 'kornex_buff_per_marcial_in_play', effectValue: 1, text: 'Este aliado recebe +1 de Ataque para cada outra carta "Marcial" no campo de qualquer jogador.'
   },
   {
-    name: 'Livro Arcano Instável', kind: 'equip', img: '/equip/layout-livroinstavel.ai.png', cost: 2, classe: '', tipo: 'Equipamento', filiacao: 'Arcana', effect: 'olhar_topo', atkBonus: 1, text: 'O aliado equipado recebe +1 de Ataque. Quando esta carta entrar em campo, olhe a carta do topo do seu deck. Você pode mantê-la no topo ou colocá-la no fundo do deck.'
+    name: 'Livro Arcano Instável', kind: 'equip', img: '/equip/layout-livroinstavel.ai.png', cost: 2, classe: '', tipo: 'Equipamento', filiacao: 'Arcana', effect: 'olhar_topo', atkBonus: 1, text: 'O personagem equipado recebe +1 de Ataque. Quando este equipamento entrar em campo, olhe a carta do topo do seu baralho. Coloque-a no fundo ou volte-a para o topo do seu baralho.'
   },
   // Exemplo: carta que exige pagar vida de um aliado em vez de fragmentos
   {

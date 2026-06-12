@@ -10,7 +10,7 @@
 
 	const CARD_BACK_IMAGE = "layout-background.ai.png";
 	const DECK_EDIT_DRAFT_KEY = "mytragor_deck_edit_draft";
-	const ASSET_CACHE_VERSION = "2026-05-17-2";
+	const ASSET_CACHE_VERSION = "2026-06-12-1";
 
 	function initFirebaseCompatLocal() {
 		try {

@@ -462,6 +462,27 @@ export class SoloMatchRoom extends Room<MatchState> {
 		return score;
 	}
 
+	private scoreDestroyEquipTarget(option: ChoiceOptionLike): number {
+		const side = String(option.side || "");
+		const cardId = String(option.cardId || option.label || "");
+		const def = findCardDef(cardId);
+		const pos = Number(option.pos ?? -1);
+		if (side !== "p1") return -5000 - Number(def?.cost || 0) * 10;
+
+		const enemy = this.state.game.p1 as any;
+		const attachedTo = pos >= 0 ? Number(enemy.supportAttachTo?.[pos] ?? -2) : -2;
+		let score = 120 + Number(def?.cost || 0) * 10;
+		if (attachedTo === -1) score += 18;
+		if (attachedTo >= 0) {
+			const carrierCardId = String(enemy.field?.[attachedTo] || "");
+			const carrierDef = findCardDef(carrierCardId);
+			score += this.getUnitAttack(carrierCardId) * 8;
+			if (this.cardHasKeyword(carrierDef, "provocar")) score += 26;
+			if (this.cardHasKeyword(carrierDef, "bloquear")) score += 18;
+		}
+		return score;
+	}
+
 	private scoreKoboldGraveTarget(cardId: string): number {
 		const def = findCardDef(cardId);
 		let score = this.scoreBotCard(cardId, def);
@@ -862,6 +883,19 @@ export class SoloMatchRoom extends Room<MatchState> {
 		return true;
 	}
 
+	private getForcedChallengeTargets(): number[] {
+		const enemy = this.state.game.p1 as any;
+		const forced: number[] = [];
+		for (let pos = 0; pos < enemy.field.length; pos += 1) {
+			const cardId = String(enemy.field[pos] || "");
+			if (!cardId) continue;
+			if (!enemy.fieldTapped?.[pos]) continue;
+			if (!this.cardHasKeyword(findCardDef(cardId), "provocar")) continue;
+			forced.push(pos);
+		}
+		return forced;
+	}
+
 	private scoreOffensiveBuffTarget(cardId: string, pos: number): number {
 		const def = findCardDef(cardId);
 		const name = this.normalizeText(def?.name || cardId);
@@ -1095,6 +1129,10 @@ export class SoloMatchRoom extends Room<MatchState> {
 			});
 			return bestBlock || options[0]?.id || null;
 		}
+		if (title.includes("escolha equipamento para destruir")) {
+			const bestEquipDestroy = this.pickBestOption(options, (option) => this.scoreDestroyEquipTarget(option));
+			return bestEquipDestroy || options[0]?.id || null;
+		}
 		if (title.includes("equipar")) {
 			const prefersDefense = Number((sourceDef as any)?.acBonus || (sourceDef as any)?.hpBonus || 0) > Number((sourceDef as any)?.atkBonus || 0);
 			const bestEquipTarget = this.pickBestOption(options, (option) => {
@@ -1308,13 +1346,11 @@ export class SoloMatchRoom extends Room<MatchState> {
 		if (effect === "destroy_env") return !!String(enemy.env || "");
 		if (effect === "destroy_enemy_ally") return enemy.field.some((cid: string) => !!cid);
 		if (effect === "destroy_equip") {
-			for (const player of [this.state.game.p1 as any, this.state.game.p2 as any]) {
-				for (const supportId of player.support as string[]) {
-					if (!supportId) continue;
-					const supportDef = findCardDef(String(supportId || ""));
-					const kind = this.normalizeText(supportDef?.kind || supportDef?.tipo);
-					if (kind === "equip" || kind === "equipamento") return true;
-				}
+			for (const supportId of enemy.support as string[]) {
+				if (!supportId) continue;
+				const supportDef = findCardDef(String(supportId || ""));
+				const kind = this.normalizeText(supportDef?.kind || supportDef?.tipo);
+				if (kind === "equip" || kind === "equipamento") return true;
 			}
 			return false;
 		}
@@ -1349,10 +1385,12 @@ export class SoloMatchRoom extends Room<MatchState> {
 
 	private pickBotAttackTarget(attackerPos: number): AttackTarget {
 		const enemy = this.state.game.p1 as any;
-		const targets: AttackTarget[] = [{ type: "leader" }];
+		const forcedChallengeTargets = this.getForcedChallengeTargets();
+		const targets: AttackTarget[] = forcedChallengeTargets.length ? [] : [{ type: "leader" }];
 		for (let pos = 0; pos < enemy.field.length; pos += 1) {
 			const cardId = String(enemy.field[pos] || "");
 			if (!cardId) continue;
+			if (forcedChallengeTargets.length && !forcedChallengeTargets.includes(pos)) continue;
 			targets.push({ type: "ally", targetPos: pos });
 		}
 		targets.sort((left, right) => this.scoreAttackTarget(attackerPos, right) - this.scoreAttackTarget(attackerPos, left));
@@ -1369,6 +1407,16 @@ export class SoloMatchRoom extends Room<MatchState> {
 		if (Number(this.state.game.seq || 0) !== leaderSeq) actions += 1;
 
 		while (actions < 4 && this.state.game.phase === "PREP" && this.pendingChoices.size === 0 && !this.activeChoiceSessionId) {
+			const beforeLeaderSeq = Number(this.state.game.seq || 0);
+			if (this.shouldUseBotLeaderPower()) {
+				activateLeaderPower(this.state, "p2", (name, payload) => this.broadcastMatchEvent(name, payload), this.askChoice);
+			}
+			if (this.state.phase === "FINISHED" || this.pendingChoices.size > 0 || this.activeChoiceSessionId) return;
+			if (Number(this.state.game.seq || 0) !== beforeLeaderSeq) {
+				actions += 1;
+				continue;
+			}
+
 			const nextCard = this.pickPlayableBotCards()[0];
 			if (!nextCard) break;
 			const beforeSeq = Number(this.state.game.seq || 0);
