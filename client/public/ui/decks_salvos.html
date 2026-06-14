@@ -887,7 +887,8 @@ function renderDeckDetail(deck) {
 					leaderKey: deck.leaderKey || '',
 					leaderImg: deck.leaderImg || null,
 					cards: deck.cards || [],
-					fragImg: deck.fragImg || null
+					fragImg: deck.fragImg || null,
+					accessories: deck.accessories || null
 				}));
 			} catch (e) {}
 			window.location.href = openLobbyWithDeck(playDeckId);

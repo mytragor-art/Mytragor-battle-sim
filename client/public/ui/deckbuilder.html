@@ -241,6 +241,20 @@
       filter: brightness(1.03);
     }
 
+    #btnAccessories {
+      background: linear-gradient(180deg, #fecaca 0%, #f87171 100%);
+      color: #3b0a0a;
+      border-color: rgba(248,113,113,.58);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.58), 0 10px 22px rgba(239,68,68,.18);
+      text-shadow: 0 1px 0 rgba(255,255,255,.24);
+      font-weight: 800;
+    }
+
+    #btnAccessories:hover {
+      filter: brightness(1.04);
+      transform: translateY(-1px);
+    }
+
     .preview-card {
       border: 1px solid rgba(250,204,21,.1);
       border-radius: 10px;
@@ -963,6 +977,190 @@
       margin: 0 auto 4px;
     }
 
+    .accessory-modal-section {
+      display: grid;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .accessory-hub-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .accessory-hub-btn {
+      border: 1px solid rgba(255,255,255,.12);
+      background: linear-gradient(180deg, rgba(18,32,54,.92), rgba(9,18,32,.92));
+      color: var(--txt);
+      border-radius: 12px;
+      padding: 12px;
+      text-align: left;
+      display: grid;
+      gap: 6px;
+      cursor: pointer;
+      transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
+    }
+
+    .accessory-hub-btn:hover {
+      transform: translateY(-1px);
+      border-color: rgba(250,204,21,.22);
+      box-shadow: 0 10px 20px rgba(2,6,23,.24);
+    }
+
+    .accessory-hub-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--gold-a);
+    }
+
+    .accessory-hub-value {
+      font-size: 12px;
+      color: #e6eef8;
+    }
+
+    .accessory-hub-desc {
+      font-size: 11px;
+      color: #9fb0cc;
+      line-height: 1.45;
+    }
+
+    .accessory-modal-head {
+      display: grid;
+      gap: 4px;
+    }
+
+    .accessory-modal-head h4 {
+      margin: 0;
+      color: var(--gold-a);
+      font-size: 14px;
+    }
+
+    .accessory-modal-head p {
+      margin: 0;
+      color: #cbd5e1;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .accessory-option-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min-content, max-content));
+      justify-content: flex-start;
+      gap: 8px;
+    }
+
+    .accessory-option {
+      position: relative;
+      display: block;
+      width: fit-content;
+      max-width: 100%;
+      justify-self: start;
+      cursor: pointer;
+    }
+
+    .accessory-option input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .accessory-option-card {
+      min-height: 96px;
+      width: fit-content;
+      max-width: min(100%, 320px);
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: linear-gradient(180deg, rgba(16,32,57,.68), rgba(8,18,32,.68));
+      padding: 10px;
+      display: grid;
+      gap: 6px;
+      transition: border-color .16s ease, transform .16s ease, box-shadow .16s ease, background .16s ease;
+    }
+
+    .accessory-option-card.has-thumb {
+      grid-template-columns: 72px minmax(0, 1fr);
+      grid-template-areas:
+        'thumb title'
+        'thumb desc';
+      align-items: center;
+      column-gap: 10px;
+    }
+
+    .accessory-option-card.has-thumb.is-playmat {
+      grid-template-columns: 132px minmax(0, 1fr);
+      max-width: min(100%, 360px);
+    }
+
+    .accessory-option:hover .accessory-option-card {
+      transform: translateY(-1px);
+      border-color: rgba(250,204,21,.24);
+      box-shadow: 0 8px 18px rgba(2,6,23,.28);
+    }
+
+    .accessory-option input:checked + .accessory-option-card {
+      border-color: rgba(250,204,21,.52);
+      box-shadow: 0 0 0 1px rgba(250,204,21,.22) inset, 0 10px 20px rgba(245,158,11,.16);
+      background: linear-gradient(180deg, rgba(37,53,81,.84), rgba(12,22,38,.82));
+    }
+
+    .accessory-option-title {
+      grid-area: title;
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--txt);
+    }
+
+    .accessory-option-thumb {
+      grid-area: thumb;
+      width: 72px;
+      height: 100px;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,.1);
+      background: rgba(255,255,255,.03);
+      box-shadow: 0 8px 18px rgba(0,0,0,.24);
+      justify-self: start;
+    }
+
+    .accessory-option-thumb.is-playmat {
+      width: 132px;
+      height: 74px;
+      border-radius: 10px;
+      object-fit: cover;
+    }
+
+    .accessory-option-desc {
+      grid-area: desc;
+      font-size: 11px;
+      line-height: 1.4;
+      color: #cbd5e1;
+    }
+
+    .accessory-breadcrumb {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    .accessory-breadcrumb-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: #e6eef8;
+    }
+
+    .accessory-modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+
     #btnBackMenu {
       position: fixed;
       right: 14px;
@@ -1005,6 +1203,7 @@
             <input id="deckNameInput" type="text" placeholder="Nome do baralho">
             <button id="btnSalvar" class="btn" disabled>Salvar</button>
             <button id="btnPlay" class="btn" disabled>Jogar</button>
+            <button id="btnAccessories" class="btn ghost" type="button">Acessórios</button>
             <button id="btnLimpar" class="btn ghost">Limpar</button>
             <button id="btnVerDecks" class="btn ghost">Ver baralhos</button>
           </div>
@@ -1116,6 +1315,7 @@
     const deckSize = document.getElementById('deckSize');
     const btnSalvar = document.getElementById('btnSalvar');
     const btnPlay = document.getElementById('btnPlay');
+    const btnAccessories = document.getElementById('btnAccessories');
     const btnLimpar = document.getElementById('btnLimpar');
     const btnVerDecks = document.getElementById('btnVerDecks');
     const deckNameInput = document.getElementById('deckNameInput');
@@ -1145,7 +1345,35 @@
     const presetDeckSelect = document.getElementById('presetDeckSelect');
     const btnApplyPresetDeck = document.getElementById('btnApplyPresetDeck');
     const DECK_EDIT_DRAFT_KEY = 'mytragor_deck_edit_draft';
+    const ACCESSORY_PREFS_KEY = 'mytragor_accessory_prefs';
     const PRESET_DECKS = Array.isArray(window.MytragorPresetDeckCatalog) ? window.MytragorPresetDeckCatalog : [];
+    const ACCESSORY_GROUPS = [
+      {
+        key: 'playmat',
+        title: 'Playmats',
+        description: 'Escolha a superfície visual usada na mesa durante a partida.',
+        options: [
+          { value: 'no-playmat', label: 'Sem playmat', description: '' },
+          { value: 'mytragor-classic', label: 'Mytragor Clássico', description: 'Usa o playmat padrão dourado do simulador.', thumb: 'publicadas/assets/playmat/playmat-base.thumb.webp' },
+          { value: 'playmat-executor', label: 'Playmat Executor', description: 'Usa o playmat Executor.', thumb: 'publicadas/assets/acessorios/playmat/playmat executor.thumb.webp' },
+          { value: 'playmat-leao-rei-sagrado', label: 'Playmat Leao Rei Sagrado', description: 'Usa o playmat Leao Rei Sagrado.', thumb: 'publicadas/assets/acessorios/playmat/playmat leão rei sagrado.thumb.webp' },
+          { value: 'playmat-livro-arcano', label: 'Playmat Livro Arcano', description: 'Usa o playmat Livro Arcano.', thumb: 'publicadas/assets/acessorios/playmat/playmat livro arcano.thumb.webp' },
+          { value: 'playmat-sede-de-vinganca', label: 'Playmat Sede de Vinganca', description: 'Usa o playmat Sede de Vinganca.', thumb: 'publicadas/assets/acessorios/playmat/playmat sede de vingança.thumb.webp' }
+        ]
+      },
+      {
+        key: 'sleeve',
+        title: 'Sleeves',
+        description: 'Defina o estilo geral das costas e molduras das cartas.',
+        options: [
+          { value: 'no-sleeve', label: 'Sem sleeve extra', description: 'Mantém apenas a arte base das cartas.', thumb: 'publicadas/ui/layout-background.ai.thumb.webp' },
+          { value: 'sleeve-arcano', label: 'Sleeve Arcano', description: '', thumb: 'publicadas/assets/acessorios/sleeve/sleeve Arcano.thumb.webp' },
+          { value: 'sleeve-marcial', label: 'Sleeve Marcial', description: '', thumb: 'publicadas/assets/acessorios/sleeve/sleeve Marcial.thumb.webp' },
+          { value: 'sleeve-religioso', label: 'Sleeve Religioso', description: '', thumb: 'publicadas/assets/acessorios/sleeve/sleeve religioso.thumb.webp' },
+          { value: 'sleeve-sombras', label: 'Sleeve Sombras', description: '', thumb: 'publicadas/assets/acessorios/sleeve/sleeve sombras.thumb.webp' }
+        ]
+      }
+    ];
 
     const FRAG_OPTIONS = [
       { label: 'Arcano', img: '../fragments/layout-fragmento_arcano.png' },
@@ -1193,6 +1421,7 @@
     let chosenLeader = null;
     let chosenFragImg = null;
     let editSession = null;
+    let accessoryPrefs = readAccessoryPrefs();
 
     const filterState = {
       query: '',
@@ -1276,6 +1505,186 @@
         .replace(/[\u0300-\u036f]/g, '')
         .toLowerCase()
         .trim();
+    }
+
+    function getDefaultAccessoryPrefs() {
+      return {
+        playmat: 'mytragor-classic',
+        sleeve: 'no-sleeve'
+      };
+    }
+
+    function normalizeAccessoryPrefs(raw) {
+      const defaults = getDefaultAccessoryPrefs();
+      const source = raw && typeof raw === 'object' ? raw : {};
+      const normalized = { ...defaults };
+      ACCESSORY_GROUPS.forEach((group) => {
+        const allowedValues = new Set(group.options.map((option) => option.value));
+        const candidate = String(source[group.key] || defaults[group.key] || '').trim();
+        normalized[group.key] = allowedValues.has(candidate) ? candidate : defaults[group.key];
+      });
+      return normalized;
+    }
+
+    function readAccessoryPrefs() {
+      try {
+        const raw = localStorage.getItem(ACCESSORY_PREFS_KEY);
+        if (!raw) return getDefaultAccessoryPrefs();
+        return normalizeAccessoryPrefs(JSON.parse(raw));
+      } catch {
+        return getDefaultAccessoryPrefs();
+      }
+    }
+
+    function saveAccessoryPrefs(prefs) {
+      accessoryPrefs = normalizeAccessoryPrefs(prefs);
+      localStorage.setItem(ACCESSORY_PREFS_KEY, JSON.stringify(accessoryPrefs));
+      refreshAccessoriesButton();
+    }
+
+    function getAccessoryOption(groupKey, optionValue) {
+      const group = ACCESSORY_GROUPS.find((item) => item.key === groupKey);
+      if (!group) return null;
+      return group.options.find((option) => option.value === optionValue) || null;
+    }
+
+    function buildAccessorySummary(prefs) {
+      const current = normalizeAccessoryPrefs(prefs);
+      return ACCESSORY_GROUPS.map((group) => {
+        const option = getAccessoryOption(group.key, current[group.key]);
+        return `${group.title}: ${option ? option.label : current[group.key]}`;
+      }).join(' • ');
+    }
+
+    function refreshAccessoriesButton() {
+      if (!btnAccessories) return;
+      const summary = buildAccessorySummary(accessoryPrefs);
+      btnAccessories.title = summary;
+      btnAccessories.setAttribute('aria-label', `Acessórios. ${summary}`);
+    }
+
+    function showAccessoriesModal() {
+      const draft = normalizeAccessoryPrefs(accessoryPrefs);
+      const overlay = document.createElement('div');
+      overlay.className = 'modalOverlay';
+
+      const box = document.createElement('div');
+      box.className = 'modalBox';
+      box.style.width = 'min(820px, 94vw)';
+      let activeGroupKey = null;
+
+      function close() {
+        document.removeEventListener('keydown', onKeyDown);
+        if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+      }
+
+      function onKeyDown(event) {
+        if (event.key === 'Escape') close();
+      }
+
+      overlay.addEventListener('click', (event) => {
+        if (event.target === overlay) close();
+      });
+
+      function saveAndClose() {
+        saveAccessoryPrefs(draft);
+        close();
+      }
+
+      function renderHub() {
+        activeGroupKey = null;
+        const buttonsMarkup = ACCESSORY_GROUPS.map((group) => {
+          const option = getAccessoryOption(group.key, draft[group.key]);
+          return `
+            <button type="button" class="accessory-hub-btn" data-open-group="${group.key}">
+              <span class="accessory-hub-title">${group.title}</span>
+              <span class="accessory-hub-value">${option ? option.label : 'Sem seleção'}</span>
+              <span class="accessory-hub-desc">${group.description}</span>
+            </button>
+          `;
+        }).join('');
+
+        box.innerHTML = `
+          <h3 style="margin:0 0 8px;color:var(--gold-a);">Acessórios da mesa</h3>
+          <p style="margin:0;color:#cbd5e1;line-height:1.5;">Escolha uma categoria para configurar seus acessórios visuais. As preferências ficam salvas neste navegador.</p>
+          <div class="accessory-hub-grid">${buttonsMarkup}</div>
+          <div class="accessory-modal-actions">
+            <button type="button" class="btn ghost" id="accessoryResetBtn">Restaurar padrão</button>
+            <button type="button" class="btn ghost" id="accessoryCancelBtn">Cancelar</button>
+            <button type="button" class="btn" id="accessorySaveBtn">Salvar acessórios</button>
+          </div>
+        `;
+
+        box.querySelectorAll('[data-open-group]').forEach((button) => {
+          button.addEventListener('click', () => renderGroup(String(button.getAttribute('data-open-group') || '')));
+        });
+        box.querySelector('#accessoryResetBtn').onclick = () => {
+          Object.assign(draft, getDefaultAccessoryPrefs());
+          renderHub();
+        };
+        box.querySelector('#accessoryCancelBtn').onclick = close;
+        box.querySelector('#accessorySaveBtn').onclick = saveAndClose;
+      }
+
+      function renderGroup(groupKey) {
+        const group = ACCESSORY_GROUPS.find((item) => item.key === groupKey);
+        if (!group) {
+          renderHub();
+          return;
+        }
+        activeGroupKey = groupKey;
+        const optionsMarkup = group.options.map((option, index) => `
+          <label class="accessory-option">
+            <input type="radio" name="accessory-${group.key}" value="${option.value}" ${draft[group.key] === option.value ? 'checked' : ''} ${index === 0 && !draft[group.key] ? 'checked' : ''}>
+            <span class="accessory-option-card${option.thumb ? ' has-thumb' : ''}${group.key === 'playmat' ? ' is-playmat' : ''}">
+              ${option.thumb ? `<img class="accessory-option-thumb${group.key === 'playmat' ? ' is-playmat' : ''}" src="${resolveImg(option.thumb)}" alt="${option.label}">` : ''}
+              <span class="accessory-option-title">${option.label}</span>
+              <span class="accessory-option-desc">${option.description}</span>
+            </span>
+          </label>
+        `).join('');
+
+        box.innerHTML = `
+          <h3 style="margin:0 0 8px;color:var(--gold-a);">Acessórios da mesa</h3>
+          <p style="margin:0;color:#cbd5e1;line-height:1.5;">Escolha a opção que deseja usar nesta categoria.</p>
+          <div class="accessory-breadcrumb">
+            <div class="accessory-breadcrumb-title">${group.title}</div>
+            <button type="button" class="btn ghost" id="accessoryBackBtn">Voltar para categorias</button>
+          </div>
+          <section class="accessory-modal-section" data-accessory-group="${group.key}">
+            <div class="accessory-modal-head">
+              <h4>${group.title}</h4>
+              <p>${group.description}</p>
+            </div>
+            <div class="accessory-option-grid">${optionsMarkup}</div>
+          </section>
+          <div class="accessory-modal-actions">
+            <button type="button" class="btn ghost" id="accessoryResetBtn">Restaurar padrão</button>
+            <button type="button" class="btn ghost" id="accessoryCancelBtn">Cancelar</button>
+            <button type="button" class="btn" id="accessorySaveBtn">Salvar acessórios</button>
+          </div>
+        `;
+
+        box.querySelectorAll(`input[name="accessory-${group.key}"]`).forEach((input) => {
+          input.addEventListener('change', () => {
+            draft[group.key] = input.value;
+          });
+        });
+        box.querySelector('#accessoryBackBtn').onclick = renderHub;
+        box.querySelector('#accessoryResetBtn').onclick = () => {
+          const defaults = getDefaultAccessoryPrefs();
+          draft[group.key] = defaults[group.key];
+          renderGroup(group.key);
+        };
+        box.querySelector('#accessoryCancelBtn').onclick = close;
+        box.querySelector('#accessorySaveBtn').onclick = saveAndClose;
+      }
+
+      renderHub();
+
+      overlay.appendChild(box);
+      document.body.appendChild(overlay);
+      document.addEventListener('keydown', onKeyDown);
     }
 
     function syncPreviewCollapse() {
@@ -1622,6 +2031,7 @@
       deck = [];
       chosenLeader = null;
       chosenFragImg = data && data.fragImg ? data.fragImg : null;
+      saveAccessoryPrefs(data && data.accessories ? data.accessories : getDefaultAccessoryPrefs());
 
       const leaderName = String(data && (data.leaderName || data.leader) || '').trim();
       if (leaderName) {
@@ -1654,6 +2064,7 @@
         leaderImg: chosenLeader.img,
         cards: deck.map(c => c.name),
         fragImg: chosenFragImg || null,
+        accessories: normalizeAccessoryPrefs(accessoryPrefs),
         tags: Array.isArray(existingDeck && existingDeck.tags) ? existingDeck.tags : []
       };
     }
@@ -1755,6 +2166,10 @@
       alert(`Baralho salvo: ${payload.deckName || chosenLeader.name}`);
     };
 
+    btnAccessories.onclick = function () {
+      showAccessoriesModal();
+    };
+
     btnPlay.onclick = function () {
       if (!chosenLeader || deck.length !== 40) {
         alert('Selecione um líder e complete 40 cartas antes de testar.');
@@ -1770,7 +2185,8 @@
         leaderKey: chosenLeader.key || '',
         leaderImg: chosenLeader.img,
         cards: deck.map(c => c.name),
-        fragImg: chosenFragImg || null
+        fragImg: chosenFragImg || null,
+        accessories: normalizeAccessoryPrefs(accessoryPrefs)
       };
       localStorage.setItem('mytragor_play_deck', JSON.stringify(payload));
       window.location.href = openLobbyWithDeck(deckId);
@@ -1877,6 +2293,7 @@
     });
 
     populatePresetDecks();
+    refreshAccessoriesButton();
 
     editSession = readEditDraft();
     if (editSession && editSession.deck) {

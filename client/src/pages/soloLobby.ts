@@ -31,7 +31,8 @@ function applySelectedBotDeck(deck: SavedDeck | null) {
 		room.send("choose_bot_deck", {
 			deckId: selectedBotDeck.id,
 			leaderId: selectedBotDeck.leaderName,
-			cards: selectedBotDeck.cards
+			cards: selectedBotDeck.cards,
+			accessories: selectedBotDeck.accessories || {}
 		});
 	}
 }
@@ -46,7 +47,8 @@ function applySelectedDeck(deck: SavedDeck | null) {
 		room.send("choose_deck", {
 			deckId: selectedDeck.id,
 			leaderId: selectedDeck.leaderName,
-			cards: selectedDeck.cards
+			cards: selectedDeck.cards,
+			accessories: selectedDeck.accessories || {}
 		});
 	}
 }
@@ -345,11 +347,11 @@ if (view.btnReady) {
 			return;
 		}
 		if (nextReady && selectedDeck) {
-			room?.send("choose_deck", { deckId: selectedDeck.id, leaderId: selectedDeck.leaderName, cards: selectedDeck.cards });
+			room?.send("choose_deck", { deckId: selectedDeck.id, leaderId: selectedDeck.leaderName, cards: selectedDeck.cards, accessories: selectedDeck.accessories || {} });
 			room?.send("choose_leader", { leaderId: selectedDeck.leaderName });
 		}
 		if (nextReady && selectedBotDeck) {
-			room?.send("choose_bot_deck", { deckId: selectedBotDeck.id, leaderId: selectedBotDeck.leaderName, cards: selectedBotDeck.cards });
+			room?.send("choose_bot_deck", { deckId: selectedBotDeck.id, leaderId: selectedBotDeck.leaderName, cards: selectedBotDeck.cards, accessories: selectedBotDeck.accessories || {} });
 		}
 		room?.send("ready", { ready: nextReady });
 		log("READY_SENT", { ready: nextReady, mode: "solo" });

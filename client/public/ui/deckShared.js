@@ -88,6 +88,12 @@
 		}) || null;
 		const deckName = String(source.deckName || source.leader || source.leaderName || `Baralho ${index + 1}`);
 		const leaderName = String((leaderDef && leaderDef.name) || source.leader || source.leaderName || "Desconhecido");
+		const accessories = source.accessories && typeof source.accessories === "object"
+			? {
+				playmat: String(source.accessories.playmat || "").trim(),
+				sleeve: String(source.accessories.sleeve || "").trim(),
+			}
+			: null;
 		return {
 			...source,
 			deckName,
@@ -97,7 +103,8 @@
 			leaderImg: source.leaderImg ? String(source.leaderImg) : "",
 			fragImg: source.fragImg ? String(source.fragImg) : "",
 			tags: Array.isArray(source.tags) ? source.tags.map((tag) => String(tag)) : [],
-			cards
+			cards,
+			accessories
 		};
 	}
 

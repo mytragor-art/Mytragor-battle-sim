@@ -32,7 +32,8 @@ function applySelectedDeck(deck: SavedDeck | null) {
 		room.send("choose_deck", {
 			deckId: selectedDeck.id,
 			leaderId: selectedDeck.leaderName,
-			cards: selectedDeck.cards
+			cards: selectedDeck.cards,
+			accessories: selectedDeck.accessories || {}
 		});
 	}
 }
@@ -284,7 +285,7 @@ if (view.btnReady) {
 			return;
 		}
 		if (nextReady && selectedDeck) {
-			room?.send("choose_deck", { deckId: selectedDeck.id, leaderId: selectedDeck.leaderName, cards: selectedDeck.cards });
+			room?.send("choose_deck", { deckId: selectedDeck.id, leaderId: selectedDeck.leaderName, cards: selectedDeck.cards, accessories: selectedDeck.accessories || {} });
 			room?.send("choose_leader", { leaderId: selectedDeck.leaderName });
 		}
 		room?.send("ready", { ready: nextReady });

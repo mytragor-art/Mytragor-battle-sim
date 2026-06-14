@@ -6,7 +6,7 @@ import { LobbyState, LobbyPlayer, type Slot } from "./schema/LobbyState";
 
 export class LobbyRoom extends Room<LobbyState> {
 	maxClients = 2;
-	private selectedDeckBySession = new Map<string, { deckId: string; leaderId: string; cards: string[] }>();
+	private selectedDeckBySession = new Map<string, { deckId: string; leaderId: string; cards: string[]; accessories?: { sleeve?: string; playmat?: string } }>();
 
 	private sanitizeDisplayName(name: unknown): string {
 		return String(name || "").trim().slice(0, 18);
@@ -20,7 +20,7 @@ export class LobbyRoom extends Room<LobbyState> {
 			leaderId: String(options?.leaderId || "")
 		});
 
-		this.onMessage("choose_deck", (client, msg: { deckId?: string; leaderId?: string; cards?: string[] }) => {
+		this.onMessage("choose_deck", (client, msg: { deckId?: string; leaderId?: string; cards?: string[]; accessories?: { sleeve?: string; playmat?: string } }) => {
 			const p = this.state.players.get(client.sessionId);
 			if (!p || this.state.phase !== "LOBBY") return;
 			p.deckId = String(msg?.deckId || "");
@@ -30,7 +30,11 @@ export class LobbyRoom extends Room<LobbyState> {
 			this.selectedDeckBySession.set(client.sessionId, {
 				deckId: p.deckId,
 				leaderId: p.leaderId,
-				cards
+				cards,
+				accessories: msg?.accessories ? {
+					sleeve: String(msg.accessories.sleeve || "").trim() || undefined,
+					playmat: String(msg.accessories.playmat || "").trim() || undefined
+				} : undefined
 			});
 
 			p.ready = false;
@@ -169,12 +173,14 @@ export class LobbyRoom extends Room<LobbyState> {
 			p1: {
 				deckId: p1.deckId,
 				leaderId: p1.leaderId,
-				cards: p1Deck?.cards || []
+				cards: p1Deck?.cards || [],
+				accessories: p1Deck?.accessories || {}
 			},
 			p2: {
 				deckId: p2.deckId,
 				leaderId: p2.leaderId,
-				cards: p2Deck?.cards || []
+				cards: p2Deck?.cards || [],
+				accessories: p2Deck?.accessories || {}
 			},
 			starterSlot,
 			seatReservations

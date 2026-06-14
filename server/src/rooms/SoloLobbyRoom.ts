@@ -17,8 +17,8 @@ function randomItem<T>(items: T[]): T {
 
 export class SoloLobbyRoom extends Room<LobbyState> {
 	maxClients = 1;
-	private selectedDeckBySession = new Map<string, { deckId: string; leaderId: string; cards: string[] }>();
-	private botDeckSelection: { deckId: string; leaderId: string; cards: string[] } | null = null;
+	private selectedDeckBySession = new Map<string, { deckId: string; leaderId: string; cards: string[]; accessories?: { sleeve?: string; playmat?: string } }>();
+	private botDeckSelection: { deckId: string; leaderId: string; cards: string[]; accessories?: { sleeve?: string; playmat?: string } } | null = null;
 	private readonly botPlayerKey = "solo-bot";
 
 	private sanitizeDisplayName(name: unknown): string {
@@ -34,7 +34,7 @@ export class SoloLobbyRoom extends Room<LobbyState> {
 			botName: "IA"
 		});
 
-		this.onMessage("choose_deck", (client, msg: { deckId?: string; leaderId?: string; cards?: string[] }) => {
+		this.onMessage("choose_deck", (client, msg: { deckId?: string; leaderId?: string; cards?: string[]; accessories?: { sleeve?: string; playmat?: string } }) => {
 			const player = this.state.players.get(client.sessionId);
 			if (!player || this.state.phase !== "LOBBY") return;
 			player.deckId = String(msg?.deckId || "");
@@ -44,7 +44,11 @@ export class SoloLobbyRoom extends Room<LobbyState> {
 			this.selectedDeckBySession.set(client.sessionId, {
 				deckId: player.deckId,
 				leaderId: player.leaderId,
-				cards
+				cards,
+				accessories: msg?.accessories ? {
+					sleeve: String(msg.accessories.sleeve || "").trim() || undefined,
+					playmat: String(msg.accessories.playmat || "").trim() || undefined
+				} : undefined
 			});
 
 			player.ready = false;
@@ -73,7 +77,7 @@ export class SoloLobbyRoom extends Room<LobbyState> {
 			void this.tryStartMatch();
 		});
 
-		this.onMessage("choose_bot_deck", (_client, msg: { deckId?: string; leaderId?: string; cards?: string[] }) => {
+		this.onMessage("choose_bot_deck", (_client, msg: { deckId?: string; leaderId?: string; cards?: string[]; accessories?: { sleeve?: string; playmat?: string } }) => {
 			const bot = this.getBotPlayer();
 			if (!bot || this.state.phase !== "LOBBY") return;
 			bot.deckId = String(msg?.deckId || "");
@@ -84,7 +88,11 @@ export class SoloLobbyRoom extends Room<LobbyState> {
 			this.botDeckSelection = bot.ready ? {
 				deckId: bot.deckId,
 				leaderId: bot.leaderId,
-				cards
+				cards,
+				accessories: msg?.accessories ? {
+					sleeve: String(msg.accessories.sleeve || "").trim() || undefined,
+					playmat: String(msg.accessories.playmat || "").trim() || undefined
+				} : undefined
 			} : null;
 
 			const human = this.getHumanPlayer();
@@ -201,12 +209,14 @@ export class SoloLobbyRoom extends Room<LobbyState> {
 			p1: {
 				deckId: human.deckId,
 				leaderId: human.leaderId,
-				cards: p1Deck?.cards || []
+				cards: p1Deck?.cards || [],
+				accessories: p1Deck?.accessories || {}
 			},
 			p2: {
 				deckId: p2Deck.deckId,
 				leaderId: p2Deck.leaderId,
-				cards: p2Deck.cards
+				cards: p2Deck.cards,
+				accessories: p2Deck.accessories || {}
 			},
 			starterSlot,
 			seatReservation,
@@ -214,7 +224,8 @@ export class SoloLobbyRoom extends Room<LobbyState> {
 				displayName: botName,
 				leaderId: p2Deck.leaderId,
 				deckId: p2Deck.deckId,
-				cards: p2Deck.cards
+				cards: p2Deck.cards,
+				accessories: p2Deck.accessories || {}
 			}
 		});
 

@@ -44,6 +44,10 @@ type SoloBotConfig = {
 	leaderId: string;
 	deckId: string;
 	cards?: string[];
+	accessories?: {
+		sleeve?: string;
+		playmat?: string;
+	};
 };
 
 export class SoloMatchRoom extends Room<MatchState> {
@@ -1532,7 +1536,11 @@ export class SoloMatchRoom extends Room<MatchState> {
 			displayName: this.sanitizeDisplayName(options?.bot?.displayName || "IA"),
 			leaderId: String(options?.bot?.leaderId || options?.p2?.leaderId || "Valbrak, O Mago Popular"),
 			deckId: String(options?.bot?.deckId || "solo-bot-default"),
-			cards: Array.isArray(options?.bot?.cards) ? options.bot.cards.map((card: unknown) => String(card)).filter(Boolean) : []
+			cards: Array.isArray(options?.bot?.cards) ? options.bot.cards.map((card: unknown) => String(card)).filter(Boolean) : [],
+			accessories: options?.bot?.accessories ? {
+				sleeve: String(options.bot.accessories.sleeve || "").trim() || undefined,
+				playmat: String(options.bot.accessories.playmat || "").trim() || undefined
+			} : undefined
 		};
 
 		this.setMetadata({
@@ -1551,7 +1559,8 @@ export class SoloMatchRoom extends Room<MatchState> {
 			{
 				deckId: this.bot.deckId,
 				leaderId: this.bot.leaderId,
-				cards: this.bot.cards || []
+				cards: this.bot.cards || [],
+				accessories: this.bot.accessories || {}
 			},
 			(name, payload) => this.broadcastMatchEvent(name, payload),
 			this.attackedThisTurn,

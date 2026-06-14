@@ -9,6 +9,10 @@ export type SavedDeck = {
 	fragImg?: string;
 	tags?: string[];
 	remoteId?: string;
+	accessories?: {
+		playmat?: string;
+		sleeve?: string;
+	};
 	cards: string[];
 };
 
@@ -45,6 +49,10 @@ function normalizeSavedDeck(input: unknown, index: number): SavedDeck {
 		fragImg: String(deck.fragImg || "").trim(),
 		tags: Array.isArray(deck.tags) ? deck.tags.map((tag) => String(tag)) : [],
 		remoteId: remoteId || undefined,
+		accessories: deck.accessories && typeof deck.accessories === "object" ? {
+			playmat: String((deck.accessories as Record<string, unknown>).playmat || "").trim() || undefined,
+			sleeve: String((deck.accessories as Record<string, unknown>).sleeve || "").trim() || undefined
+		} : undefined,
 		cards
 	};
 }
@@ -78,6 +86,10 @@ function readPlayDeck(): SavedDeck[] {
 		leaderKey: String(deck?.leaderKey || "").trim(),
 		leaderImg: String(deck?.leaderImg || "").trim(),
 		fragImg: String(deck?.fragImg || "").trim(),
+		accessories: deck?.accessories && typeof deck.accessories === "object" ? {
+			playmat: String((deck.accessories as Record<string, unknown>).playmat || "").trim() || undefined,
+			sleeve: String((deck.accessories as Record<string, unknown>).sleeve || "").trim() || undefined
+		} : undefined,
 		cards
 	}];
 }
@@ -113,6 +125,7 @@ function cacheDecksForLobby(decks: SavedDeck[]) {
 				leaderImg: deck.leaderImg || "",
 				fragImg: deck.fragImg || "",
 				tags: Array.isArray(deck.tags) ? deck.tags : [],
+				accessories: deck.accessories || undefined,
 				cards: deck.cards
 			})))
 		);

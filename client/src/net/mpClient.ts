@@ -100,7 +100,7 @@ export class MPClient {
 		return this.connectLobby(endpoint, roomId);
 	}
 
-	chooseDeck(payload: string | { deckId: string; leaderId?: string; cards?: string[] }) {
+	chooseDeck(payload: string | { deckId: string; leaderId?: string; cards?: string[]; accessories?: { sleeve?: string; playmat?: string } }) {
 		if (typeof payload === "string") {
 			this.room?.send("choose_deck", { deckId: payload });
 			return;
@@ -109,7 +109,8 @@ export class MPClient {
 		this.room?.send("choose_deck", {
 			deckId: payload.deckId,
 			leaderId: payload.leaderId,
-			cards: Array.isArray(payload.cards) ? payload.cards : []
+			cards: Array.isArray(payload.cards) ? payload.cards : [],
+			accessories: payload.accessories || {}
 		});
 	}
 

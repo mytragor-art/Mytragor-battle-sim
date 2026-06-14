@@ -6,6 +6,8 @@ export class PlayerGameState extends Schema {
 	@type("string") slot: string = "";
 	@type("string") deckId: string = "";
 	@type("string") leaderId: string = "";
+	@type("string") sleeveId: string = "";
+	@type("string") playmatId: string = "";
 
 	@type(["string"]) deck = new ArraySchema<string>();
 	@type(["string"]) hand = new ArraySchema<string>();

@@ -2343,6 +2343,10 @@ function startTurn(
 	game.p2.deckId = String(p2?.deckId || "");
 	game.p1.leaderId = String(p1?.leaderId || "");
 	game.p2.leaderId = String(p2?.leaderId || "");
+	game.p1.sleeveId = String(p1?.accessories?.sleeve || p1?.sleeveId || "");
+	game.p2.sleeveId = String(p2?.accessories?.sleeve || p2?.sleeveId || "");
+	game.p1.playmatId = String(p1?.accessories?.playmat || p1?.playmatId || "");
+	game.p2.playmatId = String(p2?.accessories?.playmat || p2?.playmatId || "");
 	game.p1.fragments = 0; game.p2.fragments = 0;
 	game.p1.fragmentMax = 0; game.p2.fragmentMax = 0;
 	game.p1.hp = Math.max(1, Number(findCardDef(game.p1.leaderId)?.hp || 30));

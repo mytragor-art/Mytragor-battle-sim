@@ -557,13 +557,18 @@ html,body{height:100%;font-family:-apple-system,system-ui,'Segoe UI',Roboto,'Hel
 /* ========= ARENA E GRADE INTERNA (405-509) ========= */
 
 .arena {
+  --arena-playmat: url("/assets/playmat/playmat-base.png");
+  --arena-overlay: linear-gradient(var(--arena-surface), var(--arena-surface));
   position: relative;
   isolation: isolate;
   border: 1px solid rgba(255,255,255,0.14);
   border-radius: 12px;
   padding: 8px 10px 10px;
   padding-left: calc(10px + 96px); /* reserva espaço para os fragmentos à esquerda */
-  background: var(--arena-surface);
+  background: var(--arena-overlay), var(--arena-playmat);
+  background-position: center, center;
+  background-repeat: no-repeat, no-repeat;
+  background-size: cover, 100% 100%;
   margin-bottom: 2px;
   box-sizing: border-box;
   overflow: visible; /* permite hover/zoom das cartas sem corte */
@@ -638,25 +643,41 @@ html,body{height:100%;font-family:-apple-system,system-ui,'Segoe UI',Roboto,'Hel
   background:
     radial-gradient(900px 420px at 15% 15%, rgba(59,130,246,.08), rgba(0,0,0,0) 55%),
     radial-gradient(900px 420px at 85% 85%, rgba(168,85,247,.06), rgba(0,0,0,0) 55%),
-    linear-gradient(180deg, rgba(2,6,23,.42), rgba(2,6,23,.60));
+    linear-gradient(180deg, rgba(2,6,23,.42), rgba(2,6,23,.60)),
+    var(--arena-playmat);
+  background-position: center, center, center, center;
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat;
+  background-size: auto, auto, cover, 100% 100%;
 }
 .arena.theme-marcial{
   background:
     radial-gradient(900px 420px at 15% 15%, rgba(239,68,68,.08), rgba(0,0,0,0) 55%),
     radial-gradient(900px 420px at 85% 85%, rgba(245,158,11,.06), rgba(0,0,0,0) 55%),
-    linear-gradient(180deg, rgba(2,6,23,.42), rgba(2,6,23,.60));
+    linear-gradient(180deg, rgba(2,6,23,.42), rgba(2,6,23,.60)),
+    var(--arena-playmat);
+  background-position: center, center, center, center;
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat;
+  background-size: auto, auto, cover, 100% 100%;
 }
 .arena.theme-santa{
   background:
     radial-gradient(900px 420px at 15% 15%, rgba(34,197,94,.08), rgba(0,0,0,0) 55%),
     radial-gradient(900px 420px at 85% 85%, rgba(250,204,21,.06), rgba(0,0,0,0) 55%),
-    linear-gradient(180deg, rgba(2,6,23,.42), rgba(2,6,23,.60));
+    linear-gradient(180deg, rgba(2,6,23,.42), rgba(2,6,23,.60)),
+    var(--arena-playmat);
+  background-position: center, center, center, center;
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat;
+  background-size: auto, auto, cover, 100% 100%;
 }
 .arena.theme-sombria{
   background:
     radial-gradient(900px 420px at 15% 15%, rgba(99,102,241,.07), rgba(0,0,0,0) 55%),
     radial-gradient(900px 420px at 85% 85%, rgba(15,23,42,.20), rgba(0,0,0,0) 60%),
-    linear-gradient(180deg, rgba(2,6,23,.44), rgba(2,6,23,.62));
+    linear-gradient(180deg, rgba(2,6,23,.44), rgba(2,6,23,.62)),
+    var(--arena-playmat);
+  background-position: center, center, center, center;
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat;
+  background-size: auto, auto, cover, 100% 100%;
 }
 
 .sideTitle{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}

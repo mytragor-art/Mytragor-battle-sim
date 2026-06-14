@@ -82,6 +82,41 @@ const cardLookup = new Map<string, CardDef>();
 const CARD_BACK_ASSET = "ui/layout-background.ai.png";
 const ASSET_CACHE_VERSION = "2026-05-17-2";
 const MOBILE_PREVIEW_FAB_POSITION_KEY = "mytragor_mobile_preview_fab_position";
+const SLEEVE_ASSET_BY_KEY: Record<string, string> = {
+	"sleeve-arcano": "/assets/acessorios/sleeve/sleeve Arcano.png",
+	"sleeve-marcial": "/assets/acessorios/sleeve/sleeve Marcial.png",
+	"sleeve-religioso": "/assets/acessorios/sleeve/sleeve religioso.png",
+	"sleeve-sombras": "/assets/acessorios/sleeve/sleeve sombras.png"
+};
+const PLAYMAT_ASSET_BY_KEY: Record<string, string> = {
+	"mytragor-classic": "/assets/playmat/playmat-base.png",
+	"playmat-executor": "/assets/acessorios/playmat/playmat executor.png",
+	"playmat-leao-rei-sagrado": "/assets/acessorios/playmat/playmat leão rei sagrado.png",
+	"playmat-livro-arcano": "/assets/acessorios/playmat/playmat livro arcano.png",
+	"playmat-sede-de-vinganca": "/assets/acessorios/playmat/playmat sede de vingança.png"
+};
+
+function resolveSleeveAsset(sleeveKey: unknown): string {
+	return SLEEVE_ASSET_BY_KEY[String(sleeveKey || "").trim()] || CARD_BACK_ASSET;
+}
+
+function cardBackAssetForSide(side: BattleSide): string {
+	return side === "you" ? resolveSleeveAsset(currentMySleeve) : resolveSleeveAsset(currentEnemySleeve);
+}
+
+function resolvePlaymatBackground(playmatKey: unknown): string {
+	const normalized = String(playmatKey || "").trim();
+	if (normalized === "no-playmat") return "none";
+	const asset = PLAYMAT_ASSET_BY_KEY[normalized] || PLAYMAT_ASSET_BY_KEY["mytragor-classic"];
+	return `url('${asset}')`;
+}
+
+function applyArenaPlaymats(): void {
+	const myArena = document.getElementById("youArena") as HTMLElement | null;
+	const enemyArena = document.getElementById("opArena") as HTMLElement | null;
+	if (myArena) myArena.style.setProperty("--arena-playmat", resolvePlaymatBackground(currentMyPlaymat));
+	if (enemyArena) enemyArena.style.setProperty("--arena-playmat", resolvePlaymatBackground(currentEnemyPlaymat));
+}
 
 function envAliasesForCard(card: CardDef): string[] {
 	const normalizedName = normalizeCardId(String(card?.name || ""));
@@ -175,6 +210,10 @@ let currentMyLeaderVitalMarks = 0;
 let currentEnemyLeaderVitalMarks = 0;
 let currentMyLeaderSpiderMarks = 0;
 let currentEnemyLeaderSpiderMarks = 0;
+let currentMySleeve = "";
+let currentEnemySleeve = "";
+let currentMyPlaymat = "";
+let currentEnemyPlaymat = "";
 let currentMyFragments = 0;
 let currentEnemyFragments = 0;
 let currentMyDeck: string[] = [];
@@ -1525,13 +1564,13 @@ function buildHandCard(cardId: string, selected: boolean, onClick?: () => void, 
 	return button;
 }
 
-function buildBackCard(cardId?: string): HTMLDivElement {
+function buildBackCard(side: BattleSide, cardId?: string): HTMLDivElement {
 	const back = document.createElement("div");
 	back.className = "card handCard slotCard slotCardBack";
 	if (cardId) back.dataset.cardId = cardId;
 	const image = document.createElement("img");
 	image.className = "slotCardImg";
-	image.src = asAssetPath(CARD_BACK_ASSET);
+	image.src = asAssetPath(cardBackAssetForSide(side));
 	image.alt = "Carta";
 	image.onerror = () => {
 		back.textContent = "Carta";
@@ -2060,10 +2099,10 @@ function renderPileModal(): void {
 		button.style.cursor = "default";
 		const image = document.createElement("img");
 		image.className = "slotCardImg";
-		image.src = hideFace ? asAssetPath(CARD_BACK_ASSET) : asAssetPath(card?.img || CARD_BACK_ASSET);
+		image.src = hideFace ? asAssetPath(cardBackAssetForSide(activePileSide)) : asAssetPath(card?.img || CARD_BACK_ASSET);
 		image.alt = hideFace ? "Carta virada" : (card?.name || cardId);
 		image.onerror = () => {
-			image.src = asAssetPath(CARD_BACK_ASSET);
+			image.src = asAssetPath(hideFace ? cardBackAssetForSide(activePileSide) : CARD_BACK_ASSET);
 		};
 		button.appendChild(image);
 		button.onmouseenter = () => {
@@ -2082,6 +2121,7 @@ function renderVisiblePileSlot(slotId: string, countId: string, cards: string[],
 	if (!slotEl) return;
 	for (const old of Array.from(slotEl.querySelectorAll(":scope > .deckVisualCard"))) old.remove();
 	if (!cards.length) return;
+	const side: BattleSide = slotId.startsWith("you") ? "you" : "ai";
 	const topCardId = String(cards[cards.length - 1] || "").trim();
 	const topCard = resolveCard(topCardId);
 	for (let layer = 0; layer < Math.min(3, cards.length); layer += 1) {
@@ -2096,14 +2136,13 @@ function renderVisiblePileSlot(slotId: string, countId: string, cards: string[],
 		cardEl.style.zIndex = String(10 + layer);
 		const image = document.createElement("img");
 		image.className = "slotCardImg";
-		image.src = hideFace ? asAssetPath(CARD_BACK_ASSET) : asAssetPath(topCard?.img || CARD_BACK_ASSET);
+		image.src = hideFace ? asAssetPath(cardBackAssetForSide(side)) : asAssetPath(topCard?.img || CARD_BACK_ASSET);
 		image.alt = hideFace ? "Carta virada" : (topCard?.name || topCardId || "Carta");
 		image.onerror = () => {
-			image.src = asAssetPath(CARD_BACK_ASSET);
+			image.src = asAssetPath(hideFace ? cardBackAssetForSide(side) : CARD_BACK_ASSET);
 		};
 		cardEl.appendChild(image);
 		if (layer === Math.min(3, cards.length) - 1 && !hideFace) {
-			const side = slotId.startsWith("you") ? "you" : "ai";
 			const lane: InspectorLane = slotId.includes("grave") ? "grave" : (slotId.includes("ban") ? "banished" : "deck");
 			cardEl.onmouseenter = () => setHoveredInspector({ cardId: topCardId, side, lane });
 			cardEl.onmouseleave = () => setHoveredInspector(null);
@@ -2633,6 +2672,7 @@ function renderDeckSlot(slotId: "you-deck" | "ai-deck", countId: "youDeckCount" 
 	if (!slotEl) return;
 	for (const old of Array.from(slotEl.querySelectorAll(":scope > .deckVisualCard"))) old.remove();
 	if (Number(total || 0) <= 0) return;
+	const side: BattleSide = slotId === "you-deck" ? "you" : "ai";
 	const back = document.createElement("div");
 	back.className = "card slotCard slotCardBack deckVisualCard";
 	back.style.width = "100%";
@@ -2640,7 +2680,7 @@ function renderDeckSlot(slotId: "you-deck" | "ai-deck", countId: "youDeckCount" 
 	back.style.margin = "0";
 	const image = document.createElement("img");
 	image.className = "slotCardImg";
-	image.src = asAssetPath(CARD_BACK_ASSET);
+	image.src = asAssetPath(cardBackAssetForSide(side));
 	image.alt = "Baralho";
 	back.appendChild(image);
 	slotEl.appendChild(back);
@@ -2777,7 +2817,7 @@ function renderSideHand(containerId: "youHand" | "aiHand", cards: string[], sele
 			renderedIndex += 1;
 			continue;
 		}
-		const backCardEl = buildBackCard();
+		const backCardEl = buildBackCard("ai");
 		backCardEl.dataset.cardId = cardId;
 		container.appendChild(backCardEl);
 		if (newEntryFlags[renderedIndex]) animateEl(backCardEl, "anim-draw");
@@ -3365,6 +3405,8 @@ function bindActiveMatchRoom() {
 			currentMySupportCounters = asNumberArray((my as any)?.supportCounters);
 			currentMyEnv = String(my?.env || "") || null;
 			currentMyLeader = String(my?.leaderId || "");
+			currentMySleeve = String((my as any)?.sleeveId || "");
+			currentMyPlaymat = String((my as any)?.playmatId || "");
 			currentMyLeaderHp = Number(my?.hp ?? 0);
 			currentMyLeaderTapped = !!(my as any)?.leaderTapped;
 			currentMyLeaderBlessing = Number((my as any)?.leaderBlessing || 0);
@@ -3398,6 +3440,8 @@ function bindActiveMatchRoom() {
 			currentEnemySupportCounters = asNumberArray((enemy as any)?.supportCounters);
 			const enemyEnv = String(enemy?.env || "") || null;
 			currentEnemyEnv = enemyEnv;
+			currentEnemySleeve = String((enemy as any)?.sleeveId || "");
+			currentEnemyPlaymat = String((enemy as any)?.playmatId || "");
 			currentEnemyLeader = String(enemy?.leaderId || "");
 			currentEnemyLeaderHp = Number(enemy?.hp ?? 0);
 			currentEnemyLeaderTapped = !!(enemy as any)?.leaderTapped;
@@ -3423,6 +3467,7 @@ function bindActiveMatchRoom() {
 			}
 			isMyTurn = myTurn;
 			currentPhase = phase;
+			applyArenaPlaymats();
 			updateArenaTurnPriority(myTurn);
 			if (!myTurn || phase !== "COMBAT") {
 				resetBoardAttackSelection();
@@ -3771,6 +3816,8 @@ async function joinMatch() {
 				currentMySupportCounters = asNumberArray((my as any)?.supportCounters);
 				currentMyEnv = String(my?.env || "") || null;
 				currentMyLeader = String(my?.leaderId || "");
+				currentMySleeve = String((my as any)?.sleeveId || "");
+				currentMyPlaymat = String((my as any)?.playmatId || "");
 				currentMyLeaderHp = Number(my?.hp ?? 0);
 				currentMyLeaderTapped = !!(my as any)?.leaderTapped;
 				currentMyLeaderBlessing = Number((my as any)?.leaderBlessing || 0);
@@ -3804,6 +3851,8 @@ async function joinMatch() {
 				currentEnemySupportCounters = asNumberArray((enemy as any)?.supportCounters);
 				const enemyEnv = String(enemy?.env || "") || null;
 				currentEnemyEnv = enemyEnv;
+				currentEnemySleeve = String((enemy as any)?.sleeveId || "");
+				currentEnemyPlaymat = String((enemy as any)?.playmatId || "");
 				currentEnemyLeader = String(enemy?.leaderId || "");
 				currentEnemyLeaderHp = Number(enemy?.hp ?? 0);
 				currentEnemyLeaderTapped = !!(enemy as any)?.leaderTapped;
@@ -3847,6 +3896,7 @@ async function joinMatch() {
 				}
 				isMyTurn = myTurn;
 				currentPhase = phase;
+				applyArenaPlaymats();
 				updateArenaTurnPriority(myTurn);
 				if (!myTurn || phase !== "COMBAT") {
 					resetBoardAttackSelection();
