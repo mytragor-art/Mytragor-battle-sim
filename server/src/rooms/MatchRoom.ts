@@ -15,6 +15,7 @@ import {
 	getSlotBySession,
 	initGame,
 	nextPhase,
+	resolveOpeningMulligans,
 	playCard
 } from "./match/matchEngine";
 
@@ -25,6 +26,8 @@ type ReservedSeat = {
 	displayName: string;
 };
 
+const MULLIGAN_TIMEOUT_MS = 40_000;
+
 export class MatchRoom extends Room<MatchState> {
 	maxClients = 2;
 	private attackedThisTurn: Record<Slot, Set<number>> = { p1: new Set<number>(), p2: new Set<number>() };
@@ -34,8 +37,10 @@ export class MatchRoom extends Room<MatchState> {
 	private pendingChoices = new Map<string, { sessionId: string; resolve: (optionId: string | null) => void; timeout?: NodeJS.Timeout; optionIds: string[]; multiSelect?: boolean }>();
 	private activeChoiceSessionId: string | null = null;
 	private inactivityTimeout: NodeJS.Timeout | null = null;
+	private mulliganTimeout: NodeJS.Timeout | null = null;
 	private reservedSeatByToken = new Map<string, ReservedSeat>();
 	private consumedJoinTokens = new Set<string>();
+	private pendingMulligans: Record<Slot, number[] | null> = { p1: null, p2: null };
 
 	private sanitizeDisplayName(name: unknown): string {
 		return String(name || "").trim().slice(0, 18);
@@ -75,6 +80,35 @@ export class MatchRoom extends Room<MatchState> {
 		this.inactivityTimeout = null;
 	}
 
+	private clearMulliganTimer(resetDeadline = false) {
+		if (this.mulliganTimeout) clearTimeout(this.mulliganTimeout);
+		this.mulliganTimeout = null;
+		if (resetDeadline) this.state.game.mulliganDeadlineAt = 0;
+	}
+
+	private startMulliganTimer() {
+		this.clearMulliganTimer();
+		this.state.game.mulliganDeadlineAt = Date.now() + MULLIGAN_TIMEOUT_MS;
+		this.mulliganTimeout = setTimeout(() => {
+			this.mulliganTimeout = null;
+			if (this.state.phase !== "IN_MATCH" || this.state.game.phase !== "MULLIGAN") {
+				this.state.game.mulliganDeadlineAt = 0;
+				return;
+			}
+			if (!this.state.game.p1MulliganDone) {
+				this.pendingMulligans.p1 = [];
+				this.state.game.p1MulliganDone = true;
+			}
+			if (!this.state.game.p2MulliganDone) {
+				this.pendingMulligans.p2 = [];
+				this.state.game.p2MulliganDone = true;
+			}
+			this.tryResolveOpeningMulligan();
+			if (this.state.game.phase === "MULLIGAN") this.publishSpectatorState();
+			this.refreshInactivityTimer();
+		}, MULLIGAN_TIMEOUT_MS);
+	}
+
 	private inferChoiceSourceCardId(payload: ChoicePayload): string | undefined {
 		const explicit = String(payload?.sourceCardId || "").trim();
 		if (explicit) return explicit;
@@ -108,6 +142,17 @@ export class MatchRoom extends Room<MatchState> {
 			this.clearInactivityTimer();
 			return;
 		}
+		if (this.state.game.phase === "MULLIGAN") {
+			const p1Done = !!this.state.game.p1MulliganDone;
+			const p2Done = !!this.state.game.p2MulliganDone;
+			if (p1Done === p2Done) {
+				this.resetInactivityTimer(null);
+				return;
+			}
+			const waitingSlot: Slot = p1Done ? "p2" : "p1";
+			this.resetInactivityTimer(this.sessionIdBySlot(waitingSlot));
+			return;
+		}
 		if (this.activeChoiceSessionId) {
 			this.resetInactivityTimer(this.activeChoiceSessionId);
 			return;
@@ -115,6 +160,48 @@ export class MatchRoom extends Room<MatchState> {
 		const turnSlot = this.state.game.turnSlot;
 		const sessionId = turnSlot === "p1" || turnSlot === "p2" ? this.sessionIdBySlot(turnSlot) : null;
 		this.resetInactivityTimer(sessionId);
+	}
+
+	private autoAdvanceFromInitial() {
+		if (this.state.game.phase !== "INITIAL") return;
+		if (this.pendingChoices.size > 0) return;
+		nextPhase(this.state, (name, payload) => this.broadcastMatchEvent(name, payload));
+		this.publishSpectatorState();
+		this.refreshInactivityTimer();
+	}
+
+	private parseMulliganSelection(rawValue: unknown, handSize: number): number[] | null {
+		if (!Array.isArray(rawValue)) return null;
+		if (rawValue.length > 5) return null;
+		const unique = new Set<number>();
+		for (const entry of rawValue) {
+			const index = Number(entry);
+			if (!Number.isInteger(index) || index < 0 || index >= handSize) return null;
+			if (unique.has(index)) return null;
+			unique.add(index);
+		}
+		return Array.from(unique).sort((left, right) => left - right);
+	}
+
+	private tryResolveOpeningMulligan() {
+		if (!this.state.game.p1MulliganDone || !this.state.game.p2MulliganDone) return;
+		this.clearMulliganTimer(true);
+		const p1Selection = this.pendingMulligans.p1 || [];
+		const p2Selection = this.pendingMulligans.p2 || [];
+		resolveOpeningMulligans(
+			this.state,
+			p1Selection,
+			p2Selection,
+			(name, payload) => this.broadcastMatchEvent(name, payload),
+			this.attackedThisTurn,
+			this.summonedThisTurn,
+			this.triggeredLeaderThisTurn,
+			this.askChoice
+		);
+		this.pendingMulligans = { p1: null, p2: null };
+		this.autoAdvanceFromInitial();
+		this.publishSpectatorState();
+		this.refreshInactivityTimer();
 	}
 
 	private askChoice = (slot: Slot, payload: ChoicePayload, onResolve: (optionId: string | null) => void) => {
@@ -220,17 +307,37 @@ export class MatchRoom extends Room<MatchState> {
 		}
 		const starterSlot: Slot = options?.starterSlot === "p2" ? "p2" : "p1";
 
-		const autoAdvanceFromInitial = () => {
-			if (this.state.game.phase !== "INITIAL") return;
-			if (this.pendingChoices.size > 0) return;
-			nextPhase(this.state, (name, payload) => this.broadcastMatchEvent(name, payload));
-			this.publishSpectatorState();
-			this.refreshInactivityTimer();
-		};
-
 		initGame(this.state, options?.p1, options?.p2, (name, payload) => this.broadcastMatchEvent(name, payload), this.attackedThisTurn, this.summonedThisTurn, this.triggeredLeaderThisTurn, starterSlot, this.askChoice);
-		autoAdvanceFromInitial();
+		this.pendingMulligans = { p1: null, p2: null };
+		this.startMulliganTimer();
+		this.autoAdvanceFromInitial();
 		this.publishSpectatorState();
+		this.refreshInactivityTimer();
+
+		this.onMessage("submit_mulligan", (client, msg: { indices?: number[] }) => this.safeRun("submit_mulligan", () => {
+			if (this.state.phase !== "IN_MATCH" || this.state.game.phase !== "MULLIGAN") return;
+			const slot = getSlotBySession(this.state, client.sessionId);
+			if (!slot) return;
+			for (const pending of this.pendingChoices.values()) {
+				if (pending.sessionId === client.sessionId) return;
+			}
+			if ((slot === "p1" && this.state.game.p1MulliganDone) || (slot === "p2" && this.state.game.p2MulliganDone)) {
+				client.send("error", { message: "mulligan_already_submitted" });
+				return;
+			}
+			const player = slot === "p1" ? this.state.game.p1 : this.state.game.p2;
+			const selection = this.parseMulliganSelection(msg?.indices, player.hand.length);
+			if (!selection) {
+				client.send("error", { message: "invalid_mulligan_selection" });
+				return;
+			}
+			this.pendingMulligans[slot] = selection;
+			if (slot === "p1") this.state.game.p1MulliganDone = true;
+			else this.state.game.p2MulliganDone = true;
+			this.tryResolveOpeningMulligan();
+			if (this.state.game.phase === "MULLIGAN") this.publishSpectatorState();
+			this.refreshInactivityTimer();
+		}, client));
 
 		this.onMessage("next_phase", (client) => this.safeRun("next_phase", () => {
 			if (!this.isValidTurnAction(client, ["INITIAL", "PREP", "COMBAT"])) return;
@@ -242,7 +349,7 @@ export class MatchRoom extends Room<MatchState> {
 		this.onMessage("end_turn", (client) => this.safeRun("end_turn", () => {
 			if (!this.isValidTurnAction(client, ["END"])) return;
 			endTurn(this.state, (name, payload) => this.broadcastMatchEvent(name, payload), this.attackedThisTurn, this.summonedThisTurn, this.triggeredLeaderThisTurn, this.askChoice);
-			autoAdvanceFromInitial();
+			this.autoAdvanceFromInitial();
 			this.publishSpectatorState();
 			this.refreshInactivityTimer();
 		}, client));
@@ -282,7 +389,7 @@ export class MatchRoom extends Room<MatchState> {
 			this.activeChoiceSessionId = null;
 			const optionId = msg?.optionId == null ? null : String(msg.optionId);
 			pending.resolve(optionId);
-			autoAdvanceFromInitial();
+			this.autoAdvanceFromInitial();
 			this.publishSpectatorState();
 			if (!this.activeChoiceSessionId) this.refreshInactivityTimer();
 		}, client));
@@ -366,6 +473,7 @@ export class MatchRoom extends Room<MatchState> {
 
 	onDispose() {
 		try {
+			this.clearMulliganTimer(true);
 			this.clearInactivityTimer();
 			// ensure spectator channel disposed
 			try { disposeSpectatorChannel(this.roomId); } catch (_) {}

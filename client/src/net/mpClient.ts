@@ -131,11 +131,11 @@ export class MPClient {
 	}
 
 	nextPhase() {
-		this.room?.send("next_phase");
+		this.room?.send("next_phase", {});
 	}
 
 	endTurn() {
-		this.room?.send("end_turn");
+		this.room?.send("end_turn", {});
 	}
 }
 

@@ -440,6 +440,11 @@ function setDeckCards(player: any, cards: string[]): void {
 	for (const cardId of cards) player.deck.push(cardId);
 }
 
+function setHandCards(player: any, cards: string[]): void {
+	player.hand.clear();
+	for (const cardId of cards) player.hand.push(cardId);
+}
+
 function removeDeckCardAt(player: any, index: number): string {
 	const cards = Array.from(player.deck as Iterable<string>).map((cardId) => String(cardId || ""));
 	if (!Number.isInteger(index) || index < 0 || index >= cards.length) return "";
@@ -2257,6 +2262,42 @@ function drawCard(state: MatchState, slot: Slot, amount: number = 1, broadcast?:
 	return drawn;
 }
 
+function normalizeMulliganSelection(handSize: number, selectedIndexes: number[]): number[] {
+	const unique = new Set<number>();
+	for (const rawIndex of Array.isArray(selectedIndexes) ? selectedIndexes : []) {
+		const index = Number(rawIndex);
+		if (!Number.isInteger(index) || index < 0 || index >= handSize) continue;
+		unique.add(index);
+	}
+	return Array.from(unique).sort((left, right) => right - left);
+}
+
+function resolvePlayerMulligan(state: MatchState, slot: Slot, selectedIndexes: number[]): void {
+	const player = slot === "p1" ? state.game.p1 : state.game.p2;
+	const hand = Array.from(player.hand as Iterable<string>).map((cardId) => String(cardId || ""));
+	const deck = Array.from(player.deck as Iterable<string>).map((cardId) => String(cardId || ""));
+	const normalizedSelection = normalizeMulliganSelection(hand.length, selectedIndexes);
+	if (!normalizedSelection.length) {
+		shuffle(deck);
+		setDeckCards(player, deck);
+		return;
+	}
+	const movedCards: string[] = [];
+	for (const index of normalizedSelection) {
+		const [removed] = hand.splice(index, 1);
+		if (removed) movedCards.push(removed);
+	}
+	for (const cardId of movedCards) deck.unshift(cardId);
+	for (let count = 0; count < movedCards.length; count += 1) {
+		const cardId = deck.pop();
+		if (!cardId) break;
+		hand.push(cardId);
+	}
+	shuffle(deck);
+	setHandCards(player, hand);
+	setDeckCards(player, deck);
+}
+
 function startTurn(
 	state: MatchState,
 	slot: Slot,
@@ -2334,6 +2375,30 @@ function startTurn(
 	offerCatedralBlessing(state, slot, broadcast, askChoice);
 }
 
+export function resolveOpeningMulligans(
+	state: MatchState,
+	p1Selection: number[],
+	p2Selection: number[],
+	broadcast: (name: string, payload: any) => void,
+	attackedThisTurn: Record<Slot, Set<number>>,
+	summonedThisTurn: Record<Slot, Set<number>>,
+	triggeredLeaderThisTurn: Record<Slot, Set<string>>,
+	askChoice?: AskChoiceFn
+) {
+	resolvePlayerMulligan(state, "p1", p1Selection);
+	resolvePlayerMulligan(state, "p2", p2Selection);
+	state.game.mulliganDeadlineAt = 0;
+	broadcast("mulligan_resolved", {
+		p1Hand: state.game.p1.hand.length,
+		p2Hand: state.game.p2.hand.length,
+		p1Deck: state.game.p1.deck.length,
+		p2Deck: state.game.p2.deck.length,
+		seq: state.game.seq
+	});
+	const starterSlot: Slot = state.game.starterSlot === "p2" ? "p2" : "p1";
+	startTurn(state, starterSlot, broadcast, attackedThisTurn, summonedThisTurn, triggeredLeaderThisTurn, askChoice);
+}
+
 	export function initGame(state: MatchState, p1: any, p2: any, broadcast: (name: string, payload: any) => void, attacked: Record<Slot, Set<number>>, summoned: Record<Slot, Set<number>>, triggeredLeaderThisTurn: Record<Slot, Set<string>>, starterSlot: Slot = "p1", askChoice?: AskChoiceFn) {
 	const game = state.game;
 	game.p1.slot = "p1";
@@ -2349,6 +2414,8 @@ function startTurn(
 	game.p2.playmatId = String(p2?.accessories?.playmat || p2?.playmatId || "");
 	game.p1.fragments = 0; game.p2.fragments = 0;
 	game.p1.fragmentMax = 0; game.p2.fragmentMax = 0;
+	game.p1MulliganDone = false;
+	game.p2MulliganDone = false;
 	game.p1.hp = Math.max(1, Number(findCardDef(game.p1.leaderId)?.hp || 30));
 	game.p2.hp = Math.max(1, Number(findCardDef(game.p2.leaderId)?.hp || 30));
 	(game.p1 as any).leaderTapped = false;
@@ -2435,7 +2502,16 @@ function startTurn(
 
 	game.turn = 1;
 	game.seq = 0;
-	startTurn(state, starterSlot, broadcast, attacked, summoned, triggeredLeaderThisTurn, askChoice);
+	game.turnSlot = starterSlot;
+	setPhase(state, "MULLIGAN", broadcast);
+	broadcast("mulligan_start", {
+		starterSlot,
+		p1Hand: game.p1.hand.length,
+		p2Hand: game.p2.hand.length,
+		maxCards: 5,
+		timeoutMs: 40_000,
+		seq: game.seq
+	});
 }
 
 export function getSlotBySession(state: MatchState, sessionId: string): Slot | null {
@@ -2445,6 +2521,7 @@ export function getSlotBySession(state: MatchState, sessionId: string): Slot | n
 }
 
 export function nextPhase(state: MatchState, broadcast: (name: string, payload: any) => void) {
+	if (state.game.phase === "MULLIGAN") return;
 	if (state.game.phase === "INITIAL") return setPhase(state, "PREP", broadcast);
 	if (state.game.phase === "PREP") return setPhase(state, "COMBAT", broadcast);
 	if (state.game.phase === "COMBAT") return setPhase(state, "END", broadcast);

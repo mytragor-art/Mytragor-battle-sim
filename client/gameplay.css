@@ -136,6 +136,55 @@
   box-shadow:0 18px 48px rgba(0,0,0,.32);
 }
 
+.mulliganBox{
+  width:min(760px, 94vw);
+  max-width:760px;
+}
+
+.mulliganIntro{
+  margin:6px 0 0;
+  color:rgba(226,232,240,.88);
+  font-size:13px;
+  line-height:1.4;
+}
+
+.mulliganCount{
+  padding:6px 10px;
+  border-radius:999px;
+  border:1px solid rgba(250,204,21,.18);
+  background:rgba(250,204,21,.08);
+  color:#f8e7a1;
+  font-size:12px;
+  font-weight:700;
+  white-space:nowrap;
+}
+
+.mulliganGrid{
+  grid-template-columns:repeat(auto-fit, minmax(84px, 1fr));
+}
+
+.mulliganGrid .card.slotCard.is-selected{
+  border-color:rgba(250,204,21,0.92);
+  box-shadow:0 0 0 2px rgba(250,204,21,0.9) inset, 0 16px 30px rgba(0,0,0,0.56), 0 0 18px rgba(250,204,21,0.28);
+  transform:translateY(-3px);
+}
+
+.mulliganGrid .card.slotCard.is-selected::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:inherit;
+  background:linear-gradient(180deg, rgba(250,204,21,0.12), rgba(15,23,42,0.28));
+  box-shadow:inset 0 0 0 1px rgba(255,248,196,0.55);
+  pointer-events:none;
+}
+
+.mulliganActions{
+  display:flex;
+  justify-content:flex-end;
+  margin-top:12px;
+}
+
 .choiceCountdown{
   margin-top: 6px;
   font-size: 14px;

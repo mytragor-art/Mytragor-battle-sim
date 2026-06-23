@@ -81,6 +81,7 @@ const cardDefs = (window as Window & { CARD_DEFS?: CardDef[] }).CARD_DEFS ?? [];
 const cardLookup = new Map<string, CardDef>();
 const CARD_BACK_ASSET = "ui/layout-background.ai.png";
 const ASSET_CACHE_VERSION = "2026-05-17-2";
+const MULLIGAN_TIMEOUT_MS = 40_000;
 const MOBILE_PREVIEW_FAB_POSITION_KEY = "mytragor_mobile_preview_fab_position";
 const SLEEVE_ASSET_BY_KEY: Record<string, string> = {
 	"sleeve-arcano": "/assets/acessorios/sleeve/sleeve Arcano.png",
@@ -216,12 +217,17 @@ let currentMyPlaymat = "";
 let currentEnemyPlaymat = "";
 let currentMyFragments = 0;
 let currentEnemyFragments = 0;
+let currentMyHand: string[] = [];
 let currentMyDeck: string[] = [];
 let currentEnemyDeck: string[] = [];
 let currentMyGrave: string[] = [];
 let currentEnemyGrave: string[] = [];
 let currentMyBanished: string[] = [];
 let currentEnemyBanished: string[] = [];
+let mulliganSubmitted = false;
+const mulliganSelectedIndexes = new Set<number>();
+let activeMulliganTimer: number | null = null;
+let currentMulliganDeadlineAt = 0;
 let activeChoiceId: string | null = null;
 let activeChoiceTimer: number | null = null;
 let activeWaitingTimer: number | null = null;
@@ -1562,6 +1568,109 @@ function buildHandCard(cardId: string, selected: boolean, onClick?: () => void, 
 	};
 	if (onClick) button.onclick = onClick;
 	return button;
+}
+
+function hideMulliganModal(): void {
+	const modal = document.getElementById("mulliganModal") as HTMLElement | null;
+	if (modal) modal.style.display = "none";
+}
+
+function clearMulliganCountdown(resetDeadline = true): void {
+	if (activeMulliganTimer) {
+		window.clearInterval(activeMulliganTimer);
+		activeMulliganTimer = null;
+	}
+	if (resetDeadline) currentMulliganDeadlineAt = 0;
+	const timer = document.getElementById("mulliganTimer") as HTMLElement | null;
+	if (!timer) return;
+	timer.style.display = "none";
+	timer.classList.remove("is-danger");
+}
+
+function syncMulliganCountdown(deadlineAt: number): void {
+	const timer = document.getElementById("mulliganTimer") as HTMLElement | null;
+	if (!timer || deadlineAt <= 0) {
+		clearMulliganCountdown(deadlineAt <= 0);
+		return;
+	}
+	currentMulliganDeadlineAt = deadlineAt;
+	const render = () => {
+		const remainingMs = Math.max(0, currentMulliganDeadlineAt - Date.now());
+		const remaining = Math.max(0, Math.ceil(remainingMs / 1000));
+		timer.style.display = "block";
+		timer.textContent = `Tempo restante: ${remaining}s`;
+		timer.classList.toggle("is-danger", remaining <= 10);
+		if (remainingMs <= 0 && activeMulliganTimer) {
+			window.clearInterval(activeMulliganTimer);
+			activeMulliganTimer = null;
+		}
+	};
+	if (activeMulliganTimer) window.clearInterval(activeMulliganTimer);
+	render();
+	activeMulliganTimer = window.setInterval(render, 250);
+}
+
+function updateMulliganModal(hand: string[], submitted: boolean, opponentReady: boolean): void {
+	const modal = document.getElementById("mulliganModal") as HTMLElement | null;
+	const intro = document.getElementById("mulliganIntro") as HTMLElement | null;
+	const counter = document.getElementById("mulliganCount") as HTMLElement | null;
+	const grid = document.getElementById("mulliganGrid") as HTMLElement | null;
+	const button = document.getElementById("mulliganConfirmButton") as HTMLButtonElement | null;
+	if (!modal || !intro || !counter || !grid || !button) return;
+	for (const index of Array.from(mulliganSelectedIndexes)) {
+		if (index < 0 || index >= hand.length) mulliganSelectedIndexes.delete(index);
+	}
+	const selectedCount = mulliganSelectedIndexes.size;
+	intro.textContent = submitted
+		? "Mulligan confirmado. Aguardando oponente concluir a troca."
+		: opponentReady
+			? "Seu oponente já confirmou. Selecione de 0 a 5 cartas para trocar."
+			: "Selecione de 0 a 5 cartas da mão inicial para trocar. As cartas escolhidas vão para o fundo do deck, você compra a mesma quantidade do topo e então o baralho é embaralhado.";
+	counter.textContent = `${selectedCount} carta${selectedCount === 1 ? "" : "s"} selecionada${selectedCount === 1 ? "" : "s"}`;
+	button.disabled = submitted;
+	button.textContent = submitted ? "Aguardando oponente..." : (selectedCount > 0 ? `Trocar ${selectedCount} carta${selectedCount === 1 ? "" : "s"}` : "Manter mão");
+	grid.innerHTML = "";
+	hand.forEach((cardId, index) => {
+		const cardEl = buildHandCard(
+			cardId,
+			mulliganSelectedIndexes.has(index),
+			submitted ? undefined : () => {
+				if (mulliganSelectedIndexes.has(index)) mulliganSelectedIndexes.delete(index);
+				else if (mulliganSelectedIndexes.size < 5) mulliganSelectedIndexes.add(index);
+				updateMulliganModal(hand, false, opponentReady);
+			},
+			{ cardId, side: "you", lane: "hand", index }
+		);
+		cardEl.draggable = false;
+		cardEl.ondragstart = null;
+		grid.appendChild(cardEl);
+	});
+	modal.style.display = "flex";
+}
+
+function syncMulliganUi(state: any, hand: string[]): void {
+	const phase = String(state?.game?.phase || "");
+	if (isSpectator || !slot || phase !== "MULLIGAN") {
+		mulliganSubmitted = false;
+		mulliganSelectedIndexes.clear();
+		clearMulliganCountdown();
+		hideMulliganModal();
+		return;
+	}
+	const localDone = slot === "p1" ? !!state?.game?.p1MulliganDone : !!state?.game?.p2MulliganDone;
+	const opponentDone = slot === "p1" ? !!state?.game?.p2MulliganDone : !!state?.game?.p1MulliganDone;
+	const deadlineAt = Number(state?.game?.mulliganDeadlineAt || 0) || (Date.now() + MULLIGAN_TIMEOUT_MS);
+	mulliganSubmitted = localDone;
+	syncMulliganCountdown(deadlineAt);
+	updateMulliganModal(hand, localDone, opponentDone);
+}
+
+function submitMulliganSelection(): void {
+	if (isSpectator || !room || currentPhase !== "MULLIGAN" || mulliganSubmitted) return;
+	const indices = Array.from(mulliganSelectedIndexes).sort((left, right) => left - right);
+	mulliganSubmitted = true;
+	updateMulliganModal(currentMyHand, true, false);
+	room.send("submit_mulligan", { indices });
 }
 
 function buildBackCard(side: BattleSide, cardId?: string): HTMLDivElement {
@@ -3071,6 +3180,7 @@ function renderFragments(containerId: "you-fragsDock" | "ai-fragsDock", total: u
 
 function formatPhaseLabel(phase: unknown): string {
 	const value = String(phase || "—");
+	if (value === "MULLIGAN") return "Mulligan";
 	if (value === "INITIAL") return "Inicial";
 	return value;
 }
@@ -3377,6 +3487,7 @@ function bindActiveMatchRoom() {
 				if (startedSide === "ai") enemyTurnCount += 1;
 			}
 			const hand = asStringArray(my?.hand);
+			currentMyHand = hand.slice();
 			currentMyDeck = asStringArray(my?.deck);
 			currentMyGrave = asStringArray(my?.grave);
 			currentMyBanished = asStringArray((my as any)?.banished || (my as any)?.ban);
@@ -3467,6 +3578,7 @@ function bindActiveMatchRoom() {
 			}
 			isMyTurn = myTurn;
 			currentPhase = phase;
+			syncMulliganUi(state, hand);
 			applyArenaPlaymats();
 			updateArenaTurnPriority(myTurn);
 			if (!myTurn || phase !== "COMBAT") {
@@ -3518,7 +3630,7 @@ function bindActiveMatchRoom() {
 			}
 			if (view.btnAttack) view.btnAttack.disabled = isSpectator || !(myTurn && phase === "COMBAT" && selectedAttackerPos !== null);
 			if (view.btnTargetLeader) view.btnTargetLeader.disabled = isSpectator || !(myTurn && phase === "COMBAT");
-			if (view.btnNextPhase) view.btnNextPhase.disabled = isSpectator || !myTurn;
+			if (view.btnNextPhase) view.btnNextPhase.disabled = isSpectator || !myTurn || phase === "MULLIGAN";
 			if (view.btnEndTurn) view.btnEndTurn.disabled = isSpectator || !(myTurn && phase === "END");
 		}
 	});
@@ -3788,6 +3900,7 @@ async function joinMatch() {
 					if (startedSide === "ai") enemyTurnCount += 1;
 				}
 				const hand = asStringArray(my?.hand);
+				currentMyHand = hand.slice();
 				currentMyDeck = asStringArray(my?.deck);
 				currentMyGrave = asStringArray(my?.grave);
 				currentMyBanished = asStringArray((my as any)?.banished || (my as any)?.ban);
@@ -3896,6 +4009,7 @@ async function joinMatch() {
 				}
 				isMyTurn = myTurn;
 				currentPhase = phase;
+				syncMulliganUi(state, hand);
 				applyArenaPlaymats();
 				updateArenaTurnPriority(myTurn);
 				if (!myTurn || phase !== "COMBAT") {
@@ -4015,7 +4129,7 @@ async function joinMatch() {
 				}
 				if (view.btnAttack) view.btnAttack.disabled = isSpectator || !(myTurn && phase === "COMBAT" && selectedAttackerPos !== null);
 				if (view.btnTargetLeader) view.btnTargetLeader.disabled = isSpectator || !(myTurn && phase === "COMBAT");
-				if (view.btnNextPhase) view.btnNextPhase.disabled = isSpectator || !myTurn;
+				if (view.btnNextPhase) view.btnNextPhase.disabled = isSpectator || !myTurn || phase === "MULLIGAN";
 				if (view.btnEndTurn) view.btnEndTurn.disabled = isSpectator || !(myTurn && phase === "END");
 			}
 		});
@@ -4082,6 +4196,7 @@ window.addEventListener("keydown", (event) => {
 (window as any).hideCardChoice = () => hideCardChoiceModal(true);
 (window as any).minimizeCardChoice = () => minimizeCardChoiceModal();
 (window as any).hidePile = () => hidePile();
+(window as any).submitMulligan = () => submitMulliganSelection();
 (window as any).hideVictory = hideVictory;
 
 const cardChoiceRestoreButton = document.getElementById("cardChoiceRestoreButton") as HTMLButtonElement | null;

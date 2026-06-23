@@ -13,6 +13,7 @@ import {
 	getSlotBySession,
 	initGame,
 	nextPhase,
+	resolveOpeningMulligans,
 	playCard
 } from "./match/matchEngine";
 
@@ -50,6 +51,8 @@ type SoloBotConfig = {
 	};
 };
 
+const MULLIGAN_TIMEOUT_MS = 40_000;
+
 export class SoloMatchRoom extends Room<MatchState> {
 	maxClients = 1;
 	private attackedThisTurn: Record<Slot, Set<number>> = { p1: new Set<number>(), p2: new Set<number>() };
@@ -60,8 +63,10 @@ export class SoloMatchRoom extends Room<MatchState> {
 	private activeChoiceSessionId: string | null = null;
 	private inactivityTimeout: NodeJS.Timeout | null = null;
 	private botTurnTimer: NodeJS.Timeout | null = null;
+	private mulliganTimeout: NodeJS.Timeout | null = null;
 	private reservedSeat: ReservedSeat | null = null;
 	private consumedJoinToken = false;
+	private pendingMulligans: Record<Slot, number[] | null> = { p1: null, p2: null };
 	private bot: SoloBotConfig = {
 		displayName: "IA",
 		leaderId: "Valbrak, O Mago Popular",
@@ -81,6 +86,30 @@ export class SoloMatchRoom extends Room<MatchState> {
 	private clearInactivityTimer() {
 		if (this.inactivityTimeout) clearTimeout(this.inactivityTimeout);
 		this.inactivityTimeout = null;
+	}
+
+	private clearMulliganTimer(resetDeadline = false) {
+		if (this.mulliganTimeout) clearTimeout(this.mulliganTimeout);
+		this.mulliganTimeout = null;
+		if (resetDeadline) this.state.game.mulliganDeadlineAt = 0;
+	}
+
+	private startMulliganTimer() {
+		this.clearMulliganTimer();
+		this.state.game.mulliganDeadlineAt = Date.now() + MULLIGAN_TIMEOUT_MS;
+		this.mulliganTimeout = setTimeout(() => {
+			this.mulliganTimeout = null;
+			if (this.state.phase !== "IN_MATCH" || this.state.game.phase !== "MULLIGAN") {
+				this.state.game.mulliganDeadlineAt = 0;
+				return;
+			}
+			if (!this.state.game.p1MulliganDone) {
+				this.pendingMulligans.p1 = [];
+				this.state.game.p1MulliganDone = true;
+			}
+			this.tryResolveOpeningMulligan();
+			this.refreshInactivityTimer();
+		}, MULLIGAN_TIMEOUT_MS);
 	}
 
 	private broadcastMatchEvent(name: string, payload: any) {
@@ -242,6 +271,74 @@ export class SoloMatchRoom extends Room<MatchState> {
 			const def = findCardDef(cardId);
 			return !!cardId && Number(def?.cost || 0) <= limit;
 		}).length;
+	}
+
+	private chooseBotOpeningMulligan(): number[] {
+		const player = this.state.game.p2 as any;
+		const hand = [...player.hand] as string[];
+		if (!hand.length) return [];
+
+		const evaluated = hand.map((cardId, index) => {
+			const def = findCardDef(cardId);
+			const cost = Math.max(0, Number(def?.cost || 0));
+			const kind = this.normalizeText(def?.kind || def?.tipo);
+			const effect = this.normalizeText(def?.effect || "");
+			let keepScore = this.scoreBotCard(cardId, def);
+
+			if (cost <= 2) keepScore += 30;
+			else if (cost === 3) keepScore += 16;
+			else if (cost >= 5) keepScore -= 20;
+			if (cost >= 7) keepScore -= 36;
+
+			if (kind === "truque") keepScore -= 18;
+			if (kind === "env") keepScore -= 10;
+			if (effect === "search_deck" || effect === "charlatao_da_vila" || effect === "informante_beco" || effect === "aranhas_observadora") {
+				keepScore += 12;
+			}
+
+			return { index, cardId, cost, kind, keepScore };
+		});
+
+		const earlyCards = evaluated
+			.filter((entry) => entry.cost <= 3 && entry.kind !== "truque")
+			.sort((left, right) => right.keepScore - left.keepScore);
+		const keepIndexes = new Set<number>();
+		const targetEarlyKeeps = earlyCards.length >= 2 ? 2 : earlyCards.length;
+		for (let i = 0; i < targetEarlyKeeps; i += 1) {
+			keepIndexes.add(earlyCards[i].index);
+		}
+
+		const bestOverall = [...evaluated].sort((left, right) => right.keepScore - left.keepScore)[0];
+		if (bestOverall) keepIndexes.add(bestOverall.index);
+
+		let selection = evaluated
+			.filter((entry) => {
+				if (keepIndexes.has(entry.index)) return false;
+				if (entry.cost >= 6) return true;
+				if (entry.cost >= 5 && earlyCards.length < 2) return true;
+				if (entry.kind === "truque" && earlyCards.length === 0) return true;
+				return entry.keepScore < 20;
+			})
+			.map((entry) => entry.index)
+			.sort((left, right) => left - right);
+
+		if (!selection.length && earlyCards.length === 0) {
+			selection = [...evaluated]
+				.sort((left, right) => {
+					if (left.keepScore !== right.keepScore) return left.keepScore - right.keepScore;
+					if (right.cost !== left.cost) return right.cost - left.cost;
+					return left.index - right.index;
+				})
+				.slice(0, Math.max(1, Math.min(2, evaluated.length - 1)))
+				.map((entry) => entry.index)
+				.sort((left, right) => left - right);
+		}
+
+		if (selection.length >= evaluated.length) {
+			selection = selection.slice(0, evaluated.length - 1);
+		}
+
+		return selection;
 	}
 
 	private countAnimalProfile() {
@@ -1061,12 +1158,54 @@ export class SoloMatchRoom extends Room<MatchState> {
 			this.clearInactivityTimer();
 			return;
 		}
+		if (this.state.game.phase === "MULLIGAN") {
+			if (!this.state.game.p1MulliganDone) {
+				this.resetInactivityTimer(this.sessionIdBySlot("p1"));
+				return;
+			}
+			this.resetInactivityTimer(null);
+			return;
+		}
 		if (this.activeChoiceSessionId) {
 			this.resetInactivityTimer(this.activeChoiceSessionId);
 			return;
 		}
 		const sessionId = this.state.game.turnSlot === "p1" ? this.sessionIdBySlot("p1") : null;
 		this.resetInactivityTimer(sessionId);
+	}
+
+	private parseMulliganSelection(rawValue: unknown, handSize: number): number[] | null {
+		if (!Array.isArray(rawValue)) return null;
+		if (rawValue.length > 5) return null;
+		const unique = new Set<number>();
+		for (const entry of rawValue) {
+			const index = Number(entry);
+			if (!Number.isInteger(index) || index < 0 || index >= handSize) return null;
+			if (unique.has(index)) return null;
+			unique.add(index);
+		}
+		return Array.from(unique).sort((left, right) => left - right);
+	}
+
+	private tryResolveOpeningMulligan() {
+		if (!this.state.game.p1MulliganDone || !this.state.game.p2MulliganDone) return;
+		this.clearMulliganTimer(true);
+		resolveOpeningMulligans(
+			this.state,
+			this.pendingMulligans.p1 || [],
+			this.pendingMulligans.p2 || [],
+			(name, payload) => this.broadcastMatchEvent(name, payload),
+			this.attackedThisTurn,
+			this.summonedThisTurn,
+			this.triggeredLeaderThisTurn,
+			this.askChoice
+		);
+		this.pendingMulligans = { p1: null, p2: null };
+		if (this.state.game.phase === "INITIAL") {
+			nextPhase(this.state, (name, payload) => this.broadcastMatchEvent(name, payload));
+		}
+		this.refreshInactivityTimer();
+		this.queueBotTurn();
 	}
 
 	private chooseBotOption(payload: ChoicePayload): string | null {
@@ -1569,10 +1708,27 @@ export class SoloMatchRoom extends Room<MatchState> {
 			starterSlot,
 			this.askChoice
 		);
+		this.pendingMulligans = { p1: null, p2: this.chooseBotOpeningMulligan() };
+		this.state.game.p2MulliganDone = true;
+		this.startMulliganTimer();
+		this.refreshInactivityTimer();
 
-		if (this.state.game.phase === "INITIAL") {
-			nextPhase(this.state, (name, payload) => this.broadcastMatchEvent(name, payload));
-		}
+		this.onMessage("submit_mulligan", (client, msg: { indices?: number[] }) => {
+			if (this.state.phase !== "IN_MATCH" || this.state.game.phase !== "MULLIGAN") return;
+			const slot = getSlotBySession(this.state, client.sessionId);
+			if (slot !== "p1" || this.state.game.p1MulliganDone) return;
+			for (const pending of this.pendingChoices.values()) {
+				if (pending.sessionId === client.sessionId) return;
+			}
+			const selection = this.parseMulliganSelection(msg?.indices, this.state.game.p1.hand.length);
+			if (!selection) {
+				client.send("error", { message: "invalid_mulligan_selection" });
+				return;
+			}
+			this.pendingMulligans.p1 = selection;
+			this.state.game.p1MulliganDone = true;
+			this.tryResolveOpeningMulligan();
+		});
 
 		this.onMessage("next_phase", (client) => {
 			if (!this.isValidTurnAction(client, ["INITIAL", "PREP", "COMBAT"])) return;
@@ -1675,11 +1831,13 @@ export class SoloMatchRoom extends Room<MatchState> {
 		}
 		this.state.players.delete(client.sessionId);
 		this.clearBotTimer();
+		this.clearMulliganTimer(true);
 		this.clearInactivityTimer();
 	}
 
 	onDispose() {
 		this.clearBotTimer();
+		this.clearMulliganTimer(true);
 		this.clearInactivityTimer();
 	}
 

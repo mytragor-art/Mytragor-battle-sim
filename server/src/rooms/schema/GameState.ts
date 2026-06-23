@@ -1,6 +1,6 @@
 import { Schema, type, ArraySchema } from "@colyseus/schema";
 
-export type TurnPhase = "INITIAL" | "PREP" | "COMBAT" | "END";
+export type TurnPhase = "MULLIGAN" | "INITIAL" | "PREP" | "COMBAT" | "END";
 
 export class PlayerGameState extends Schema {
 	@type("string") slot: string = "";
@@ -47,7 +47,10 @@ export class GameState extends Schema {
 	@type("string") turnSlot: string = "p1";
 	@type("number") turn: number = 1;
 	@type("number") seq: number = 0;
-	@type("string") phase: TurnPhase = "INITIAL";
+	@type("string") phase: TurnPhase = "MULLIGAN";
+	@type("boolean") p1MulliganDone: boolean = false;
+	@type("boolean") p2MulliganDone: boolean = false;
+	@type("number") mulliganDeadlineAt: number = 0;
 	@type(PlayerGameState) p1 = new PlayerGameState();
 	@type(PlayerGameState) p2 = new PlayerGameState();
 }
