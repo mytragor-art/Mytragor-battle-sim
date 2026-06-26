@@ -1043,7 +1043,11 @@ function buildMobileInspectCard(target: string | InspectorView | null): MobileIn
 }
 
 function bindMobileCardInspect(element: HTMLElement, target: string | InspectorView | null): void {
-	mobileCardInspect.bind(element, () => buildMobileInspectCard(target));
+	const inspectElement = element as HTMLElement & { __mobileInspectTarget?: string | InspectorView | null; __mobileInspectBound?: boolean };
+	inspectElement.__mobileInspectTarget = target;
+	if (inspectElement.__mobileInspectBound) return;
+	inspectElement.__mobileInspectBound = true;
+	mobileCardInspect.bind(inspectElement, () => buildMobileInspectCard(inspectElement.__mobileInspectTarget || null));
 }
 
 function asAssetPath(path: string | undefined): string {
@@ -3019,12 +3023,14 @@ function renderLane(zoneId: "you-field" | "ai-field" | "you-support" | "ai-suppo
 		}
 		const cardId = cards[index];
 		if (!cardId) {
+			bindMobileCardInspect(slotEl, null);
 			slotEl.onmousemove = null;
 			slotEl.onmouseleave = null;
 			continue;
 		}
 		const side: BattleSide = zoneId.startsWith("you") ? "you" : "ai";
 		const lane: InspectorLane = zoneId.endsWith("field") ? "field" : "support";
+		bindMobileCardInspect(slotEl, { cardId, side, lane, index });
 		const cardEl = buildHandCard(cardId, false, undefined, { cardId, side, lane, index });
 		cardEl.className = "card slotCard";
 		if (zoneId === "you-field" && tappedBySide.you.has(index)) cardEl.classList.add("tapped");
