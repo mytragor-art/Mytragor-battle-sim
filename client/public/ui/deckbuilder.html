@@ -954,6 +954,194 @@
       box-shadow: 0 10px 38px rgba(0,0,0,.55);
     }
 
+    .mobileInspectBackdrop,
+    .mobileInspectSheet,
+    .mobileInspectViewer {
+      display: none;
+    }
+
+    @media (max-width: 980px) and (pointer: coarse), (max-width: 980px) and (any-pointer: coarse) {
+      .pool-card,
+      .deck-card,
+      .leader-modal-card {
+        touch-action: manipulation;
+        -webkit-touch-callout: none;
+        user-select: none;
+      }
+
+      .mobileInspectBackdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 10030;
+        display: block;
+        background: rgba(4, 6, 12, .7);
+        backdrop-filter: blur(10px);
+      }
+
+      .mobileInspectBackdrop[hidden],
+      .mobileInspectSheet[hidden],
+      .mobileInspectViewer[hidden] {
+        display: none !important;
+      }
+
+      .mobileInspectSheet,
+      .mobileInspectViewer {
+        position: fixed;
+        left: max(12px, env(safe-area-inset-left));
+        right: max(12px, env(safe-area-inset-right));
+        z-index: 10031;
+        display: block;
+        color: #f8fafc;
+        background: linear-gradient(180deg, rgba(17,24,39,.98), rgba(6,10,18,.98));
+        border: 1px solid rgba(255,255,255,.18);
+        box-shadow: 0 24px 70px rgba(0,0,0,.55);
+        touch-action: manipulation;
+      }
+
+      .mobileInspectSheet {
+        bottom: max(12px, env(safe-area-inset-bottom));
+        border-radius: 18px;
+        padding: 14px;
+      }
+
+      .mobileInspectHeader,
+      .mobileInspectViewerHeader {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .mobileInspectTitleWrap {
+        min-width: 0;
+      }
+
+      .mobileInspectTitle,
+      .mobileInspectViewerTitle {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 800;
+        line-height: 1.2;
+      }
+
+      .mobileInspectType {
+        margin-top: 4px;
+        font-size: 12px;
+        line-height: 1.25;
+        color: rgba(248,250,252,.76);
+      }
+
+      .mobileInspectClose {
+        width: 38px;
+        height: 38px;
+        padding: 0;
+        border: 1px solid rgba(255,255,255,.22);
+        border-radius: 999px;
+        background: rgba(255,255,255,.1);
+        color: #fff;
+        font-size: 24px;
+        line-height: 1;
+      }
+
+      .mobileInspectBody {
+        display: grid;
+        grid-template-columns: minmax(96px, 30vw) 1fr;
+        gap: 12px;
+        align-items: start;
+        margin-top: 12px;
+      }
+
+      .mobileInspectThumb {
+        width: 100%;
+        border-radius: 10px;
+        border: 1px solid rgba(255,255,255,.16);
+        box-shadow: 0 14px 34px rgba(0,0,0,.45);
+        background: rgba(255,255,255,.05);
+      }
+
+      .mobileInspectContent {
+        min-width: 0;
+      }
+
+      .mobileInspectMeta,
+      .mobileInspectStats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .mobileInspectStats {
+        margin-top: 8px;
+      }
+
+      .mobileInspectMetaPill,
+      .mobileInspectStatPill {
+        padding: 5px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        line-height: 1.2;
+        background: rgba(255,255,255,.1);
+        border: 1px solid rgba(255,255,255,.16);
+      }
+
+      .mobileInspectText {
+        margin-top: 10px;
+        max-height: min(28vh, 220px);
+        overflow: auto;
+        font-size: 13px;
+        line-height: 1.4;
+        white-space: pre-wrap;
+        color: rgba(248,250,252,.92);
+      }
+
+      .mobileInspectActions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .mobileInspectAction {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 42px;
+      }
+
+      .mobileInspectViewer {
+        top: max(12px, env(safe-area-inset-top));
+        bottom: max(12px, env(safe-area-inset-bottom));
+        border-radius: 18px;
+        padding: 14px;
+        display: grid;
+        grid-template-rows: auto 1fr;
+        gap: 12px;
+      }
+
+      .mobileInspectViewerImage {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        border-radius: 10px;
+        background: rgba(0,0,0,.24);
+      }
+    }
+
+    @media (max-width: 720px) and (pointer: coarse), (max-width: 720px) and (any-pointer: coarse) {
+      .mobileInspectBody {
+        grid-template-columns: 1fr;
+      }
+
+      .mobileInspectThumb {
+        width: min(56vw, 220px);
+        justify-self: center;
+      }
+
+      .mobileInspectActions {
+        grid-template-columns: 1fr;
+      }
+    }
+
     .leader-modal-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
@@ -1172,6 +1360,43 @@
       top: 14px;
       z-index: 10001;
     }
+
+    .deckbuilderMobileHint {
+      display: none;
+    }
+
+    @media (max-width: 980px) and (pointer: coarse), (max-width: 980px) and (any-pointer: coarse) {
+      #btnBackMenu {
+        position: fixed;
+        left: max(8px, env(safe-area-inset-left));
+        right: auto;
+        top: max(8px, env(safe-area-inset-top));
+        width: auto;
+        margin: 0;
+        padding: 7px 10px;
+        font-size: 12px;
+      }
+
+      .preview-panel,
+      #previewDetails,
+      .preview-toggle,
+      .preview-toggle > summary,
+      .preview-toggle > summary::after {
+        display: none !important;
+        content: none !important;
+      }
+
+      .deckbuilderMobileHint {
+        display: grid;
+        gap: 2px;
+        margin: -2px 0 8px;
+        color: var(--gold-a);
+        font-size: 11px;
+        font-weight: 800;
+        line-height: 1.2;
+        text-shadow: 0 1px 5px rgba(0,0,0,.72);
+      }
+    }
   </style>
 </head>
 <body>
@@ -1240,6 +1465,11 @@
             <div id="filterSummary" style="font-size:11px;color:#cbd5e1;">Nenhum filtro</div>
             <button id="btnShowTutorial" class="btn ghost" style="padding:6px 10px;">Tutorial</button>
           </div>
+        </div>
+
+        <div class="deckbuilderMobileHint" aria-hidden="true">
+          <span>Clique para adicionar no baralho</span>
+          <span>Segure para visualizar a carta</span>
         </div>
 
         <div class="filtersBar">
@@ -1498,10 +1728,280 @@
         .replace(/\n/g, '<br>');
     }
 
+    const mobileInspect = createMobileInspect();
+
+    function buildMobileInspectCard(card) {
+      if (!card) return null;
+      const stats = [];
+      if (card.kind === 'chosen' || card.kind === 'leader') {
+        const vida = card.hp ?? card.maxHp;
+        if (vida != null) stats.push(`Vida: ${vida}`);
+      } else if (card.kind === 'ally') {
+        const values = [
+          ['Vida', card.hp ?? card.maxHp],
+          ['Ataque', card.damage ?? card.atkBonus],
+          ['Resistência', card.ac]
+        ];
+        values.forEach(([label, value]) => {
+          if (value != null) stats.push(`${label}: ${value}`);
+        });
+      }
+      const details = cardDetailsLine(card);
+      const bodyText = [details, String(card.text || card.description || '').trim() || 'Sem descrição'].filter(Boolean).join('\n\n');
+      return {
+        cardId: String(card.id || card.name || card.img || ''),
+        title: card.name || card.label || 'Carta',
+        imageSrc: resolveImg(card.img),
+        typeLine: cardSubclassLine(card),
+        filiationLine: card.filiacao ? `Filiação: ${card.filiacao}` : '',
+        text: bodyText,
+        stats
+      };
+    }
+
+    function isMobileInspectEnabled() {
+      return window.matchMedia('(max-width: 980px)').matches
+        && (window.matchMedia('(pointer: coarse)').matches || window.matchMedia('(any-pointer: coarse)').matches);
+    }
+
+    function createMobileInspect() {
+      const backdrop = document.createElement('div');
+      backdrop.className = 'mobileInspectBackdrop';
+      backdrop.hidden = true;
+
+      const sheet = document.createElement('section');
+      sheet.className = 'mobileInspectSheet';
+      sheet.hidden = true;
+      sheet.setAttribute('aria-label', 'Inspeção de carta');
+      sheet.innerHTML = `
+        <div class="mobileInspectHeader">
+          <div class="mobileInspectTitleWrap">
+            <h3 class="mobileInspectTitle"></h3>
+            <div class="mobileInspectType"></div>
+          </div>
+          <button type="button" class="mobileInspectClose" aria-label="Fechar inspeção da carta">×</button>
+        </div>
+        <div class="mobileInspectBody">
+          <img class="mobileInspectThumb" alt="Carta inspecionada">
+          <div class="mobileInspectContent">
+            <div class="mobileInspectMeta"></div>
+            <div class="mobileInspectStats"></div>
+            <div class="mobileInspectText"></div>
+          </div>
+        </div>
+        <div class="mobileInspectActions">
+          <button type="button" class="btn primary mobileInspectAction" data-mobile-view-card>Ver carta</button>
+          <button type="button" class="btn mobileInspectAction" data-mobile-close>Fechar</button>
+        </div>`;
+
+      const viewer = document.createElement('section');
+      viewer.className = 'mobileInspectViewer';
+      viewer.hidden = true;
+      viewer.setAttribute('aria-label', 'Arte da carta');
+      viewer.innerHTML = `
+        <div class="mobileInspectViewerHeader">
+          <div class="mobileInspectViewerTitle"></div>
+          <button type="button" class="mobileInspectClose" aria-label="Fechar arte da carta">×</button>
+        </div>
+        <img class="mobileInspectViewerImage" alt="Arte ampliada da carta">`;
+
+      document.body.append(backdrop, sheet, viewer);
+
+      const titleEl = sheet.querySelector('.mobileInspectTitle');
+      const typeEl = sheet.querySelector('.mobileInspectType');
+      const thumb = sheet.querySelector('.mobileInspectThumb');
+      const metaEl = sheet.querySelector('.mobileInspectMeta');
+      const statsEl = sheet.querySelector('.mobileInspectStats');
+      const textEl = sheet.querySelector('.mobileInspectText');
+      const fullImage = viewer.querySelector('.mobileInspectViewerImage');
+      const viewerTitle = viewer.querySelector('.mobileInspectViewerTitle');
+      let activeCard = null;
+
+      function hideInfoOnly() {
+        sheet.hidden = true;
+        if (viewer.hidden) backdrop.hidden = true;
+      }
+
+      function hideImageOnly() {
+        viewer.hidden = true;
+        if (sheet.hidden) backdrop.hidden = true;
+      }
+
+      function hideAll() {
+        hideImageOnly();
+        hideInfoOnly();
+      }
+
+      function renderCard(card) {
+        titleEl.textContent = card.title || card.cardId;
+        typeEl.textContent = card.typeLine || '';
+        thumb.src = card.imageSrc;
+        thumb.alt = card.title || 'Carta';
+        fullImage.src = card.imageSrc;
+        fullImage.alt = card.title || 'Carta';
+        viewerTitle.textContent = card.title || card.cardId;
+        metaEl.innerHTML = '';
+        statsEl.innerHTML = '';
+        textEl.textContent = String(card.text || '').trim() || 'Sem texto de efeito.';
+        if (card.filiationLine) {
+          const pill = document.createElement('div');
+          pill.className = 'mobileInspectMetaPill';
+          pill.textContent = card.filiationLine;
+          metaEl.appendChild(pill);
+        }
+        (card.stats || []).forEach((stat) => {
+          const pill = document.createElement('div');
+          pill.className = 'mobileInspectStatPill';
+          pill.textContent = stat;
+          statsEl.appendChild(pill);
+        });
+      }
+
+      function showInfo(card) {
+        activeCard = card;
+        if (!isMobileInspectEnabled() || !card) {
+          hideAll();
+          return;
+        }
+        renderCard(card);
+        viewer.hidden = true;
+        backdrop.hidden = false;
+        sheet.hidden = false;
+      }
+
+      function showImage(card) {
+        if (card) activeCard = card;
+        if (!isMobileInspectEnabled() || !activeCard) return;
+        renderCard(activeCard);
+        backdrop.hidden = false;
+        viewer.hidden = false;
+      }
+
+      backdrop.addEventListener('click', () => {
+        if (!viewer.hidden) {
+          hideImageOnly();
+          return;
+        }
+        hideAll();
+      });
+      sheet.querySelector('.mobileInspectClose').addEventListener('click', hideAll);
+      sheet.querySelector('[data-mobile-close]').addEventListener('click', hideAll);
+      sheet.querySelector('[data-mobile-view-card]').addEventListener('click', () => showImage());
+      viewer.querySelector('.mobileInspectClose').addEventListener('click', hideImageOnly);
+      document.addEventListener('keydown', (event) => { if (event.key === 'Escape') hideAll(); });
+      window.addEventListener('resize', () => { if (!isMobileInspectEnabled()) hideAll(); });
+
+      function bind(element, getCard) {
+        let pointerId = null;
+        let touchIdentifier = null;
+        let startX = 0;
+        let startY = 0;
+        let holdTimer = null;
+        let suppressNextClick = false;
+        const longPressMs = 650;
+        const moveCancelPx = 10;
+
+        function clearHold() {
+          if (holdTimer !== null) {
+            window.clearTimeout(holdTimer);
+            holdTimer = null;
+          }
+        }
+
+        function triggerInspect() {
+          const card = getCard();
+          if (!card) return;
+          suppressNextClick = true;
+          showInfo(card);
+          try { window.navigator.vibrate?.(16); } catch (_) {}
+        }
+
+        function scheduleHold() {
+          clearHold();
+          holdTimer = window.setTimeout(triggerInspect, longPressMs);
+        }
+
+        function cancelTracking() {
+          clearHold();
+          pointerId = null;
+          touchIdentifier = null;
+        }
+
+        element.addEventListener('pointerdown', (event) => {
+          if (!isMobileInspectEnabled()) return;
+          if (event.pointerType !== 'touch' && event.pointerType !== 'pen') return;
+          if (event.button !== 0) return;
+          pointerId = event.pointerId;
+          startX = event.clientX;
+          startY = event.clientY;
+          suppressNextClick = false;
+          scheduleHold();
+        }, { passive: true });
+
+        element.addEventListener('pointermove', (event) => {
+          if (pointerId !== event.pointerId) return;
+          if (Math.hypot(event.clientX - startX, event.clientY - startY) > moveCancelPx) cancelTracking();
+        }, { passive: true });
+
+        element.addEventListener('pointerup', (event) => {
+          if (pointerId !== event.pointerId) return;
+          clearHold();
+          pointerId = null;
+        });
+
+        element.addEventListener('pointercancel', (event) => {
+          if (pointerId !== event.pointerId) return;
+          cancelTracking();
+        });
+
+        element.addEventListener('touchstart', (event) => {
+          if (!isMobileInspectEnabled()) return;
+          if (event.touches.length !== 1) return;
+          const touch = event.touches[0];
+          touchIdentifier = touch.identifier;
+          startX = touch.clientX;
+          startY = touch.clientY;
+          suppressNextClick = false;
+          scheduleHold();
+        }, { passive: true });
+
+        element.addEventListener('touchmove', (event) => {
+          if (touchIdentifier === null) return;
+          const touch = Array.from(event.touches).find((entry) => entry.identifier === touchIdentifier);
+          if (!touch) {
+            cancelTracking();
+            return;
+          }
+          if (Math.hypot(touch.clientX - startX, touch.clientY - startY) > moveCancelPx) cancelTracking();
+        }, { passive: true });
+
+        element.addEventListener('touchend', () => {
+          clearHold();
+          touchIdentifier = null;
+        }, { passive: true });
+
+        element.addEventListener('touchcancel', cancelTracking, { passive: true });
+
+        element.addEventListener('contextmenu', (event) => {
+          if (!isMobileInspectEnabled()) return;
+          event.preventDefault();
+        });
+
+        element.addEventListener('click', (event) => {
+          if (!suppressNextClick) return;
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          suppressNextClick = false;
+        }, true);
+      }
+
+      return { bind, showInfo, showImage, hideAll };
+    }
+
     function attachPreview(el, card) {
       if (!el || !card) return;
       el.addEventListener('mouseenter', () => setPreview(card));
-      el.addEventListener('touchstart', () => setPreview(card), { passive: true });
+      mobileInspect.bind(el, () => buildMobileInspectCard(card));
     }
 
     function normalizeText(value) {
@@ -1694,7 +2194,9 @@
 
     function syncPreviewCollapse() {
       if (!previewDetails) return;
-      if (window.matchMedia('(max-width: 900px)').matches) previewDetails.removeAttribute('open');
+      const touchMobile = window.matchMedia('(max-width: 980px)').matches
+        && (window.matchMedia('(pointer: coarse)').matches || window.matchMedia('(any-pointer: coarse)').matches);
+      if (touchMobile || window.matchMedia('(max-width: 900px)').matches) previewDetails.removeAttribute('open');
       else previewDetails.setAttribute('open', 'open');
     }
 

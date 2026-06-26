@@ -234,7 +234,7 @@ function startRoomPolling() {
 	}, 3000);
 }
 
-async function joinLobby(): Promise<boolean> {
+async function joinLobby(forceCreate = false): Promise<boolean> {
 	if (isJoining || !view.endpointEl || !view.roomIdEl) return false;
 	isJoining = true;
 	try {
@@ -244,7 +244,7 @@ async function joinLobby(): Promise<boolean> {
 		}
 		log("JOINING", { endpoint: view.endpointEl.value.trim(), roomId: requestedRoomId || "(novo solo)" });
 		client = await connectClient(view.endpointEl.value.trim());
-		room = await joinOrCreateNamedRoom(client, "solo_lobby", requestedRoomId);
+		room = await joinOrCreateNamedRoom(client, "solo_lobby", requestedRoomId, forceCreate);
 		roomId = room.id;
 		selectedRoomId = room.id;
 		view.roomIdEl.value = room.id;
@@ -331,7 +331,7 @@ if (view.btnJoinSelected) view.btnJoinSelected.onclick = () => {
 if (view.btnReady) {
 	view.btnReady.onclick = async () => {
 		if (!room) {
-			const joined = await joinLobby();
+			const joined = await joinLobby(true);
 			if (!joined || !room) {
 				log("ERROR", { text: "Não foi possível entrar na sala solo para marcar Ready." });
 				return;

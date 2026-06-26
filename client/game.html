@@ -21,17 +21,6 @@
 
 <div class="app">
   <div class="col" id="handsCol" aria-label="Mãos dos jogadores">
-    <div class="handDock" id="enemyHandDock">
-      <div class="handDockTitle">Mão do Oponente</div>
-      <div class="hand" id="aiHand" aria-label="Mão do oponente"></div>
-    </div>
-    <div class="handDock" id="youHandDock">
-      <div class="handDockTitle">Sua Mão</div>
-      <div class="hand" id="youHand" aria-label="Sua mão"></div>
-    </div>
-  </div>
-
-  <div class="col" id="arenaCol">
     <div class="arenaToolbar" aria-label="Controles da partida">
       <button id="btnOpenLog" class="btn">Diário</button>
       <div class="arenaStatusBar">
@@ -41,12 +30,24 @@
       </div>
       <button id="btnBackLobby" class="btn">Sair</button>
     </div>
+    <div class="mobilePlayHint" aria-hidden="true">
+      <span>Para visualizar a carta, segure na carta por alguns segundos</span>
+      <span>Clique para realizar jogadas</span>
+    </div>
+  </div>
+
+  <div class="col" id="arenaCol">
+    <div class="handDock" id="enemyHandDock">
+      <div class="handDockTitle">Mão do Oponente</div>
+      <div class="hand" id="aiHand" aria-label="Mão do oponente"></div>
+    </div>
     <div class="boardWrap">
       <div class="scaler" id="boardScaler">
         <div class="boardStage" id="boardStage">
-          <div class="board boardZoom" id="board">
+          <div class="board boardZoom battleTable" id="board">
+            <div class="tableSurface" aria-hidden="true"></div>
 
-            <div class="arena" id="opArena">
+            <div class="arena opponentArena" id="opArena">
               <div class="fragDock" id="ai-fragsDock" aria-label="Fragmentos do oponente"></div>
 
               <div class="sideTitle">
@@ -93,7 +94,7 @@
 
             </div>
 
-            <div class="centerBar">
+            <div class="centerBar centerArena">
               <div class="phaseBar" id="phaseBar">
                 <div class="phaseItem" data-phase="INITIAL">Inicial</div>
                 <div class="phaseItem" data-phase="PREP">Preparação</div>
@@ -107,7 +108,7 @@
               </div>
             </div>
 
-            <div class="arena" id="youArena">
+            <div class="arena playerArena" id="youArena">
               <div class="fragDock" id="you-fragsDock" aria-label="Seus fragmentos"></div>
 
               <div class="sideTitle bottom">
@@ -157,6 +158,10 @@
           </div>
         </div>
       </div>
+    </div>
+    <div class="handDock youHandDock playerHandDock" id="youHandDock">
+      <div class="handDockTitle">Sua Mão</div>
+      <div class="hand youHand playerHand" id="youHand" aria-label="Sua mão"></div>
     </div>
   </div>
 

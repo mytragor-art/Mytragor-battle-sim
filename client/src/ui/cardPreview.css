@@ -1,0 +1,268 @@
+@media (max-width: 980px) {
+  .battleScreen,
+  .app {
+    width: 100dvw;
+    min-height: 100dvh;
+    padding:
+      calc(6px + env(safe-area-inset-top))
+      calc(6px + env(safe-area-inset-right))
+      calc(6px + env(safe-area-inset-bottom))
+      calc(6px + env(safe-area-inset-left));
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+
+  .previewDrawer,
+  .sidePreview,
+  .cardPreviewPanel,
+  #previewCol {
+    display: none !important;
+  }
+
+  .arenaCol,
+  .arenaCol.previewOpen,
+  #arenaCol,
+  #arenaCol.previewOpen {
+    padding-right: 0 !important;
+  }
+
+  body.mobile-preview-open #previewCol {
+    display: none !important;
+  }
+
+  .mobileCardPeek {
+    position: fixed;
+    left: calc(8px + env(safe-area-inset-left));
+    right: calc(8px + env(safe-area-inset-right));
+    bottom: calc(8px + env(safe-area-inset-bottom));
+    height: 58px;
+    z-index: 120;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 16px;
+    background: rgba(5, 8, 18, 0.88);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  }
+
+  .mobileCardPeek[hidden] {
+    display: none !important;
+  }
+
+  .mobileCardPeek img {
+    width: 36px;
+    height: 50px;
+    object-fit: cover;
+    border-radius: 4px;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35);
+  }
+
+  .mobileCardPeek .cardInfo {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .mobileCardPeek .cardName {
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mobileCardPeek .cardText {
+    font-size: 10px;
+    opacity: 0.8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mobileCardPeek .viewButton {
+    height: 34px;
+    padding: 0 12px;
+    border-radius: 999px;
+    font-size: 11px;
+    min-width: 0;
+  }
+
+  .mobileCardSheetBackdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 180;
+    background: rgba(0, 0, 0, 0.45);
+  }
+
+  .mobileCardSheetBackdrop[hidden] {
+    display: none !important;
+  }
+
+  .mobileCardSheet {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 190;
+    max-height: 72dvh;
+    padding:
+      12px
+      calc(14px + env(safe-area-inset-right))
+      calc(14px + env(safe-area-inset-bottom))
+      calc(14px + env(safe-area-inset-left));
+    border-radius: 22px 22px 0 0;
+    background: rgba(8, 10, 18, 0.96);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 -18px 50px rgba(0, 0, 0, 0.6);
+    overflow: auto;
+  }
+
+  .mobileCardSheet[hidden] {
+    display: none !important;
+  }
+
+  .mobileCardSheetHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+
+  .mobileCardSheetHeaderTitle {
+    font-size: 14px;
+    font-weight: 800;
+    color: #f3f4f6;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mobileCardSheetClose {
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    background: rgba(255, 255, 255, 0.08);
+    color: #f8fafc;
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  .mobileCardSheetContent {
+    display: grid;
+    grid-template-columns: 42% 1fr;
+    gap: 12px;
+    align-items: start;
+  }
+
+  .mobileCardSheetImage {
+    width: 100%;
+    max-width: 220px;
+    margin: 0 auto;
+    border-radius: 10px;
+    box-shadow: 0 14px 32px rgba(0, 0, 0, 0.55);
+  }
+
+  .mobileCardSheetText {
+    font-size: 12px;
+    line-height: 1.35;
+    color: #e5e7eb;
+    white-space: pre-wrap;
+  }
+
+  .rotateHint {
+    display: none;
+  }
+
+  .touchFocus {
+    transform: translateY(-10px) scale(1.08);
+    z-index: 80;
+  }
+}
+
+@media (max-width: 980px) and (orientation: landscape) {
+  .mobileCardPeek {
+    top: calc(6px + env(safe-area-inset-top));
+    bottom: auto;
+    left: auto;
+    right: calc(8px + env(safe-area-inset-right));
+    width: min(360px, 44dvw);
+    height: 54px;
+  }
+
+  .mobileCardSheet {
+    max-height: 86dvh;
+    width: min(620px, 62dvw);
+    left: auto;
+    right: calc(10px + env(safe-area-inset-right));
+    bottom: calc(10px + env(safe-area-inset-bottom));
+    border-radius: 18px;
+  }
+
+  .mobileCardSheetContent {
+    grid-template-columns: 40% 1fr;
+  }
+
+  .mobileCardSheetImage {
+    max-height: 68dvh;
+    object-fit: contain;
+  }
+}
+
+@media (max-width: 740px) and (orientation: portrait) {
+  .rotateHint {
+    display: block;
+    position: fixed;
+    top: calc(8px + env(safe-area-inset-top));
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 200;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgba(10, 12, 20, 0.78);
+    color: #fff;
+    font-size: 11px;
+    pointer-events: none;
+  }
+
+  .mobileCardSheet {
+    max-height: 82dvh;
+  }
+
+  .mobileCardSheetContent {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .mobileCardSheetImage {
+    width: min(72dvw, 260px);
+    max-width: 260px;
+  }
+
+  .mobileCardSheetText {
+    width: 100%;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 390px) {
+  .mobileCardSheetImage {
+    width: min(68dvw, 230px);
+  }
+
+  .mobileCardSheetText {
+    font-size: 12px;
+  }
+
+  .mobileCardPeek {
+    height: 52px;
+  }
+
+  .mobileCardPeek img {
+    width: 32px;
+    height: 44px;
+  }
+}

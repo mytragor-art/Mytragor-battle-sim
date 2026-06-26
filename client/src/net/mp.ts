@@ -26,13 +26,13 @@ export async function connectClient(endpoint: string): Promise<Colyseus.Client> 
 	return new Colyseus.Client(config.endpoint);
 }
 
-export async function joinOrCreateLobby(client: Colyseus.Client, roomId?: string): Promise<Colyseus.Room> {
-	if (!roomId) return client.create("lobby");
+export async function joinOrCreateLobby(client: Colyseus.Client, roomId?: string, forceCreate = false): Promise<Colyseus.Room> {
+	if (forceCreate || !roomId) return client.create("lobby");
 	return client.joinById(roomId);
 }
 
-export async function joinOrCreateNamedRoom(client: Colyseus.Client, roomName: string, roomId?: string): Promise<Colyseus.Room> {
-	if (!roomId) return client.create(roomName);
+export async function joinOrCreateNamedRoom(client: Colyseus.Client, roomName: string, roomId?: string, forceCreate = false): Promise<Colyseus.Room> {
+	if (forceCreate || !roomId) return client.create(roomName);
 	return client.joinById(roomId);
 }
 

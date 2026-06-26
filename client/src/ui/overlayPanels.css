@@ -1,0 +1,115 @@
+/* Responsibility: keep floating control/preview panels above the arena with opaque surfaces. */
+
+#handsCol {
+	position: sticky;
+	z-index: 130;
+}
+
+#handsCol > .arenaToolbar,
+.arenaToolbar {
+	position: relative;
+	z-index: 135;
+	background: linear-gradient(180deg, #111827, #050914) !important;
+	border-color: rgba(255, 255, 255, 0.18) !important;
+	box-shadow: 0 16px 34px rgba(0, 0, 0, 0.48) !important;
+	backdrop-filter: none !important;
+}
+
+#previewCol,
+.previewDrawer {
+	position: sticky;
+	z-index: 130;
+	display: grid;
+	grid-template-rows: auto minmax(0, 1fr);
+	min-height: 0;
+	background: #070b14 !important;
+	border-color: rgba(255, 255, 255, 0.18) !important;
+	box-shadow: 0 18px 42px rgba(0, 0, 0, 0.55) !important;
+	backdrop-filter: none !important;
+	overflow: hidden !important;
+}
+
+#previewCol .inspector,
+.previewDrawer .inspector {
+	display: grid;
+	grid-template-rows: minmax(0, 0.39fr) minmax(0, 0.61fr);
+	gap: 8px;
+	min-height: 0;
+	height: 100%;
+	overflow: visible;
+}
+
+#previewCol .big,
+#previewCol .bigMeta,
+.previewDrawer .big,
+.previewDrawer .bigMeta {
+	background: #0b101c !important;
+	border-color: rgba(214, 181, 112, 0.18) !important;
+	box-shadow: 0 12px 28px rgba(0, 0, 0, 0.42) !important;
+	backdrop-filter: none !important;
+}
+
+#previewCol .big,
+.previewDrawer .big {
+	display: grid;
+	grid-template-rows: minmax(0, 1fr) minmax(24px, auto);
+	gap: 8px;
+	min-height: 0;
+	padding: 8px !important;
+	overflow: hidden;
+}
+
+#previewCol #bigImg,
+.previewDrawer #bigImg {
+	width: auto;
+	max-width: 100%;
+	height: auto;
+	max-height: min(28.8dvh, 264px) !important;
+	justify-self: center;
+	object-fit: contain !important;
+}
+
+#previewCol .bigStats,
+.previewDrawer .bigStats {
+	min-height: 0;
+	gap: 4px;
+}
+
+#previewCol .bigMeta,
+.previewDrawer .bigMeta {
+	align-content: start;
+	gap: 6px !important;
+	min-height: 0;
+	padding: 10px !important;
+	overflow: visible !important;
+}
+
+#previewCol .bigMetaTitle,
+.previewDrawer .bigMetaTitle {
+	font-size: 19.5px !important;
+	line-height: 1.15 !important;
+}
+
+#previewCol .bigMetaLine,
+.previewDrawer .bigMetaLine {
+	font-size: 14.3px !important;
+	line-height: 1.2 !important;
+}
+
+#previewCol .bigMetaText,
+.previewDrawer .bigMetaText {
+	font-size: 15.6px !important;
+	line-height: 1.32 !important;
+}
+
+@media (min-width: 981px), (hover: hover) and (pointer: fine) {
+	#previewCol,
+	.previewDrawer {
+		position: fixed;
+		top: 8px;
+		bottom: 8px;
+		height: auto;
+		max-height: none;
+		z-index: 140;
+	}
+}

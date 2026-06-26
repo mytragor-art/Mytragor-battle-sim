@@ -86,20 +86,22 @@ async function main() {
 				const matchRoomId = String(room.metadata?.matchRoomId || "");
 				if (matchRoomId) spectatorByMatchRoomId.set(matchRoomId, room);
 			}
-			const activeMatches = matches.map((room: any) => ({
-				roomId: String(room.roomId || ""),
-				spectatorRoomId: String(spectatorByMatchRoomId.get(String(room.roomId || ""))?.roomId || ""),
-				clients: Number(room.clients || 0),
-				maxClients: Number(room.maxClients || 2),
-				locked: !!room.locked,
-				metadata: {
-					title: String(room.metadata?.title || ""),
-					p1Name: String(room.metadata?.p1Name || ""),
-					p2Name: String(room.metadata?.p2Name || ""),
-					p1LeaderId: String(room.metadata?.p1LeaderId || ""),
-					p2LeaderId: String(room.metadata?.p2LeaderId || "")
-				}
-			}));
+			const activeMatches = matches
+				.filter((room: any) => Number(room.clients || 0) > 0)
+				.map((room: any) => ({
+					roomId: String(room.roomId || ""),
+					spectatorRoomId: String(spectatorByMatchRoomId.get(String(room.roomId || ""))?.roomId || ""),
+					clients: Number(room.clients || 0),
+					maxClients: Number(room.maxClients || 2),
+					locked: !!room.locked,
+					metadata: {
+						title: String(room.metadata?.title || ""),
+						p1Name: String(room.metadata?.p1Name || ""),
+						p2Name: String(room.metadata?.p2Name || ""),
+						p1LeaderId: String(room.metadata?.p1LeaderId || ""),
+						p2LeaderId: String(room.metadata?.p2LeaderId || "")
+					}
+				}));
 			res.json({ rooms: activeMatches });
 		} catch (error) {
 			console.error("[SERVER] Failed to list matches", error);
@@ -165,6 +167,12 @@ async function main() {
 			const targetMatchRoomId = String(req.params.matchRoomId || "").trim();
 			if (!targetMatchRoomId) {
 				res.status(400).json({ error: "missing_match_room_id" });
+				return;
+			}
+			const matches = await matchMaker.query({ name: "match" });
+			const activeMatch = matches.find((item: any) => String(item.roomId || "") === targetMatchRoomId && Number(item.clients || 0) > 0);
+			if (!activeMatch) {
+				res.status(404).json({ error: "match_room_not_found" });
 				return;
 			}
 			const rooms = await matchMaker.query({ name: "spectator" });

@@ -6,6 +6,7 @@ import { getGameInputs, log, logText, renderButtonRow } from "../ui/gameView";
 import { setupBoardScale } from "../ui/boardScale";
 import { setupArenaSlots } from "../ui/arenaSlots";
 import { getDisplayName } from "../ui/profile";
+import { createMobileCardInspect, type MobileInspectCard } from "../ui/mobileCardInspect";
 import { resolveServerEndpoint } from "../config/runtime";
 import { canAttackCardQuiet, canAttackTargetQuiet, endAttackCleanup, resolveAttackOn, selectAttacker, type AttackSelection, type AttackTarget as BattleTarget, type BattleCard, type BattleRuntime, type BattleSide } from "../game/battle";
 
@@ -44,6 +45,7 @@ setupBoardScale();
 setupArenaSlots();
 setupAttackArrow();
 setupMobilePreviewToggle();
+const mobileCardInspect = createMobileCardInspect();
 
 const previousLaneCards: Record<"you-field" | "ai-field" | "you-support" | "ai-support", string[]> = {
 	"you-field": [],
@@ -1025,6 +1027,25 @@ function previewTextLine(cardId: string, card: CardDef | undefined): string {
 	return text || String(card?.description || "").trim() || String(card?.tipo || cardId || "").trim();
 }
 
+function buildMobileInspectCard(target: string | InspectorView | null): MobileInspectCard | null {
+	const nextView = normalizedInspectorView(typeof target === "string" ? { cardId: target } : target);
+	if (!nextView?.cardId) return null;
+	const card = resolveCard(nextView.cardId);
+	return {
+		cardId: nextView.cardId,
+		title: String(card?.name || nextView.cardId || "Carta"),
+		imageSrc: asAssetPath(card?.img || CARD_BACK_ASSET),
+		typeLine: cardSubclassLine(card),
+		filiationLine: previewFiliationLine(card),
+		text: previewTextLine(nextView.cardId, card),
+		stats: getInspectorStatsSafe(nextView).map((item) => `${item.label}: ${item.value}`),
+	};
+}
+
+function bindMobileCardInspect(element: HTMLElement, target: string | InspectorView | null): void {
+	mobileCardInspect.bind(element, () => buildMobileInspectCard(target));
+}
+
 function asAssetPath(path: string | undefined): string {
 	if (!path) return "";
 	if (/^(https?:|data:|file:|\/\/)/i.test(path)) return path;
@@ -1321,12 +1342,13 @@ function syncMobilePreviewState(): void {
 	const fab = document.getElementById("mobilePreviewFab") as HTMLButtonElement | null;
 	const isOpen = document.body.classList.contains("mobile-preview-open");
 	const isMobile = isMobileGameplay();
+	if (isMobile) document.body.classList.remove("mobile-preview-open");
 	if (button) {
 		button.textContent = isMobile ? "Fechar" : "Minimizar";
 		button.setAttribute("aria-expanded", isOpen ? "true" : "false");
 	}
 	if (fab) {
-		fab.hidden = !isMobile;
+		fab.hidden = true;
 		fab.setAttribute("aria-expanded", isOpen ? "true" : "false");
 		fab.classList.toggle("is-active", isOpen);
 		fab.setAttribute("aria-label", isOpen ? "Fechar detalhes da carta" : "Ver detalhes da carta");
@@ -1339,8 +1361,7 @@ function openMobilePreview(target?: string | InspectorView | null): void {
 		: (hoveredInspectorView || selectedInspectorView || (selectedHandCardId ? { cardId: selectedHandCardId } : null)));
 	if (nextTarget) setInspector(nextTarget);
 	if (!isMobileGameplay()) return;
-	document.body.classList.add("mobile-preview-open");
-	syncMobilePreviewState();
+	return;
 }
 
 function closeMobilePreview(): void {
@@ -1358,51 +1379,13 @@ function toggleMobilePreview(): void {
 }
 
 function attachMobilePreviewGesture(element: HTMLElement, inspectorTarget?: string | InspectorView | null): void {
-	let holdTimer: number | null = null;
-	let holdTriggered = false;
-
-	const clearHold = () => {
-		if (holdTimer !== null) {
-			window.clearTimeout(holdTimer);
-			holdTimer = null;
-		}
-	};
-
-	element.addEventListener("touchstart", (event) => {
-		if (!isMobileGameplay() || event.touches.length !== 1) return;
-		holdTriggered = false;
-		clearHold();
-		holdTimer = window.setTimeout(() => {
-			holdTriggered = true;
-			openMobilePreview(inspectorTarget || null);
-			try {
-				window.navigator.vibrate?.(12);
-			} catch {
-				// Ignore unsupported vibration APIs.
-			}
-		}, 420);
-	}, { passive: true });
-
-	for (const eventName of ["touchend", "touchcancel", "touchmove"]) {
-		element.addEventListener(eventName, clearHold, { passive: true });
-	}
-
-	element.addEventListener("contextmenu", (event) => {
-		if (!isMobileGameplay()) return;
-		event.preventDefault();
-	});
-
-	element.addEventListener("click", (event) => {
-		if (!holdTriggered) return;
-		event.preventDefault();
-		event.stopImmediatePropagation();
-		holdTriggered = false;
-	}, true);
+	bindMobileCardInspect(element, inspectorTarget || null);
 }
 
 function setupMobilePreviewToggle(): void {
 	const button = document.getElementById("btnTogglePreview") as HTMLButtonElement | null;
 	const fab = document.getElementById("mobilePreviewFab") as HTMLButtonElement | null;
+	if (fab) fab.hidden = true;
 	if (!button) return;
 	let suppressFabClick = false;
 
@@ -2203,6 +2186,7 @@ function renderPileModal(): void {
 		const button = document.createElement("button");
 		button.type = "button";
 		button.className = "card slotCard";
+		button.dataset.cardId = cardId;
 		button.style.width = "63px";
 		button.style.height = "88px";
 		button.style.cursor = "default";
@@ -2219,6 +2203,7 @@ function renderPileModal(): void {
 			setHoveredInspector({ cardId, side: activePileSide, lane: activePileWhich });
 		};
 		button.onmouseleave = () => setHoveredInspector(null);
+		if (!hideFace) bindMobileCardInspect(button, { cardId, side: activePileSide, lane: activePileWhich });
 		grid.appendChild(button);
 	}
 }
@@ -2236,6 +2221,7 @@ function renderVisiblePileSlot(slotId: string, countId: string, cards: string[],
 	for (let layer = 0; layer < Math.min(3, cards.length); layer += 1) {
 		const cardEl = document.createElement("div");
 		cardEl.className = "card slotCard deckVisualCard";
+		cardEl.dataset.cardId = topCardId;
 		cardEl.style.width = "100%";
 		cardEl.style.height = "100%";
 		cardEl.style.margin = "0";
@@ -2255,6 +2241,7 @@ function renderVisiblePileSlot(slotId: string, countId: string, cards: string[],
 			const lane: InspectorLane = slotId.includes("grave") ? "grave" : (slotId.includes("ban") ? "banished" : "deck");
 			cardEl.onmouseenter = () => setHoveredInspector({ cardId: topCardId, side, lane });
 			cardEl.onmouseleave = () => setHoveredInspector(null);
+			bindMobileCardInspect(cardEl, { cardId: topCardId, side, lane });
 		}
 		slotEl.appendChild(cardEl);
 	}
@@ -2696,6 +2683,7 @@ function showEffectChoiceModal(payload: any) {
 		button.disabled = disabled;
 		const visual = getChoiceOptionVisual(option, payload);
 		const cardId = visual.cardId || String(option?.cardId || option?.label || "");
+		if (cardId) button.dataset.cardId = cardId;
 		const card = resolveCard(cardId);
 		button.classList.toggle("choiceCardMuted", visual.muted);
 		if (card?.img) {
@@ -2723,6 +2711,7 @@ function showEffectChoiceModal(payload: any) {
 			previewImg.style.filter = visual.muted ? "grayscale(1) saturate(0.15) contrast(1.05) brightness(0.92)" : "none";
 			previewMeta.textContent = [String(option?.description || option?.label || "").trim(), cardPreviewDetails(cardId, card, false, false)].filter(Boolean).join("\n\n");
 		};
+		if (cardId) bindMobileCardInspect(button, cardId);
 		button.onclick = () => {
 			if (disabled) return;
 			if (!room || !activeChoiceId) return;
@@ -2933,7 +2922,46 @@ function renderSideHand(containerId: "youHand" | "aiHand", cards: string[], sele
 		renderedIndex += 1;
 	}
 	previousHandCards[containerId] = cards.slice();
+	queueHandStackLayout(containerId);
 }
+
+function applyHandStackLayout(containerId: "youHand" | "aiHand"): void {
+	const container = document.getElementById(containerId) as HTMLElement | null;
+	if (!container) return;
+	container.classList.remove("handStacked");
+	container.style.removeProperty("--hand-overlap");
+	if (!window.matchMedia("(max-width: 980px) and (orientation: portrait) and (pointer: coarse)").matches) return;
+	const cards = Array.from(container.querySelectorAll(":scope > .handCard")) as HTMLElement[];
+	if (cards.length <= 1) return;
+	const parent = container.parentElement as HTMLElement | null;
+	if (!parent) return;
+	const availableWidth = Math.max(parent.getBoundingClientRect().width - 16, 1);
+	const firstCardRect = cards[0].getBoundingClientRect();
+	const cardWidth = firstCardRect.width || cards[0].offsetWidth || 1;
+	const gap = parseFloat(getComputedStyle(container).gap) || 0;
+	const totalWidth = (cardWidth * cards.length) + (gap * Math.max(cards.length - 1, 0));
+	if (totalWidth <= availableWidth) return;
+	const requiredOverlap = (totalWidth - availableWidth) / Math.max(cards.length - 1, 1);
+	const maxOverlap = cardWidth * 0.58;
+	const overlap = Math.min(requiredOverlap, maxOverlap);
+	if (overlap <= 0) return;
+	container.classList.add("handStacked");
+	container.style.setProperty("--hand-overlap", `${overlap}px`);
+}
+
+function queueHandStackLayout(containerId: "youHand" | "aiHand"): void {
+	requestAnimationFrame(() => applyHandStackLayout(containerId));
+}
+
+window.addEventListener("resize", () => {
+	queueHandStackLayout("youHand");
+	queueHandStackLayout("aiHand");
+});
+
+window.addEventListener("orientationchange", () => {
+	queueHandStackLayout("youHand");
+	queueHandStackLayout("aiHand");
+});
 
 function renderLane(zoneId: "you-field" | "ai-field" | "you-support" | "ai-support", cards: string[], activeIndex: number | null, onClick?: (index: number) => void, hpValues?: number[]): void {
 	const zone = document.getElementById(zoneId);
@@ -3294,7 +3322,19 @@ function goLobby() {
 	const endpoint = view.endpointEl?.value?.trim() || resolveServerEndpoint(window.location.search);
 	const search = new URLSearchParams(window.location.search);
 	const lobbyPath = search.get("solo") === "1" ? "./solo-lobby.html" : "./lobby.html";
-	window.location.href = `${lobbyPath}?endpoint=${encodeURIComponent(endpoint)}`;
+	const targetUrl = `${lobbyPath}?endpoint=${encodeURIComponent(endpoint)}`;
+	const activeRoom = room;
+	room = null;
+	if (activeRoom && typeof activeRoom.leave === "function") {
+		void Promise.resolve(activeRoom.leave()).catch(() => undefined).finally(() => {
+			window.location.href = targetUrl;
+		});
+		setTimeout(() => {
+			if (window.location.href !== targetUrl) window.location.href = targetUrl;
+		}, 500);
+		return;
+	}
+	window.location.href = targetUrl;
 }
 
 function clearSpectatorReconnectTimer() {

@@ -41,6 +41,7 @@ export class MatchRoom extends Room<MatchState> {
 	private reservedSeatByToken = new Map<string, ReservedSeat>();
 	private consumedJoinTokens = new Set<string>();
 	private pendingMulligans: Record<Slot, number[] | null> = { p1: null, p2: null };
+	private disconnectTimer: NodeJS.Timeout | null = null;
 
 	private sanitizeDisplayName(name: unknown): string {
 		return String(name || "").trim().slice(0, 18);
@@ -84,6 +85,14 @@ export class MatchRoom extends Room<MatchState> {
 		if (this.mulliganTimeout) clearTimeout(this.mulliganTimeout);
 		this.mulliganTimeout = null;
 		if (resetDeadline) this.state.game.mulliganDeadlineAt = 0;
+	}
+
+	private scheduleDisconnect(delayMs = 1200) {
+		if (this.disconnectTimer) clearTimeout(this.disconnectTimer);
+		this.disconnectTimer = setTimeout(() => {
+			this.disconnectTimer = null;
+			try { this.disconnect(); } catch (_) {}
+		}, delayMs);
 	}
 
 	private startMulliganTimer() {
@@ -457,6 +466,7 @@ export class MatchRoom extends Room<MatchState> {
 			if (this.activeChoiceSessionId === client.sessionId) this.activeChoiceSessionId = null;
 			if (leavingSlot && this.state.phase !== "FINISHED" && remainingPlayers.length > 0) {
 				finishMatch(this.state, leavingSlot, "opponent_left", (name, payload) => this.broadcastMatchEvent(name, payload));
+				this.scheduleDisconnect(1800);
 			}
 			this.clearInactivityTimer();
 			this.state.players.delete(client.sessionId);
@@ -465,6 +475,7 @@ export class MatchRoom extends Room<MatchState> {
 				this.state.hostSessionId = first?.sessionId || "";
 			}
 			this.publishSpectatorState();
+			if (remainingPlayers.length === 0) this.scheduleDisconnect(100);
 			this.refreshInactivityTimer();
 		} catch (err: any) {
 			console.error(`[ROOM ERROR] room=${this.roomId} onLeave client=${client?.sessionId || "-"}`, err && (err.stack || err));
@@ -475,6 +486,8 @@ export class MatchRoom extends Room<MatchState> {
 		try {
 			this.clearMulliganTimer(true);
 			this.clearInactivityTimer();
+			if (this.disconnectTimer) clearTimeout(this.disconnectTimer);
+			this.disconnectTimer = null;
 			// ensure spectator channel disposed
 			try { disposeSpectatorChannel(this.roomId); } catch (_) {}
 			console.log(`[ROOM] disposed room=${this.roomId}`);

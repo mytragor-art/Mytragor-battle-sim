@@ -1,0 +1,206 @@
+@media (min-width: 981px), (hover: hover) and (pointer: fine) {
+	#youHandDock,
+	.youHandDock,
+	.playerHandDock {
+		left: 12px !important;
+		right: 12px !important;
+		bottom: 0 !important;
+		width: auto !important;
+		max-width: none !important;
+		transform: none !important;
+		z-index: 160 !important;
+		overflow: visible !important;
+		padding-top: 18px !important;
+		box-sizing: border-box !important;
+	}
+
+	#youHand,
+	.youHand,
+	.playerHand,
+	#youHand.hand,
+	#youHand.handStacked,
+	.youHand.handStacked,
+	.playerHand.handStacked,
+	#youHand:has(.handCard:nth-child(8)),
+	.youHand:has(.handCard:nth-child(8)),
+	.playerHand:has(.handCard:nth-child(8)) {
+		position: relative !important;
+		z-index: 161 !important;
+		width: 100% !important;
+		max-width: 100% !important;
+		justify-content: flex-start !important;
+		gap: 8px !important;
+		overflow-x: auto !important;
+		overflow-y: hidden !important;
+		overscroll-behavior-x: contain !important;
+		scrollbar-gutter: stable both-edges !important;
+		padding: 18px 14px 8px 14px !important;
+		box-sizing: border-box !important;
+	}
+
+	#youHand .card.handCard,
+	.youHand .card.handCard,
+	.playerHand .card.handCard,
+	#youHand.handStacked .card.handCard + .card.handCard,
+	.youHand.handStacked .card.handCard + .card.handCard,
+	.playerHand.handStacked .card.handCard + .card.handCard,
+	#youHand:has(.handCard:nth-child(8)) .card.handCard + .card.handCard,
+	.youHand:has(.handCard:nth-child(8)) .card.handCard + .card.handCard,
+	.playerHand:has(.handCard:nth-child(8)) .card.handCard + .card.handCard {
+		margin-left: 0 !important;
+	}
+
+	#youHand::-webkit-scrollbar,
+	.youHand::-webkit-scrollbar,
+	.playerHand::-webkit-scrollbar {
+		height: 10px !important;
+	}
+
+	#youHand::-webkit-scrollbar-track,
+	.youHand::-webkit-scrollbar-track,
+	.playerHand::-webkit-scrollbar-track {
+		background: rgba(15, 23, 42, 0.72) !important;
+		border-radius: 999px !important;
+	}
+
+	#youHand::-webkit-scrollbar-thumb,
+	.youHand::-webkit-scrollbar-thumb,
+	.playerHand::-webkit-scrollbar-thumb {
+		background: rgba(250, 204, 21, 0.72) !important;
+		border-radius: 999px !important;
+		border: 2px solid rgba(15, 23, 42, 0.72) !important;
+	}
+}
+
+@media (max-width: 980px) and (orientation: portrait) and (pointer: coarse) {
+	.app {
+		grid-template-rows: 96px minmax(0, 1fr) !important;
+		height: 100dvh !important;
+		min-height: 0 !important;
+		max-height: 100dvh !important;
+		overflow: hidden !important;
+	}
+
+	#handsCol {
+		grid-template-rows: auto auto !important;
+		height: 96px !important;
+		max-height: 96px !important;
+		gap: 3px !important;
+	}
+
+	#arenaCol,
+	.arenaCol {
+		min-height: 0 !important;
+		overflow: hidden !important;
+	}
+
+	:root {
+		--arena-w: 560 !important;
+		--arena-h: 740 !important;
+		--cardW-base: 62px !important;
+		--cardH-base: 96px !important;
+		--cardW: 62px !important;
+		--cardH: 96px !important;
+		--arena-screen-w: min(100vw, calc((var(--arena-w) * 1px) * var(--scale))) !important;
+	}
+
+	.mobilePlayHint {
+		display: grid !important;
+		gap: 1px !important;
+		width: min(var(--arena-screen-w), 100%) !important;
+		max-width: min(var(--arena-screen-w), 100%) !important;
+		justify-self: start !important;
+		margin-left: 4px !important;
+		padding: 0 6px !important;
+		box-sizing: border-box !important;
+		color: #facc15 !important;
+		font-size: 9.5px !important;
+		font-weight: 800 !important;
+		line-height: 1.15 !important;
+		text-shadow: 0 1px 4px rgba(0, 0, 0, 0.72) !important;
+	}
+
+	#youHandDock,
+	.youHandDock,
+	.playerHandDock {
+		left: 8px !important;
+		right: 8px !important;
+		bottom: 0 !important;
+		width: auto !important;
+		max-width: none !important;
+		transform: none !important;
+		justify-content: flex-start !important;
+		overflow: visible !important;
+	}
+
+	#youHand,
+	.youHand,
+	.playerHand,
+	#youHand.hand,
+	#youHand.handStacked,
+	.youHand.handStacked,
+	.playerHand.handStacked,
+	#youHand:has(.handCard:nth-child(8)),
+	.youHand:has(.handCard:nth-child(8)),
+	.playerHand:has(.handCard:nth-child(8)) {
+		width: 100% !important;
+		max-width: 100% !important;
+		justify-content: flex-start !important;
+		gap: 5px !important;
+		overflow-x: auto !important;
+		overflow-y: hidden !important;
+		overscroll-behavior-x: contain !important;
+		-webkit-overflow-scrolling: touch !important;
+		scroll-snap-type: x proximity !important;
+		scroll-padding-inline: 12px !important;
+		padding: 0 10px 7px 10px !important;
+		touch-action: pan-x !important;
+		scrollbar-width: none !important;
+	}
+
+	#youHand::-webkit-scrollbar,
+	.youHand::-webkit-scrollbar,
+	.playerHand::-webkit-scrollbar {
+		display: none !important;
+	}
+
+	#youHand .card.handCard,
+	.youHand .card.handCard,
+	.playerHand .card.handCard,
+	#youHand.handStacked .card.handCard + .card.handCard,
+	.youHand.handStacked .card.handCard + .card.handCard,
+	.playerHand.handStacked .card.handCard + .card.handCard,
+	#youHand:has(.handCard:nth-child(8)) .card.handCard + .card.handCard,
+	.youHand:has(.handCard:nth-child(8)) .card.handCard + .card.handCard,
+	.playerHand:has(.handCard:nth-child(8)) .card.handCard + .card.handCard {
+		margin-left: 0 !important;
+		scroll-snap-align: center !important;
+	}
+
+	.lane > .slot:nth-child(1) { z-index: 15 !important; }
+	.lane > .slot:nth-child(2) { z-index: 14 !important; }
+	.lane > .slot:nth-child(3) { z-index: 13 !important; }
+	.lane > .slot:nth-child(4) { z-index: 12 !important; }
+	.lane > .slot:nth-child(5) { z-index: 11 !important; }
+
+	.boardWrap {
+		width: 100% !important;
+		max-width: 100vw !important;
+		overflow: hidden !important;
+	}
+
+	.boardStage,
+	#boardStage {
+		width: calc(var(--arena-w) * 1px) !important;
+		height: calc(var(--arena-h) * 1px) !important;
+		max-width: none !important;
+	}
+
+	#youHandDock,
+	.youHandDock,
+	.playerHandDock {
+		left: 6px !important;
+		right: 6px !important;
+		bottom: 4px !important;
+	}
+}

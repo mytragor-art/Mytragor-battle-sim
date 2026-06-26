@@ -21,6 +21,7 @@ export class SpectatorRoom extends Room<MatchState> {
 	maxClients = 100;
 	private matchRoomId = "";
 	private unsubscribe: (() => void) | null = null;
+	private closeTimer: NodeJS.Timeout | null = null;
 
 	onCreate(options: any) {
 		this.autoDispose = false;
@@ -38,11 +39,24 @@ export class SpectatorRoom extends Room<MatchState> {
 	}
 
 	onJoin(client: Client) {
+		if (this.state.phase === "FINISHED") {
+			client.leave(4000);
+			return;
+		}
 		client.send("assign_slot", { slot: null, spectator: true, sessionId: client.sessionId });
 	}
 
 	onDispose() {
 		if (this.unsubscribe) this.unsubscribe();
+		if (this.closeTimer) clearTimeout(this.closeTimer);
+	}
+
+	private scheduleClose() {
+		if (this.closeTimer) return;
+		this.closeTimer = setTimeout(() => {
+			this.closeTimer = null;
+			try { this.disconnect(); } catch (_) {}
+		}, 1200);
 	}
 
 	private applySnapshot(snapshot: SpectatorSnapshot) {
@@ -58,6 +72,7 @@ export class SpectatorRoom extends Room<MatchState> {
 		this.state.game.phase = snapshot.game.phase as any;
 		this.applyGamePlayer(this.state.game.p1, snapshot.game.p1);
 		this.applyGamePlayer(this.state.game.p2, snapshot.game.p2);
+		if (this.state.phase === "FINISHED") this.scheduleClose();
 	}
 
 	private syncPublicPlayer(slot: "p1" | "p2", displayName: string) {

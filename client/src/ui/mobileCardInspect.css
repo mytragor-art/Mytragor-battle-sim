@@ -1,0 +1,195 @@
+#mobilePreviewFab[hidden] {
+	display: none !important;
+}
+
+@media (max-width: 980px) and (pointer: coarse), (max-width: 980px) and (any-pointer: coarse) {
+	#previewCol,
+	#mobilePreviewFab,
+	body.mobile-preview-open #previewCol {
+		display: none !important;
+	}
+
+	.mobileInspectBackdrop {
+		position: fixed;
+		inset: 0;
+		z-index: 10030;
+		background: rgba(4, 6, 12, 0.7);
+		backdrop-filter: blur(10px);
+	}
+
+	.mobileInspectBackdrop[hidden],
+	.mobileInspectSheet[hidden],
+	.mobileInspectViewer[hidden] {
+		display: none !important;
+	}
+
+	.mobileInspectSheet,
+	.mobileInspectViewer {
+		position: fixed;
+		left: max(12px, env(safe-area-inset-left));
+		right: max(12px, env(safe-area-inset-right));
+		z-index: 10031;
+		color: #f8fafc;
+		background: linear-gradient(180deg, rgba(17, 24, 39, 0.98), rgba(6, 10, 18, 0.98));
+		border: 1px solid rgba(255, 255, 255, 0.18);
+		box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+		touch-action: manipulation;
+	}
+
+	.mobileInspectSheet {
+		bottom: max(12px, env(safe-area-inset-bottom));
+		border-radius: 18px;
+		padding: 14px;
+	}
+
+	.mobileInspectHeader,
+	.mobileInspectViewerHeader {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 12px;
+	}
+
+	.mobileInspectTitleWrap {
+		min-width: 0;
+	}
+
+	.mobileInspectTitle,
+	.mobileInspectViewerTitle {
+		margin: 0;
+		font-size: 16px;
+		font-weight: 800;
+		line-height: 1.2;
+	}
+
+	.mobileInspectType {
+		margin-top: 4px;
+		font-size: 12px;
+		line-height: 1.25;
+		color: rgba(248, 250, 252, 0.76);
+	}
+
+	.mobileInspectClose {
+		width: 38px;
+		height: 38px;
+		padding: 0;
+		border: 1px solid rgba(255, 255, 255, 0.22);
+		border-radius: 999px;
+		background: rgba(255, 255, 255, 0.1);
+		color: #fff;
+		font-size: 24px;
+		line-height: 1;
+	}
+
+	.mobileInspectBody {
+		display: grid;
+		grid-template-columns: minmax(96px, 30vw) 1fr;
+		gap: 12px;
+		align-items: start;
+		margin-top: 12px;
+	}
+
+	.mobileInspectThumb {
+		width: 100%;
+		border-radius: 10px;
+		border: 1px solid rgba(255, 255, 255, 0.16);
+		box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
+		background: rgba(255, 255, 255, 0.05);
+	}
+
+	.mobileInspectContent {
+		min-width: 0;
+	}
+
+	.mobileInspectMeta,
+	.mobileInspectStats {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+	}
+
+	.mobileInspectStats {
+		margin-top: 8px;
+	}
+
+	.mobileInspectMetaPill,
+	.mobileInspectStatPill {
+		padding: 5px 8px;
+		border-radius: 999px;
+		font-size: 11px;
+		line-height: 1.2;
+		background: rgba(255, 255, 255, 0.1);
+		border: 1px solid rgba(255, 255, 255, 0.16);
+	}
+
+	.mobileInspectText {
+		margin-top: 10px;
+		max-height: min(28vh, 220px);
+		overflow: auto;
+		font-size: 13px;
+		line-height: 1.4;
+		white-space: pre-wrap;
+		color: rgba(248, 250, 252, 0.92);
+	}
+
+	.mobileInspectActions {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 10px;
+		margin-top: 14px;
+	}
+
+	.mobileInspectAction {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 8px;
+		min-height: 42px;
+	}
+
+	.mobileInspectEye {
+		font-size: 17px;
+		line-height: 1;
+	}
+
+	.card[data-card-id],
+	.slotCard[data-card-id],
+	.deckVisualCard[data-card-id] {
+		touch-action: manipulation;
+		-webkit-touch-callout: none;
+		user-select: none;
+	}
+
+	.mobileInspectViewer {
+		top: max(12px, env(safe-area-inset-top));
+		bottom: max(12px, env(safe-area-inset-bottom));
+		border-radius: 18px;
+		padding: 14px;
+		display: grid;
+		grid-template-rows: auto 1fr;
+		gap: 12px;
+	}
+
+	.mobileInspectViewerImage {
+		width: 100%;
+		height: 100%;
+		object-fit: contain;
+		border-radius: 10px;
+		background: rgba(0, 0, 0, 0.24);
+	}
+}
+
+@media (max-width: 720px) and (pointer: coarse), (max-width: 720px) and (any-pointer: coarse) {
+	.mobileInspectBody {
+		grid-template-columns: 1fr;
+	}
+
+	.mobileInspectThumb {
+		width: min(56vw, 220px);
+		justify-self: center;
+	}
+
+	.mobileInspectActions {
+		grid-template-columns: 1fr;
+	}
+}

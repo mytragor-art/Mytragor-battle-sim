@@ -1,0 +1,177 @@
+@media (min-width: 981px), (hover: hover) and (pointer: fine) {
+	:root {
+		--hand-overlap: -22px;
+	}
+
+	#handsCol {
+		display: grid;
+		grid-template-rows: auto minmax(0, 1fr);
+		align-content: start;
+		gap: 6px;
+		padding: 6px;
+		overflow: hidden;
+	}
+
+	#handsCol > .arenaToolbar {
+		align-self: start;
+		width: 100%;
+		box-sizing: border-box;
+		flex-direction: column;
+		align-items: stretch;
+		justify-content: flex-start;
+		gap: 6px;
+	}
+
+	#handsCol > .arenaToolbar .arenaStatusBar {
+		width: 100%;
+		justify-content: stretch;
+		align-items: stretch;
+		flex-direction: column;
+		gap: 5px;
+	}
+
+	#handsCol > .arenaToolbar .btn,
+	#handsCol > .arenaToolbar .pill {
+		width: 100%;
+		box-sizing: border-box;
+		justify-content: center;
+	}
+
+	#arenaCol > #enemyHandDock {
+		width: 100%;
+		min-height: 68px;
+		padding: 5px 10px;
+		box-sizing: border-box;
+		overflow: hidden;
+	}
+
+	#enemyHandDock,
+	.handDock,
+	.opponentHandDock,
+	.handContainer,
+	.opponentHand,
+	#aiHand {
+		background: transparent !important;
+		border: none !important;
+		box-shadow: none !important;
+		backdrop-filter: none !important;
+	}
+
+	#enemyHandDock,
+	.opponentHandDock {
+		background: linear-gradient(180deg, rgba(0, 0, 0, 0.14), transparent) !important;
+	}
+
+	#aiHand,
+	.opponentHand {
+		height: 58px;
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		overflow: hidden;
+		padding: 3px 18px 0;
+	}
+
+	#aiHand .card,
+	#aiHand .handCard,
+	.opponentHand .card,
+	.opponentHand .handCard {
+		width: var(--hand-opponent-card-w);
+		height: var(--hand-opponent-card-h);
+		margin-left: -12px;
+	}
+}
+
+@media (max-width: 980px) and (pointer: coarse) {
+	#arenaCol > #enemyHandDock {
+		grid-column: 1 !important;
+		grid-row: auto !important;
+		width: 100% !important;
+		max-width: none !important;
+		height: 64px !important;
+		max-height: 64px !important;
+		padding: 2px 6px !important;
+		box-sizing: border-box;
+		overflow: visible;
+	}
+
+	#arenaCol > #enemyHandDock #aiHand {
+		height: 42px;
+		min-height: 0;
+		overflow: visible;
+	}
+
+	#handsCol > .arenaToolbar {
+		grid-column: 1 / -1;
+		grid-row: 1;
+		width: 100%;
+		max-width: none;
+		box-sizing: border-box;
+	}
+}
+
+@media (max-width: 980px) and (orientation: portrait) and (pointer: coarse) {
+	#arenaCol > #enemyHandDock,
+	#enemyHandDock {
+		width: min(var(--arena-screen-w), 100%) !important;
+		max-width: min(var(--arena-screen-w), 100%) !important;
+		justify-self: start !important;
+	}
+
+	#arenaCol > #enemyHandDock #aiHand,
+	#aiHand {
+		width: 100% !important;
+		max-width: 100% !important;
+		justify-content: flex-start !important;
+		align-items: flex-start !important;
+		flex-wrap: nowrap !important;
+		padding: 0 8px 2px 8px !important;
+		gap: 2px !important;
+		overflow: visible !important;
+	}
+
+	#handsCol > .arenaToolbar {
+		width: min(var(--arena-screen-w), 100%) !important;
+		max-width: min(var(--arena-screen-w), 100%) !important;
+		justify-self: start !important;
+		margin-left: 4px !important;
+	}
+
+	#aiHand.handStacked,
+	#enemyHandDock .hand.handStacked {
+		gap: 0 !important;
+	}
+
+	#aiHand:has(.handCard:nth-child(8)),
+	#enemyHandDock .hand:has(.handCard:nth-child(8)) {
+		--hand-overlap: 6px;
+		gap: 0 !important;
+	}
+
+	#aiHand:has(.handCard:nth-child(9)),
+	#enemyHandDock .hand:has(.handCard:nth-child(9)) {
+		--hand-overlap: 10px;
+	}
+
+	#aiHand:has(.handCard:nth-child(10)),
+	#enemyHandDock .hand:has(.handCard:nth-child(10)) {
+		--hand-overlap: 16px;
+	}
+
+	#aiHand:has(.handCard:nth-child(11)),
+	#enemyHandDock .hand:has(.handCard:nth-child(11)) {
+		--hand-overlap: 20px;
+	}
+
+	#aiHand:has(.handCard:nth-child(12)),
+	#enemyHandDock .hand:has(.handCard:nth-child(12)) {
+		--hand-overlap: 24px;
+	}
+
+	#aiHand.handStacked .card.handCard + .card.handCard,
+	#enemyHandDock .hand.handStacked .card.handCard + .card.handCard,
+	#aiHand:has(.handCard:nth-child(8)) .card.handCard + .card.handCard,
+	#enemyHandDock .hand:has(.handCard:nth-child(8)) .card.handCard + .card.handCard {
+		margin-left: calc(var(--hand-overlap, 0px) * -1) !important;
+	}
+}
