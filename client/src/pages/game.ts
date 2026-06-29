@@ -2554,6 +2554,7 @@ function showEffectChoiceModal(payload: any) {
 	const grid = document.getElementById("cardChoiceGrid") as HTMLElement | null;
 	if (!modal || !title || !grid) return;
 	const options = Array.isArray(payload?.options) ? payload.options : [];
+	const isMobileChoiceLayout = window.innerWidth <= 980;
 	const denseChoiceCards = options.length >= 12;
 	const choiceCardWidth = denseChoiceCards ? 68 : 72;
 	const choiceCardHeight = denseChoiceCards ? 94 : 100;
@@ -2569,7 +2570,7 @@ function showEffectChoiceModal(payload: any) {
 
 	const layout = document.createElement("div");
 	layout.style.display = "grid";
-	layout.style.gridTemplateColumns = window.innerWidth <= 980 ? "1fr" : "minmax(0, 1fr) minmax(180px, 220px)";
+	layout.style.gridTemplateColumns = isMobileChoiceLayout ? "1fr" : "minmax(0, 1fr) minmax(180px, 220px)";
 	layout.style.gap = "10px";
 	layout.style.alignItems = "start";
 
@@ -2620,8 +2621,10 @@ function showEffectChoiceModal(payload: any) {
 		previewWrap.appendChild(timeoutInfo);
 	}
 	startCountdown("cardChoiceCountdown", "cardChoiceCountdownValue", timeoutMs, "choice");
-	previewWrap.appendChild(previewImg);
-	previewWrap.appendChild(previewMeta);
+	if (!isMobileChoiceLayout) {
+		previewWrap.appendChild(previewImg);
+		previewWrap.appendChild(previewMeta);
+	}
 
 	const isMultiSelect = payload?.multiSelect === true;
 	const selectedOptionIds = new Set<string>();
@@ -2685,6 +2688,7 @@ function showEffectChoiceModal(payload: any) {
 		button.style.cursor = disabled ? "not-allowed" : "pointer";
 		if (disabled) button.style.opacity = "0.45";
 		button.disabled = disabled;
+		if (disabled) button.style.pointerEvents = "none";
 		const visual = getChoiceOptionVisual(option, payload);
 		const cardId = visual.cardId || String(option?.cardId || option?.label || "");
 		if (cardId) button.dataset.cardId = cardId;
@@ -2715,7 +2719,7 @@ function showEffectChoiceModal(payload: any) {
 			previewImg.style.filter = visual.muted ? "grayscale(1) saturate(0.15) contrast(1.05) brightness(0.92)" : "none";
 			previewMeta.textContent = [String(option?.description || option?.label || "").trim(), cardPreviewDetails(cardId, card, false, false)].filter(Boolean).join("\n\n");
 		};
-		if (cardId) bindMobileCardInspect(button, cardId);
+		if (cardId) bindMobileCardInspect(item, cardId);
 		button.onclick = () => {
 			if (disabled) return;
 			if (!room || !activeChoiceId) return;
@@ -2756,7 +2760,7 @@ function showEffectChoiceModal(payload: any) {
 		choicesWrap.appendChild(duelPanel);
 	}
 
-	if (window.innerWidth <= 980) {
+	if (isMobileChoiceLayout) {
 		layout.style.gridTemplateColumns = "1fr";
 		previewWrap.style.order = "-1";
 	}

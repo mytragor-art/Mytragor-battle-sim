@@ -35,9 +35,18 @@
       background:
 	        radial-gradient(circle at center, rgba(10,10,15,0.14) 0%, rgba(10,10,15,0.58) 72%),
 	        linear-gradient(rgba(10,10,15,0.28), rgba(10,10,15,0.28)),
-	        url("/bgambientes/fundostartdeck.png") center 12% / cover no-repeat fixed;
+          url("/bgambientes/fundostartdeck.png") center center / 100% auto no-repeat fixed;
       position:relative;
       background-color:#0a0a0f;
+    }
+
+    @media (max-width: 880px){
+      body{
+        background:
+	        radial-gradient(circle at center, rgba(10,10,15,0.14) 0%, rgba(10,10,15,0.58) 72%),
+	        linear-gradient(rgba(10,10,15,0.28), rgba(10,10,15,0.28)),
+          url("/bgambientes/fundostartdeckmobile.png") center 12% / cover no-repeat fixed;
+      }
     }
 
     body::before,
