@@ -10,6 +10,7 @@ function parseArgs(argv) {
 		publicRoot: "public",
 		outputRoot: "public/publicadas",
 		folders: [...DEFAULT_FOLDERS],
+		files: [],
 		width: 420,
 		height: 580,
 		quality: 82,
@@ -22,6 +23,13 @@ function parseArgs(argv) {
 		const nextValue = inlineValue ?? argv[index + 1];
 		const consumeNext = inlineValue == null;
 		switch (rawKey) {
+			case "files":
+				options.files = String(nextValue || "")
+					.split(",")
+					.map((value) => value.trim())
+					.filter(Boolean);
+				if (consumeNext) index += 1;
+				break;
 			case "public-root":
 				options.publicRoot = String(nextValue || options.publicRoot);
 				if (consumeNext) index += 1;
@@ -50,7 +58,7 @@ function parseArgs(argv) {
 				if (consumeNext) index += 1;
 				break;
 			case "help":
-				console.log(`Uso:\n  npm run assets:thumbs -- --folders allies,spell,equip\n\nOpcoes:\n  --public-root <pasta>  Padrao: public\n  --output-root <pasta>  Padrao: public/publicadas\n  --folders <lista>      Pastas separadas por virgula\n  --width <px>           Padrao: 420\n  --height <px>          Padrao: 580\n  --quality <0-100>      Padrao: 82`);
+				console.log(`Uso:\n  npm run assets:thumbs -- --folders allies,spell,equip\n  npm run assets:thumbs -- --files allies/carta.png,spell/outra.png\n\nOpcoes:\n  --public-root <pasta>  Padrao: public\n  --output-root <pasta>  Padrao: public/publicadas\n  --folders <lista>      Pastas separadas por virgula\n  --files <lista>        Arquivos relativos a public, separados por virgula\n  --width <px>           Padrao: 420\n  --height <px>          Padrao: 580\n  --quality <0-100>      Padrao: 82`);
 				process.exit(0);
 			default:
 				throw new Error(`Argumento desconhecido: --${rawKey}`);
@@ -103,17 +111,22 @@ async function main() {
 	let originalBytes = 0;
 	let thumbBytes = 0;
 
-	for (const folder of options.folders) {
-		const sourceDir = path.join(publicRoot, folder);
-		let stats;
-		try {
-			stats = await fs.stat(sourceDir);
-		} catch {
-			continue;
-		}
-		if (!stats.isDirectory()) continue;
+	const filesByFolder = options.files.length ? new Map([["", options.files.map((file) => path.join(publicRoot, file))]]) : null;
+	const folders = filesByFolder ? filesByFolder.keys() : options.folders;
 
-		const files = await collectFiles(sourceDir);
+	for (const folder of folders) {
+		const sourceDir = path.join(publicRoot, folder);
+		if (!filesByFolder) {
+			let stats;
+			try {
+				stats = await fs.stat(sourceDir);
+			} catch {
+				continue;
+			}
+			if (!stats.isDirectory()) continue;
+		}
+
+		const files = filesByFolder ? filesByFolder.get(folder) : await collectFiles(sourceDir);
 		for (const file of files) {
 			const relativePath = path.relative(publicRoot, file);
 			const parsed = path.parse(relativePath);

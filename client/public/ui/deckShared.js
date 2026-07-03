@@ -10,7 +10,7 @@
 
 	const CARD_BACK_IMAGE = "layout-background.ai.png";
 	const DECK_EDIT_DRAFT_KEY = "mytragor_deck_edit_draft";
-	const ASSET_CACHE_VERSION = "2026-06-12-1";
+	const ASSET_CACHE_VERSION = "2026-07-03-1";
 
 	function initFirebaseCompatLocal() {
 		try {
@@ -172,7 +172,7 @@
 		if (!path) return CARD_BACK_IMAGE;
 		try {
 			if (/^(data:|file:|\/\/)/i.test(path)) return path;
-			let normalized = String(path).replace(/\\/g, "/").replace(/[?#].*$/, "").replace(/^\.\//, "").replace(/^\.\.\//, "");
+			let normalized = String(path).replace(/\\/g, "/").replace(/[?#].*$/, "").replace(/^\.\//, "").replace(/^\.\.\//, "").replace(/^\/+/, "");
 			const href = (global.location && global.location.href) || "";
 			const pathname = (global.location && global.location.pathname) || "";
 			const inLegacyAssetsUi = pathname.includes("/assets/ui/");
@@ -200,7 +200,7 @@
 	function resolveThumbImg(path) {
 		if (!path) return resolveImg(CARD_BACK_IMAGE);
 		try {
-			let normalized = String(path).replace(/\\/g, "/").replace(/[?#].*$/, "").replace(/^\.\//, "").replace(/^\.\.\//, "");
+			let normalized = String(path).replace(/\\/g, "/").replace(/[?#].*$/, "").replace(/^\.\//, "").replace(/^\.\.\//, "").replace(/^\/+/, "");
 			if (normalized.startsWith("assets/")) {
 				normalized = normalized.slice("assets/".length);
 			}

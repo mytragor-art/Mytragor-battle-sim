@@ -15,7 +15,11 @@ function sanitizeEndpoint(rawValue: string): string {
 function fallbackWsEndpoint() {
 	const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
 	const host = window.location.hostname || "localhost";
-	return sanitizeEndpoint(`${protocol}//${host}:${DEFAULT_SERVER_PORT}`);
+	const currentPort = window.location.port;
+	const isVitePort = currentPort === "5173" || currentPort === "4173";
+	const port = isVitePort ? currentPort : DEFAULT_SERVER_PORT;
+	const path = isVitePort ? "/colyseus" : "";
+	return sanitizeEndpoint(`${protocol}//${host}:${port}${path}`);
 }
 
 export function resolveServerEndpoint(search: string = window.location.search) {
