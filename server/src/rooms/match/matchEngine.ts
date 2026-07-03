@@ -50,28 +50,33 @@ function getCombatAttackValue(state: MatchState, slot: Slot, attackerId: string,
 		attackValue += getFieldDamageBonusFromVital(me, attackerPos);
 	}
 	if (!isLeaderAttacker && String(attackerDef?.effect || "") === "kornex_buff_per_marcial_in_play") {
-		let marcialCount = 0;
-		for (const currentSlot of [slot, enemySlotId] as Slot[]) {
-			const player = asPlayer(state, currentSlot);
-			const leaderId = String(player.leaderId || "");
-			if (leaderId && cardHasFiliation(leaderId, "Marcial")) marcialCount += 1;
-			for (let index = 0; index < player.field.length; index += 1) {
-				const cardId = String(player.field[index] || "");
-				if (cardId && cardHasFiliation(cardId, "Marcial")) marcialCount += 1;
-			}
-			for (let index = 0; index < player.support.length; index += 1) {
-				const cardId = String(player.support[index] || "");
-				if (cardId && cardHasFiliation(cardId, "Marcial")) marcialCount += 1;
-			}
-			const envId = String(player.env || "");
-			if (envId && cardHasFiliation(envId, "Marcial")) marcialCount += 1;
-		}
-		attackValue += Math.max(0, marcialCount - 1);
+		attackValue += countMarcialCardsInPlay(state, slot, attackerPos);
 	}
 	if (hasMarcialEnvAttackBonus(state, slot, attackerId)) attackValue += 1;
 	attackValue += getAttachedSupportCounter(me, "draw_bonus", isLeaderAttacker ? null : attackerPos);
 	attackValue += getAttachedSupportNumericBonus(me, isLeaderAttacker ? null : attackerPos, "dmgBonus");
 	return attackValue;
+}
+
+function countMarcialCardsInPlay(state: MatchState, excludedSlot: Slot, excludedFieldPos: number): number {
+	let marcialCount = 0;
+	for (const currentSlot of [excludedSlot, enemySlot(excludedSlot)] as Slot[]) {
+		const player = asPlayer(state, currentSlot);
+		const leaderId = String(player.leaderId || "");
+		if (leaderId && cardHasFiliation(leaderId, "Marcial")) marcialCount += 1;
+		for (let index = 0; index < player.field.length; index += 1) {
+			if (currentSlot === excludedSlot && index === excludedFieldPos) continue;
+			const cardId = String(player.field[index] || "");
+			if (cardId && cardHasFiliation(cardId, "Marcial")) marcialCount += 1;
+		}
+		for (let index = 0; index < player.support.length; index += 1) {
+			const cardId = String(player.support[index] || "");
+			if (cardId && cardHasFiliation(cardId, "Marcial")) marcialCount += 1;
+		}
+		const envId = String(player.env || "");
+		if (envId && cardHasFiliation(envId, "Marcial")) marcialCount += 1;
+	}
+	return marcialCount;
 }
 
 function normalizeKind(kind: string | undefined): string {
@@ -3392,23 +3397,7 @@ export function attack(
 			attackValue += getFieldDamageBonusFromVital(me as any, attackerPos);
 		}
 		if (!isLeaderAttacker && String(attackerDef?.effect || "") === "kornex_buff_per_marcial_in_play") {
-			let marcialCount = 0;
-			for (const s of [slot, enemySlot] as Slot[]) {
-				const p = asPlayer(state, s);
-				const leaderId = String(p.leaderId || "");
-				if (leaderId && cardHasFiliation(leaderId, "Marcial")) marcialCount += 1;
-				for (let index = 0; index < p.field.length; index += 1) {
-					const cid = String(p.field[index] || "");
-					if (cid && cardHasFiliation(cid, "Marcial")) marcialCount += 1;
-				}
-				for (let index = 0; index < p.support.length; index += 1) {
-					const cid = String(p.support[index] || "");
-					if (cid && cardHasFiliation(cid, "Marcial")) marcialCount += 1;
-				}
-				const envId = String(p.env || "");
-				if (envId && cardHasFiliation(envId, "Marcial")) marcialCount += 1;
-			}
-			attackValue += Math.max(0, marcialCount - 1);
+			attackValue += countMarcialCardsInPlay(state, slot, attackerPos);
 		}
 		if (hasMarcialEnvAttackBonus(state, slot, attackerId)) attackValue += 1;
 		attackValue += getAttachedSupportCounter(me as any, "draw_bonus", isLeaderAttacker ? null : attackerPos);

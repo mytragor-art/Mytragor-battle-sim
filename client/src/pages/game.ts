@@ -776,10 +776,17 @@ function getAuraHpBonusForSide(side: BattleSide, cardId: string): number {
 	return total;
 }
 
-function countMarcialCardsInBattle(): number {
+function countMarcialCardsInBattle(excludedSide?: BattleSide, excludedIndex?: number): number {
 	let total = 0;
 	for (const cardId of [currentMyLeader, currentEnemyLeader]) if (cardId && cardHasFiliation(cardId, "Marcial")) total += 1;
-	for (const source of [currentMyField, currentEnemyField, currentMySupport, currentEnemySupport]) {
+	for (const [side, source] of [["you", currentMyField], ["enemy", currentEnemyField]] as Array<[BattleSide, string[]]>) {
+		for (let index = 0; index < source.length; index += 1) {
+			if (side === excludedSide && index === excludedIndex) continue;
+			const cardId = source[index];
+			if (cardId && cardHasFiliation(cardId, "Marcial")) total += 1;
+		}
+	}
+	for (const source of [currentMySupport, currentEnemySupport]) {
 		for (const cardId of source) if (cardId && cardHasFiliation(cardId, "Marcial")) total += 1;
 	}
 	for (const envId of [currentMyEnv, currentEnemyEnv]) if (envId && cardHasFiliation(envId, "Marcial")) total += 1;
@@ -794,9 +801,9 @@ function isYohanCard(cardId: string): boolean {
 		|| cardEffectIds(cardId).includes("kornex_buff_per_marcial_in_play");
 }
 
-function getMarcialBattleBonus(cardId: string): number {
+function getMarcialBattleBonus(cardId: string, side?: BattleSide, index?: number): number {
 	if (!isYohanCard(cardId)) return 0;
-	return Math.max(0, countMarcialCardsInBattle() - 1);
+	return Math.max(0, countMarcialCardsInBattle(side, index));
 }
 
 function isMarcialBonusEnvCard(cardId: string | null | undefined): boolean {
@@ -874,7 +881,7 @@ function getFieldAttackValue(side: BattleSide, index: number, cardId: string): n
 	total += getAttachedSupportNumericBonusForSide(side, index, "dmgBonus");
 	total += getFieldVitalMarksForSide(side, index);
 	total += getAuraAttackBonusForSide(side, cardId);
-	total += getMarcialBattleBonus(cardId);
+	total += getMarcialBattleBonus(cardId, side, index);
 	if (hasMarcialEnvAttackBonusForSide(side, cardId)) total += 1;
 	return Math.max(0, total);
 }
@@ -907,7 +914,7 @@ function getFallbackFieldInspectorStats(view: InspectorView, card: CardDef | und
 	const baseHp = Number(card?.hp || 1);
 	const baseAttack = Number(card?.atkBonus || 0);
 	const baseResistance = Number(card?.ac || 0);
-	const marcialBonus = getMarcialBattleBonus(view.cardId);
+	const marcialBonus = getMarcialBattleBonus(view.cardId, view.side as BattleSide, view.index || 0);
 	const attackValue = baseAttack + marcialBonus;
 	const out: Array<{ label: string; value: string; tone?: "good" | "bad" | "neutral" | "gold" }> = [
 		{ label: "Vida", value: `${currentHp}/${baseHp}` },
@@ -927,7 +934,7 @@ function getYohanInspectorStats(view: InspectorView, card: CardDef): Array<{ lab
 	const baseResistance = Number(card.ac || 0);
 	const attack = getFieldAttackValue(view.side as BattleSide, index, view.cardId);
 	const resistance = getFieldResistanceValue(view.side as BattleSide, index, view.cardId);
-	const marcialBonus = getMarcialBattleBonus(view.cardId);
+	const marcialBonus = getMarcialBattleBonus(view.cardId, view.side as BattleSide, index);
 	const out: Array<{ label: string; value: string; tone?: "good" | "bad" | "neutral" | "gold" }> = [
 		{ label: "Vida", value: `${currentHp}/${baseHp}` },
 		{ label: "Ataque", value: formatStatWithDelta(attack, baseAttack), tone: attack > baseAttack ? "good" : "neutral" },
@@ -961,7 +968,7 @@ function getInspectorStats(view: InspectorView | null): Array<{ label: string; v
 		const baseAttack = Number(card.atkBonus || 0);
 		const baseResistance = Number(card.ac || 0);
 		const baseHp = Number(card.hp || 1);
-		const marcialBonus = getMarcialBattleBonus(view.cardId);
+		const marcialBonus = getMarcialBattleBonus(view.cardId, view.side, view.index);
 		const hpValue = maxHp === baseHp ? `${currentHp}/${maxHp}` : `${currentHp}/${maxHp} (${maxHp > baseHp ? "+" : ""}${maxHp - baseHp})`;
 		const out: Array<{ label: string; value: string; tone?: "good" | "bad" | "neutral" | "gold" }> = [
 			{ label: "Vida", value: hpValue, tone: currentHp < maxHp ? (currentHp / Math.max(1, maxHp) <= 0.5 ? "bad" : "neutral") : (maxHp > baseHp ? "good" : "neutral") },
