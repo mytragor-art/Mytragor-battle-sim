@@ -1093,19 +1093,10 @@ function clearCatedralBlessing(
 		player.fieldBlessing[pos] = 0;
 		if (!cardId) continue;
 		const currentHp = Number(player.fieldHp[pos] || 0);
-		const remainingHp = currentHp - blessing;
-		if (remainingHp > 0) {
-			const maxHp = getFieldMaxHp(state, slot, pos);
-			player.fieldHp[pos] = Math.min(maxHp, remainingHp);
-			broadcast("effect_log", { slot, cardId, effect: "religioso_protecao", text: `${cardId}: perdeu o bônus de vida da Catedral Ensolarada.` });
-			continue;
-		}
-		destroyAttachedSupports(state, slot, pos, broadcast);
-		const removed = clearFieldSlotWithAuras(state, slot, pos);
-		if (!removed) continue;
-		const exitZone = moveRemovedFieldCardOutOfPlay(player, removed);
-		if (exitZone === "grave" && askChoice) handleDestroyedAllyTriggers(state, slot, removed, broadcast, askChoice, { fromCombat: false });
-		broadcast("effect_log", { slot, cardId: removed, effect: "religioso_protecao", text: exitZone === "grave" ? `${removed}: perdeu o bônus de vida da Catedral Ensolarada e foi enviado ao cemitério.` : `${removed}: perdeu o bônus de vida da Catedral Ensolarada e desapareceu do campo por ser uma ficha.` });
+		const remainingHp = Math.max(1, currentHp - blessing);
+		const maxHp = getFieldMaxHp(state, slot, pos);
+		player.fieldHp[pos] = Math.min(maxHp, remainingHp);
+		broadcast("effect_log", { slot, cardId, effect: "religioso_protecao", text: `${cardId}: perdeu o bônus de vida da Catedral Ensolarada.` });
 	}
 }
 
@@ -1114,6 +1105,19 @@ function getTargetHP(state: MatchState, targetSlot: Slot, targetPos: number): nu
 	const current = Number((p as any).fieldHp?.[targetPos] ?? 0);
 	if (Number.isFinite(current) && current > 0) return current;
 	return getFieldMaxHp(state, targetSlot, targetPos);
+}
+
+function applyDamageToField(state: MatchState, targetSlot: Slot, targetPos: number, amount: number): number {
+	const player = asPlayer(state, targetSlot) as any;
+	const damage = Math.max(0, Number(amount || 0));
+	const current = getTargetHP(state, targetSlot, targetPos);
+	const blessing = Math.max(0, Number(player.fieldBlessing?.[targetPos] || 0));
+	if (blessing > 0 && damage > 0) {
+		player.fieldBlessing[targetPos] = Math.max(0, blessing - damage);
+	}
+	const remaining = Math.max(0, current - damage);
+	player.fieldHp[targetPos] = remaining;
+	return remaining;
 }
 
 function isFirstTurnForSlot(game: MatchState["game"], slot: Slot): boolean {
@@ -1342,9 +1346,7 @@ function triggerAutoEffects(
 			if (typeof pick.pos !== "number") return;
 			const targetId = String(targetPlayer.field[pick.pos] || "");
 			if (!targetId) return;
-			const current = getTargetHP(state, targetSlot, pick.pos);
-			const remaining = Math.max(0, current - 2);
-			(targetPlayer as any).fieldHp[pick.pos] = remaining;
+			const remaining = applyDamageToField(state, targetSlot, pick.pos, 2);
 			if (remaining <= 0) {
 				destroyAttachedSupports(state, targetSlot, pick.pos, broadcast);
 				const removed = clearFieldSlotWithAuras(state, targetSlot, pick.pos);
@@ -1616,9 +1618,7 @@ function triggerAutoEffects(
 				if (typeof costPick.pos !== "number") return;
 				payerId = String(me.field[costPick.pos] || "");
 				if (!payerId) return;
-				const payerHp = getTargetHP(state, slot, costPick.pos);
-				const payerRemaining = Math.max(0, payerHp - 2);
-				(me as any).fieldHp[costPick.pos] = payerRemaining;
+				const payerRemaining = applyDamageToField(state, slot, costPick.pos, 2);
 				if (payerRemaining <= 0) {
 					destroyAttachedSupports(state, slot, costPick.pos, broadcast);
 					const removed = clearFieldSlotWithAuras(state, slot, costPick.pos);
@@ -1654,9 +1654,7 @@ function triggerAutoEffects(
 				if (typeof targetPick.pos !== "number") return;
 				const targetId = String(foe.field[targetPick.pos] || "");
 				if (!targetId) return;
-				const hp = getTargetHP(state, enemySlot(slot), targetPick.pos);
-				const remaining = Math.max(0, hp - 4);
-				(foe as any).fieldHp[targetPick.pos] = remaining;
+				const remaining = applyDamageToField(state, enemySlot(slot), targetPick.pos, 4);
 				if (remaining <= 0) {
 					destroyAttachedSupports(state, enemySlot(slot), targetPick.pos, broadcast);
 					const removed = clearFieldSlotWithAuras(state, enemySlot(slot), targetPick.pos);
@@ -1915,9 +1913,7 @@ function triggerAutoEffects(
 			if (!pick || pick.pos == null || !pick.cardId) return;
 			const targetCardId = String(own.field[pick.pos] || "");
 			if (!targetCardId) return;
-			const currentHp = getTargetHP(state, slot, pick.pos);
-			const remainingHp = Math.max(0, currentHp - dmg);
-			(own as any).fieldHp[pick.pos] = remainingHp;
+			const remainingHp = applyDamageToField(state, slot, pick.pos, dmg);
 			if (remainingHp <= 0) {
 				destroyAttachedSupports(state, slot, pick.pos, broadcast);
 				const removed = clearFieldSlotWithAuras(state, slot, pick.pos);
@@ -2012,9 +2008,7 @@ function triggerAutoEffects(
 			if (!pick || typeof pick.pos !== "number" || !pick.cardId) return;
 			const damageToAnimal = Math.max(1, Number((cardDef as any)?.effectValue?.damageToAnimal || 2));
 			const healLeader = Math.max(1, Number((cardDef as any)?.effectValue?.healValue || 4));
-			const hp = getTargetHP(state, slot, pick.pos);
-			const remaining = Math.max(0, hp - damageToAnimal);
-			(me as any).fieldHp[pick.pos] = remaining;
+			const remaining = applyDamageToField(state, slot, pick.pos, damageToAnimal);
 			if (remaining <= 0) {
 				destroyAttachedSupports(state, slot, pick.pos, broadcast);
 				const removed = clearFieldSlotWithAuras(state, slot, pick.pos);
@@ -2575,7 +2569,7 @@ export function playCard(state: MatchState, slot: Slot, cardId: string, targetPo
 				broadcast("error", { text: "Vida insuficiente no Agiota para pagar este custo." });
 				return false;
 			}
-			(pg as any).fieldHp[forcedAgiotaPos] = agiotaHp - 2;
+			applyDamageToField(state, slot, forcedAgiotaPos, 2);
 			triggeredLeaderThisTurn[slot].add(agiotaTurnKey(forcedAgiotaPos));
 			broadcast("effect_log", { slot, cardId: liveAgiotaId, effect: "agiota", text: `${liveAgiotaId}: sofreu 2 de dano para permitir jogar ${cardId} sem pagar fragmentos.` });
 			return true;
@@ -3241,8 +3235,7 @@ export function attack(
 			if (reduction > 0) damage = Math.max(0, damage - reduction);
 			else if (hasProtected(enemyCard)) damage = Math.max(0, damage - 1);
 			if (tieDealsMinimumDamage) damage = Math.max(1, damage);
-			const remainingHp = Math.max(0, enemyCardHp - damage);
-			(enemy as any).fieldHp[finalTargetLocal.targetPos] = remainingHp;
+			const remainingHp = applyDamageToField(state, enemySlot, finalTargetLocal.targetPos, damage);
 			if (remainingHp <= 0) {
 				destroyAttachedSupports(state, enemySlot, finalTargetLocal.targetPos, broadcast);
 				const removed = clearFieldSlotWithAuras(state, enemySlot, finalTargetLocal.targetPos);
@@ -3420,8 +3413,7 @@ export function attack(
 			if (reduction > 0) damage = Math.max(0, damage - reduction);
 			else if (hasProtected(enemyCard)) damage = Math.max(0, damage - 1);
 			if (tieDealsMinimumDamage) damage = Math.max(1, damage);
-			const remainingHp = Math.max(0, enemyCardHp - damage);
-			(enemy as any).fieldHp[finalTarget.targetPos] = remainingHp;
+			const remainingHp = applyDamageToField(state, enemySlot, finalTarget.targetPos, damage);
 			if (remainingHp <= 0) {
 				destroyAttachedSupports(state, enemySlot, finalTarget.targetPos, broadcast);
 				const removed = clearFieldSlotWithAuras(state, enemySlot, finalTarget.targetPos);

@@ -765,7 +765,7 @@ export class SoloMatchRoom extends Room<MatchState> {
 		if (name.includes("gladiador veloz")) score += 30;
 		if (name.includes("gladiador implacavel")) score += 28;
 		if (name.includes("gladiador ousado")) score += 20;
-		if (name.includes("thorn")) score += Number(player.fragments || 0) >= 6 ? 26 : 8;
+		if (name.includes("thorn")) score += Number(player.fragments || 0) >= 7 ? 26 : 8;
 		if (name.includes("yohan")) score += marcialUnits.field >= 2 ? 26 : -12;
 		if (effect === "kornex_buff_per_marcial_in_play") score += marcialUnits.field >= 2 ? 16 : -8;
 		if (effect === "buff_on_kill") score += 20;

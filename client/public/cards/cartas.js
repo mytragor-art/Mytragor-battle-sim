@@ -103,7 +103,7 @@ const CARD_DEFS = [
     name: 'Goblin Sabotador', kind: 'ally', img: '/allies/layout-goblinsabotador.ai.png', cost: 3, classe: 'Criatura', tipo: 'Humanoide', filiacao: 'Neutra', ac: 1, hp: 4, maxHp: 4, damage: 2, atkBonus: 2, keywords: [], effect: 'destroy_equip_on_enter', text: 'Quando este aliado for convocado, você pode destruir 1 equipamento inimigo.'
   },
   {
-  name: 'Thorn, o Martelo da Montanha', kind: 'ally', img: '/allies/layout-thornmartelomontanha.ai.png', cost: 6, classe: 'Guerreiro', tipo: 'Anão', filiacao: 'Neutra', ac: 1, hp: 8, maxHp: 8, damage: 6, atkBonus: 6, keywords: ['atropelar'], effect: '', text: 'Atropelar — O excesso de dano em um combate atinge diretamente a vida do Escolhido inimigo.'
+  name: 'Thorn, o Martelo da Montanha', kind: 'ally', img: '/allies/layout-thornmartelomontanha.ai.png', cost: 7, classe: 'Guerreiro', tipo: 'Anão', filiacao: 'Neutra', ac: 1, hp: 8, maxHp: 8, damage: 6, atkBonus: 6, keywords: ['atropelar'], effect: '', text: 'Atropelar — O excesso de dano em um combate atinge diretamente a vida do Escolhido inimigo.'
   },
  {
   name: 'Urso Negro', key: 'Urso Negro Tanque', kind: 'ally', img: '/allies/layout-ursonegro.ai.png', cost: 5, classe: 'Criatura', tipo: 'Animal', filiacao: 'Neutra', ac: 1, hp: 7, maxHp: 7, damage: 4, atkBonus: 4, keywords: [], effect: '', text: ''
@@ -262,7 +262,7 @@ name: 'Tamanduá Guardião', kind: 'ally', img: '/allies/layout-tamanduaguardiao
     name: 'Campos Ensanguentados', kind: 'env', img: '/envs/layout-camposensanguentados.ai.png', cost: 4, classe: '', tipo: 'Ambiente', filiacao: 'Marcial', effect: 'marcial_bonus', text: 'Enquanto esta carta estiver em campo, jogadores cujo Escolhido seja Marcial concedem +1 de Ataque aos seus personagens Marcial.'
   },
   {
-    name: 'Catedral Ensolarada', kind: 'env', img: '/envs/layout-catedralensolarada.ai.png', cost: 3, classe: '', tipo: 'Ambiente', filiacao: 'Religioso', effect: 'religioso_protecao', text: 'Enquanto esta carta estiver em campo, jogadores com Escolhido "Religioso" escolhem 1 Aliado em sua fase inicial. O Aliado selecionado recebe +2 de vida até o inicio do próximo turno do jogador. Se ao perder o bônus concedido por este Ambiente o Aliado chegar a 0 ou menos de vida, ele é enviado para o cemitério.'
+    name: 'Catedral Ensolarada', kind: 'env', img: '/envs/layout-catedralensolarada.ai.png', cost: 3, classe: '', tipo: 'Ambiente', filiacao: 'Religioso', effect: 'religioso_protecao', text: 'Durante a Fase Inicial, jogadores com Escolhido "Religioso" escolhem 1 Aliado em campo. O Aliado selecionado recebe +2 de vida até o início do próximo turno do jogador. Se sofrer dano, gasta primeiro a vida extra.'
   },
   {
     name: 'Lâmina Serralhada', kind: 'equip', img: '/equip/layout-laminaserrilhada.ai.png', cost: 2, classe: '', tipo: 'Equipamento', filiacao: 'Marcial', atkBonus: 2, text: 'O Aliado equipado recebe +2 de Ataque.'
