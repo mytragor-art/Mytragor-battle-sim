@@ -669,10 +669,10 @@ function removeAuraHpBonusFromSource(state: MatchState, ownerSlot: Slot, sourceC
 	}
 }
 
-function triggerLeafaeOnAllyHeal(state: MatchState, slot: Slot, broadcast: (name: string, payload: any) => void, sourceCardId: string): void {
+function triggerVitalMarksOnCharacterHeal(state: MatchState, slot: Slot, broadcast: (name: string, payload: any) => void, sourceCardId: string, healedAlly = true): void {
 	const me = asPlayer(state, slot) as any;
 	const leaderId = String(me.leaderId || "");
-	if (leaderId) {
+	if (healedAlly && leaderId) {
 		const leaderDef = findCardDef(leaderId);
 		if (cardHasEffectId(leaderDef, "leafae")) {
 			me.leaderVitalMarks = Number(me.leaderVitalMarks || 0) + 1;
@@ -697,7 +697,7 @@ function triggerLeafaeOnAllyHeal(state: MatchState, slot: Slot, broadcast: (name
 			slot,
 			cardId: cid,
 			effect: "ally_heal_buff",
-			text: `${cid}: ganhou 1 marcador de Elo Vital ao curar um aliado com ${sourceCardId}.`
+			text: `${cid}: ganhou 1 marcador de Elo Vital ao curar um personagem com ${sourceCardId}.`
 		});
 	}
 }
@@ -1783,7 +1783,7 @@ function triggerAutoEffects(
 	}
 
 	if (effect === "ally_heal_buff") {
-		broadcast("effect_log", { slot, cardId, effect, text: `${cardId}: ganhará marcadores de Elo Vital sempre que um aliado seu for curado.` });
+		broadcast("effect_log", { slot, cardId, effect, text: `${cardId}: ganhará marcadores de Elo Vital sempre que um personagem seu for curado.` });
 		return;
 	}
 
@@ -1986,7 +1986,7 @@ function triggerAutoEffects(
 			const current = getTargetHP(state, slot, pick.pos);
 			const maxHp = getCardDynamicMaxHp(state, slot, pick.cardId);
 			(me as any).fieldHp[pick.pos] = Math.min(maxHp, current + heal);
-			triggerLeafaeOnAllyHeal(state, slot, broadcast, cardId);
+			triggerVitalMarksOnCharacterHeal(state, slot, broadcast, cardId);
 			broadcast("effect_log", { slot, cardId, effect, text: `${cardId}: curou ${heal} de vida de ${pick.cardId}.` });
 		});
 		return;
@@ -2019,6 +2019,7 @@ function triggerAutoEffects(
 				}
 			}
 			me.hp = Math.min(getCardDynamicMaxHp(state, slot, String(me.leaderId || "")), Number(me.hp || 0) + healLeader);
+			triggerVitalMarksOnCharacterHeal(state, slot, broadcast, cardId, false);
 			broadcast("effect_log", { slot, cardId, effect, text: `${cardId}: causou ${damageToAnimal} em ${pick.cardId} e curou ${healLeader} do líder.` });
 		});
 		return;
@@ -2161,7 +2162,7 @@ function triggerAutoEffects(
 			const healAmount = Math.min(3, Math.max(0, maxHp - currentHp));
 			if (healAmount <= 0) return;
 			(me as any).fieldHp[pick.pos] = currentHp + healAmount;
-			triggerLeafaeOnAllyHeal(state, slot, broadcast, cardId);
+			triggerVitalMarksOnCharacterHeal(state, slot, broadcast, cardId);
 			broadcast("effect_log", { slot, cardId, effect, text: `${cardId}: curou ${healAmount} de vida de ${pick.cardId}.` });
 		});
 		return;
@@ -2723,6 +2724,7 @@ export function playCard(state: MatchState, slot: Slot, cardId: string, targetPo
 			askChoice(slot, { title: `${cardId}: escolha personagem para curar`, options, allowCancel: true }, (optionId) => {
 				if (optionId === "heal-leader") {
 					pg.hp = Math.min(getLeaderMaxHp(pg), Number(pg.hp || 0) + healValue);
+					triggerVitalMarksOnCharacterHeal(state, slot, broadcast, cardId, false);
 					done();
 					return;
 				}
@@ -2731,7 +2733,7 @@ export function playCard(state: MatchState, slot: Slot, cardId: string, targetPo
 					const current = getTargetHP(state, slot, pick.pos);
 					const maxHp = getFieldMaxHp(state, slot, pick.pos);
 					(pg as any).fieldHp[pick.pos] = Math.min(maxHp, current + healValue);
-					triggerLeafaeOnAllyHeal(state, slot, broadcast, cardId);
+					triggerVitalMarksOnCharacterHeal(state, slot, broadcast, cardId);
 				}
 				done();
 			});
@@ -3162,7 +3164,7 @@ export function activateLeaderPower(
 			}
 			player.leaderVitalMarks = Math.max(0, Number(player.leaderVitalMarks || 0) - 3);
 			player.fieldHp[pick.pos] = currentHp + healAmount;
-			triggerLeafaeOnAllyHeal(state, slot, broadcast, leaderId);
+			triggerVitalMarksOnCharacterHeal(state, slot, broadcast, leaderId);
 			state.game.seq += 1;
 			broadcast("effect_log", {
 				slot,

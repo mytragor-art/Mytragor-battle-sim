@@ -124,7 +124,7 @@ const CARD_DEFS = [
   name: 'Gladiador Ousado', kind: 'ally', img: '/allies/layout-gladiadorousado.ai.png', cost: 4, classe: 'Guerreiro', tipo: 'Humano', filiacao: 'Neutra', ac: 1, hp: 6, maxHp: 6, damage: 3, atkBonus: 3, keywords: ['provocar'], text: 'Desafio — Enquanto este aliado estiver Exaurido, seus oponentes só podem atacar aliados com Desafio.'
   },
   {
-name: 'Tamanduá Guardião', kind: 'ally', img: '/allies/layout-tamanduaguardiao.ai.png', cost: 2, classe: 'Criatura', tipo: 'Animal', filiacao: 'Religioso', ac: 1, hp: 7, maxHp: 7, damage: 2, atkBonus: 2, keywords: ['provocar'], effect: '', text: 'Desafio — Enquanto este aliado estiver Exaurido, seus oponentes só podem declarar ataques tendo como alvo aliados com Desafio.'
+name: 'Tamanduá Guardião', kind: 'ally', img: '/allies/layout-tamanduaguardiao.ai.png', cost: 2, classe: 'Criatura', tipo: 'Animal', filiacao: 'Religioso', ac: 0, hp: 7, maxHp: 7, damage: 2, atkBonus: 2, keywords: ['provocar'], effect: '', text: 'Desafio — Enquanto este aliado estiver Exaurido, seus oponentes só podem declarar ataques tendo como alvo aliados com Desafio.'
   },
     {
     name: 'Leão Rei Sagrado', kind: 'ally', img: '/allies/layout-leaoreisagrado.ai.png', cost: 6, classe: 'Criatura', tipo: 'Animal', filiacao: 'Religioso', ac: 1, hp: 5, maxHp: 5, damage: 4, atkBonus: 4, keywords: [], effect: 'search_deck_animal_aura_atk', effectValue: 1, auraTarget: { tipo: 'Animal' }, auraProp: 'atk', text: 'Quando este aliado for Convocado, adicione um aliado "Animal" do seu baralho para sua mão, em seguida embaralhe seu baralho. Enquanto este aliado estiver em campo, seus aliados "Animal" recebem +1 de ataque.'
