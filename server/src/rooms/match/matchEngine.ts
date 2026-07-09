@@ -3269,9 +3269,8 @@ export function attack(
 			if (Number((me as any).fieldSedeMark[attackerPos] || 0) > 0) {
 				drawCard(state, slot, 1, broadcast);
 				if (state.phase !== "FINISHED") {
-					tryUntapField(state, slot, attackerPos);
 					(me as any).fieldSedeMark[attackerPos] = 0;
-					broadcast("effect_log", { slot, cardId: attackerId, effect: "sede_vinganca", text: `${attackerId}: derrotou inimigo, comprou 1 carta e ficou disposto.` });
+					broadcast("effect_log", { slot, cardId: attackerId, effect: "sede_vinganca", text: `${attackerId}: derrotou inimigo e comprou 1 carta.` });
 				}
 			}
 			const katsuBurnKey = leaderEffectTurnKey(me, "katsu_warrior_burn");
@@ -3447,9 +3446,8 @@ export function attack(
 			if (Number((me as any).fieldSedeMark[attackerPos] || 0) > 0) {
 				drawCard(state, slot, 1, broadcast);
 				if (state.phase !== "FINISHED") {
-					tryUntapField(state, slot, attackerPos);
 					(me as any).fieldSedeMark[attackerPos] = 0;
-					broadcast("effect_log", { slot, cardId: attackerId, effect: "sede_vinganca", text: `${attackerId}: derrotou inimigo, comprou 1 carta e ficou disposto.` });
+					broadcast("effect_log", { slot, cardId: attackerId, effect: "sede_vinganca", text: `${attackerId}: derrotou inimigo e comprou 1 carta.` });
 				}
 			}
 			const katsuBurnKey = leaderEffectTurnKey(me, "katsu_warrior_burn");

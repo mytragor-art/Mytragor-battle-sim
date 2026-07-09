@@ -417,8 +417,7 @@ export function resolveAttackOn(runtime: BattleRuntime, target: AttackTarget): v
 		if (attackerCard._sede_vinganca && !attackerCard._sede_vinganca.used) {
 			attackerCard._sede_vinganca.used = true;
 			runtime.draw?.(side);
-			attackerCard.tapped = false;
-			runtime.log?.("Sede de Vingança: comprou 1 carta e pode atacar novamente.");
+			runtime.log?.("Sede de Vingança: comprou 1 carta.");
 		}
 	}
 

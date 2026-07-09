@@ -326,7 +326,7 @@ name: 'Tamanduá Guardião', kind: 'ally', img: '/allies/layout-tamanduaguardiao
     name: 'Quebra-Aço', kind: 'spell', img: '/spell/layout-quebraaco.ai.png', cost: 1, classe: '', tipo: 'Magia', filiacao: 'Neutra', effect: 'destroy_equip', text: 'Destrua um equipamento em campo.'
   },
   {
-    name: 'Sede de Vingança', kind: 'spell', img: '/spell/layout-sedevinganca.ai.png', cost: 5, classe: '', tipo: 'Magia', filiacao: 'Marcial', effect: 'sede_vinganca', effectValue: 3, text: 'Escolha 1 personagem Guerreiro que você controla. Ele recebe +3 de ataque, até o fim do turno. Se ele derrotar 1 Aliado do oponente, em combate, neste turno, compre 1 carta. Em seguida ele fica Disposto, mas não pode atacar novamente neste turno. Sede de Vingança pode ser ativada uma vez por turno.'
+    name: 'Sede de Vingança', kind: 'spell', img: '/spell/layout-sedevinganca.ai.png', cost: 5, classe: '', tipo: 'Magia', filiacao: 'Marcial', effect: 'sede_vinganca', effectValue: 3, text: 'Escolha 1 personagem Guerreiro que você controla. Ele recebe +3 de ataque, até o fim do turno. Se ele derrotar 1 Aliado do oponente, em combate, neste turno, compre 1 carta. Sede de Vingança pode ser ativada uma vez por turno.'
   },
   {
     name: 'Gladiador Implacável', kind: 'ally', img: '/allies/layout-gladiadorimplacavel.ai.png', cost: 4, classe: 'Guerreiro', tipo: 'Humano', filiacao: 'Marcial', ac: 0, hp: 5, maxHp: 5, damage: 3, atkBonus: 3, keywords: [], effect: 'buff_on_kill', effectValue: { atk: 1, ac: 1 }, text: 'Quando este Aliado vencer um inimigo em combate e enviá-lo para o cemitério, coloque 1 marcador "Sangue" neste aliado. Ele recebe +1 de Ataque e +1 de Resistência para cada marcador Sangue nele.'
