@@ -50,7 +50,7 @@ function getCombatAttackValue(state: MatchState, slot: Slot, attackerId: string,
 		attackValue += getFieldDamageBonusFromVital(me, attackerPos);
 	}
 	if (!isLeaderAttacker && String(attackerDef?.effect || "") === "kornex_buff_per_marcial_in_play") {
-		attackValue += countMarcialCardsInPlay(state, slot, attackerPos);
+		attackValue += countOtherMarcialCardsInPlay(state, slot, attackerPos);
 	}
 	if (hasMarcialEnvAttackBonus(state, slot, attackerId)) attackValue += 1;
 	attackValue += getAttachedSupportCounter(me, "draw_bonus", isLeaderAttacker ? null : attackerPos);
@@ -58,15 +58,15 @@ function getCombatAttackValue(state: MatchState, slot: Slot, attackerId: string,
 	return attackValue;
 }
 
-function countMarcialCardsInPlay(state: MatchState, excludedSlot: Slot, excludedFieldPos: number): number {
+function countOtherMarcialCardsInPlay(state: MatchState, excludedSlot: Slot, excludedFieldPos: number): number {
 	let marcialCount = 0;
 	for (const currentSlot of [excludedSlot, enemySlot(excludedSlot)] as Slot[]) {
 		const player = asPlayer(state, currentSlot);
 		const leaderId = String(player.leaderId || "");
 		if (leaderId && cardHasFiliation(leaderId, "Marcial")) marcialCount += 1;
 		for (let index = 0; index < player.field.length; index += 1) {
-			if (currentSlot === excludedSlot && index === excludedFieldPos) continue;
 			const cardId = String(player.field[index] || "");
+			if (currentSlot === excludedSlot && index === excludedFieldPos) continue;
 			if (cardId && cardHasFiliation(cardId, "Marcial")) marcialCount += 1;
 		}
 		for (let index = 0; index < player.support.length; index += 1) {
@@ -1378,13 +1378,14 @@ function triggerAutoEffects(
 			if (!optionId) return;
 			const pick = options.find((o) => o.id === optionId);
 			if (!pick || typeof pick.pos !== "number") return;
-			(foe as any).fieldAtkTemp[pick.pos] = Number((foe as any).fieldAtkTemp[pick.pos] || 0) - 1;
+			const attackPenalty = Math.max(1, Number((findCardDef(cardId) as any)?.effectValue || 3));
+			(foe as any).fieldAtkTemp[pick.pos] = Number((foe as any).fieldAtkTemp[pick.pos] || 0) - attackPenalty;
 			const hasAranhas = Array.from({ length: me.field.length }, (_, i) => String(me.field[i] || "")).some((name) => normalizeKind(name).replace(/[^a-z0-9]+/g, "").includes("aranhasnegras"));
 			if (hasAranhas) {
 				drawCard(state, slot, 1, broadcast);
 				if (state.phase === "FINISHED") return;
 			}
-			broadcast("effect_log", { slot, cardId, effect, text: `${cardId}: aplicou -1 de ATK temporário em ${String(foe.field[pick.pos] || "inimigo")}.` });
+			broadcast("effect_log", { slot, cardId, effect, text: `${cardId}: aplicou -${attackPenalty} de ATK temporário em ${String(foe.field[pick.pos] || "inimigo")}.` });
 		});
 		return;
 	}
@@ -3392,7 +3393,7 @@ export function attack(
 			attackValue += getFieldDamageBonusFromVital(me as any, attackerPos);
 		}
 		if (!isLeaderAttacker && String(attackerDef?.effect || "") === "kornex_buff_per_marcial_in_play") {
-			attackValue += countMarcialCardsInPlay(state, slot, attackerPos);
+			attackValue += countOtherMarcialCardsInPlay(state, slot, attackerPos);
 		}
 		if (hasMarcialEnvAttackBonus(state, slot, attackerId)) attackValue += 1;
 		attackValue += getAttachedSupportCounter(me as any, "draw_bonus", isLeaderAttacker ? null : attackerPos);
@@ -3496,8 +3497,9 @@ export function attack(
 			const emboscadaCardId = String(enemy.hand[emboscadaIndex] || "");
 			const emboscadaCost = getCardCost(emboscadaCardId);
 			if (emboscadaCardId && Number(enemy.fragments || 0) >= emboscadaCost) {
+				const emboscadaPenalty = Math.max(1, Number((findCardDef(emboscadaCardId) as any)?.effectValue || 3));
 				const options: ChoiceOption[] = [
-					{ id: "emboscada-yes", label: `Ativar ${emboscadaCardId}`, description: `Pagar ${emboscadaCost} fragmento(s) para dar -1 ATK ao atacante.` },
+					{ id: "emboscada-yes", label: `Ativar ${emboscadaCardId}`, description: `Pagar ${emboscadaCost} fragmento(s) para dar -${emboscadaPenalty} ATK ao atacante.` },
 					{ id: "emboscada-no", label: "Não ativar" }
 				];
 				askChoice(enemySlot, {
@@ -3520,10 +3522,10 @@ export function attack(
 							enemy.hand.splice(liveEmboscadaIndex, 1);
 							enemy.grave.push(emboscadaCardId);
 							maybeOfferCounterToActivation(state, enemySlot, emboscadaCardId, broadcast, askChoice, () => {
-								reactiveAttackPenalty -= 1;
+								reactiveAttackPenalty -= emboscadaPenalty;
 								const hasAranhas = Array.from({ length: enemy.field.length }, (_, index) => String(enemy.field[index] || "")).some((cid) => normalizeLoose(String(findCardDef(cid)?.name || cid || "")).includes("aranhasnegras"));
 								if (hasAranhas) drawCard(state, enemySlot, 1, broadcast);
-								broadcast("effect_log", { slot: enemySlot, cardId: emboscadaCardId, effect: "aranhas_emboscada", text: `${emboscadaCardId}: aplicou -1 ATK em ${attackerId}${hasAranhas ? " e comprou 1 carta" : ""}.` });
+								broadcast("effect_log", { slot: enemySlot, cardId: emboscadaCardId, effect: "aranhas_emboscada", text: `${emboscadaCardId}: aplicou -${emboscadaPenalty} ATK em ${attackerId}${hasAranhas ? " e comprou 1 carta" : ""}.` });
 								continueDeclaredAttack();
 							}, () => continueDeclaredAttack());
 							return;

@@ -776,13 +776,13 @@ function getAuraHpBonusForSide(side: BattleSide, cardId: string): number {
 	return total;
 }
 
-function countMarcialCardsInBattle(excludedSide?: BattleSide, excludedIndex?: number): number {
+function countOtherMarcialCardsInBattle(excludedSide?: BattleSide, excludedIndex?: number): number {
 	let total = 0;
 	for (const cardId of [currentMyLeader, currentEnemyLeader]) if (cardId && cardHasFiliation(cardId, "Marcial")) total += 1;
-	for (const [side, source] of [["you", currentMyField], ["enemy", currentEnemyField]] as Array<[BattleSide, string[]]>) {
+	for (const [side, source] of [["you", currentMyField], ["ai", currentEnemyField]] as Array<[BattleSide, string[]]>) {
 		for (let index = 0; index < source.length; index += 1) {
-			if (side === excludedSide && index === excludedIndex) continue;
 			const cardId = source[index];
+			if (side === excludedSide && index === excludedIndex) continue;
 			if (cardId && cardHasFiliation(cardId, "Marcial")) total += 1;
 		}
 	}
@@ -803,7 +803,7 @@ function isYohanCard(cardId: string): boolean {
 
 function getMarcialBattleBonus(cardId: string, side?: BattleSide, index?: number): number {
 	if (!isYohanCard(cardId)) return 0;
-	return Math.max(0, countMarcialCardsInBattle(side, index));
+	return Math.max(0, countOtherMarcialCardsInBattle(side, index));
 }
 
 function isMarcialBonusEnvCard(cardId: string | null | undefined): boolean {

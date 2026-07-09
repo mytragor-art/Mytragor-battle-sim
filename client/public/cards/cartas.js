@@ -89,7 +89,7 @@ const CARD_DEFS = [
     name: 'Cidadãos Unidos', key: 'token_povo', kind: 'ally', img: '/tokens/layout-cidadaotoken.ai.png', cost: 0, classe: 'Cidadão', tipo: 'Humano', filiacao: 'Arcana', ac: 1, hp: 1, maxHp: 1, damage: 1, atkBonus: 1, keywords: [], text: 'Ficha de cidadão criada por Ajuda do Povo.'
   },
 	{
-    name: 'Aranhas Negras, Mascote', kind: 'ally', img: '/allies/layout-aranhasmascote.ai.png', cost: 7, classe: 'Criatura', tipo: 'Animal', filiacao: 'Sombras', ac: 0, hp: 4, maxHp: 4, damage: 2, atkBonus: 2, keywords: [], effect: 'aranhas_mascote', text: 'Quando este aliado for convocado, Crie até 2 Tokens "Aranhas Negras", Criatura, Animal, 1 de vida, 1 de dano e 1 de Resistência.'
+    name: 'Aranhas Negras, Mascote', kind: 'ally', img: '/allies/layout-aranhasmascote.ai.png', cost: 7, classe: 'Criatura', tipo: 'Animal', filiacao: 'Sombras', ac: 0, hp: 5, maxHp: 5, damage: 3, atkBonus: 3, keywords: [], effect: 'aranhas_mascote', text: 'Quando este aliado for convocado, Crie até 2 Tokens "Aranhas Negras", Criatura, Animal, 1 de vida, 1 de dano e 1 de Resistência.'
   },
   {
     name: 'Gladiador Aposentado', kind: 'ally', img: '/allies/layout-gladiadoraposentado.ai.png', cost: 7, classe: 'Cidadão', tipo: 'Humano', filiacao: 'Neutra', ac: 2, hp: 8, maxHp: 8, damage: 6, atkBonus: 6, keywords: [], text: ''
@@ -236,7 +236,8 @@ name: 'Tamanduá Guardião', kind: 'ally', img: '/allies/layout-tamanduaguardiao
       tipo: 'Truque',
       filiacao: 'Sombras',
       effect: 'aranhas_emboscada',
-      text: 'Quando um oponente declarar um ataque: o personagem atacante perde 1 de Ataque até o final daquele embate. Se você controlar um aliado com "Aranhas Negras" no nome, compre 1 carta.'
+      effectValue: 3,
+      text: 'Quando um oponente declarar um ataque: O personagem atacante perde 3 de Ataque até o final daquele embate. Se você controlar um aliado com "Aranhas Negras" no nome, compre 1 carta.'
     },
   {
     name: 'Interrupção Perfeita', kind: 'truque', img: '/trick/layout-interrupcaoperfeita.ai.png', cost: 2, classe: '', tipo: 'Truque', filiacao: 'Arcana', effect: 'anular_magia_truque', text: 'Quando o oponente ativa uma magia ou truque, anule o efeito.'
