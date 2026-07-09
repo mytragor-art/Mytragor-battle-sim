@@ -112,7 +112,7 @@ const CARD_DEFS = [
     name: 'Bartolomeu, o Inspirador', kind: 'ally', img: '/allies/layout-bartolomeuinspirador.ai.png', cost: 4, classe: 'Cidadão', tipo: 'Humano', filiacao: 'Arcana', ac: 1, hp: 5, maxHp: 5, damage: 2, atkBonus: 2, keywords: [], effect: 'chamar_cidadao', text: 'Quando este aliado for derrotado em combate e enviado do campo para o seu cemitério, você pode convocar um aliado "Cidadão", com nome diferente deste, da sua mão sem pagar o custo dele.', chamarEspecial: { classe: 'Cidadão', origem: ['hand'] }
   },
   {
-      name: 'Batedor Kobold', kind: 'ally', img: '/allies/layout-batedorkobold.ai.png', cost: 1, classe: 'Criatura', tipo: 'Humanoide', filiacao: 'Sombras', ac: 0, hp: 2, maxHp: 2, damage: 2, atkBonus: 2, keywords: [], effect: '', text: ''
+      name: 'Batedor Kobold', kind: 'ally', img: '/allies/layout-batedorkobold.ai.png', cost: 1, classe: 'Cidadão', tipo: 'Humanoide', filiacao: 'Sombras', ac: 0, hp: 2, maxHp: 2, damage: 2, atkBonus: 2, keywords: [], effect: '', text: ''
   },
   {
   name: 'Aprendiz de Magia', kind: 'ally', img: '/allies/layout-aprendizmagia.ai.png', cost: 1, classe: 'Cidadão', tipo: 'Humano', filiacao: 'Neutra', ac: 0, hp: 2, maxHp: 2, damage: 1, atkBonus: 1, keywords: [], text: ''
