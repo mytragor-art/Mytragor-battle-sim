@@ -36,10 +36,12 @@ export function resolveServerEndpoint(search: string = window.location.search) {
 export function resolveHttpBase(endpoint: string) {
 	try {
 		const parsed = new URL(sanitizeEndpoint(endpoint));
-		return `${parsed.protocol === "wss:" ? "https:" : "http:"}//${parsed.host}`;
+		const path = parsed.pathname === "/" ? "" : parsed.pathname.replace(/\/+$/, "");
+		return `${parsed.protocol === "wss:" ? "https:" : "http:"}//${parsed.host}${path}`;
 	} catch {
 		const fallbackEndpoint = fallbackWsEndpoint();
 		const parsed = new URL(fallbackEndpoint);
-		return `${parsed.protocol === "wss:" ? "https:" : "http:"}//${parsed.host}`;
+		const path = parsed.pathname === "/" ? "" : parsed.pathname.replace(/\/+$/, "");
+		return `${parsed.protocol === "wss:" ? "https:" : "http:"}//${parsed.host}${path}`;
 	}
 }

@@ -27,8 +27,17 @@ export async function connectClient(endpoint: string): Promise<Colyseus.Client> 
 }
 
 export async function joinOrCreateLobby(client: Colyseus.Client, roomId?: string, forceCreate = false): Promise<Colyseus.Room> {
-	if (forceCreate || !roomId) return client.create("lobby");
+	if (forceCreate) return client.create("lobby");
+	if (!roomId) return client.joinOrCreate("lobby", { queue: "public" });
 	return client.joinById(roomId);
+}
+
+export async function createPrivateLobby(client: Colyseus.Client, privateCode: string): Promise<Colyseus.Room> {
+	return client.create("private_lobby", { queue: "private", privateCode });
+}
+
+export async function joinPrivateLobby(client: Colyseus.Client, privateCode: string): Promise<Colyseus.Room> {
+	return client.join("private_lobby", { queue: "private", privateCode });
 }
 
 export async function joinOrCreateNamedRoom(client: Colyseus.Client, roomName: string, roomId?: string, forceCreate = false): Promise<Colyseus.Room> {

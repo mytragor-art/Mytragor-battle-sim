@@ -173,6 +173,7 @@ let hoveredInspectorView: InspectorView | null = null;
 let selectedAttackerPos: number | null = null;
 let selectedTargetType: "leader" | "ally" = "leader";
 let selectedTargetPos: number | null = null;
+let pendingAttackConfirmPos: number | null = null;
 let isJoining = false;
 let currentPhase = "INITIAL";
 let isMatchFinished = false;
@@ -1197,15 +1198,60 @@ function getBattleRuntime(): BattleRuntime {
 	};
 }
 
+function getAttackConfirmEls() {
+	return {
+		modal: document.getElementById("attackConfirmModal") as HTMLElement | null,
+		title: document.getElementById("attackConfirmTitle"),
+		text: document.getElementById("attackConfirmText"),
+		btnYes: document.getElementById("btnAttackConfirmYes") as HTMLButtonElement | null,
+		btnNo: document.getElementById("btnAttackConfirmNo") as HTMLButtonElement | null
+	};
+}
+
+function hideAttackConfirmModal(): void {
+	pendingAttackConfirmPos = null;
+	const { modal } = getAttackConfirmEls();
+	if (modal) modal.style.display = "none";
+}
+
+function showAttackConfirmModal(index: number): void {
+	pendingAttackConfirmPos = index;
+	const cardId = currentMyField[index] || "esta carta";
+	const card = resolveCard(cardId);
+	const { modal, title, text } = getAttackConfirmEls();
+	if (title) title.textContent = `Atacar com ${card?.name || cardId}?`;
+	if (text) text.textContent = "Confirme para escolher o alvo do ataque. Se cancelar, a fase de combate continua sem alterar a seleção.";
+	if (modal) modal.style.display = "flex";
+}
+
+function confirmPendingBoardAttack(): void {
+	const index = pendingAttackConfirmPos;
+	hideAttackConfirmModal();
+	if (index === null) return;
+	commitBoardAttackFrom(index);
+}
+
 function beginBoardAttackFrom(index: number): void {
 	if (!isMyTurn || currentPhase !== "COMBAT") return;
-	const runtime = getBattleRuntime();
-	const card = runtime.state.you.allies[index] ?? null;
 	if (selectedAttackerPos === index) {
 		resetBoardAttackSelection();
 		cancelBoardAttackSelection();
 		return;
 	}
+	const runtime = getBattleRuntime();
+	const card = runtime.state.you.allies[index] ?? null;
+	if (!canAttackCardQuiet(runtime, "you", card)) {
+		resetBoardAttackSelection();
+		cancelBoardAttackSelection();
+		return;
+	}
+	showAttackConfirmModal(index);
+}
+
+function commitBoardAttackFrom(index: number): void {
+	if (!isMyTurn || currentPhase !== "COMBAT") return;
+	const runtime = getBattleRuntime();
+	const card = runtime.state.you.allies[index] ?? null;
 	if (!canAttackCardQuiet(runtime, "you", card)) {
 		resetBoardAttackSelection();
 		cancelBoardAttackSelection();
@@ -4221,6 +4267,14 @@ if (view.btnTargetLeader) view.btnTargetLeader.onclick = () => {
 	selectedTargetPos = null;
 	if (view.selectedTargetEl) view.selectedTargetEl.textContent = "Líder inimigo";
 };
+const attackConfirmEls = getAttackConfirmEls();
+if (attackConfirmEls.btnNo) attackConfirmEls.btnNo.onclick = hideAttackConfirmModal;
+if (attackConfirmEls.btnYes) attackConfirmEls.btnYes.onclick = confirmPendingBoardAttack;
+if (attackConfirmEls.modal) {
+	attackConfirmEls.modal.addEventListener("click", (event) => {
+		if (event.target === attackConfirmEls.modal) hideAttackConfirmModal();
+	});
+}
 if (view.btnNextPhase) view.btnNextPhase.onclick = () => !isSpectator && room?.send("next_phase");
 if (view.btnEndTurn) view.btnEndTurn.onclick = () => !isSpectator && room?.send("end_turn");
 if (view.btnBackLobby) view.btnBackLobby.onclick = goLobby;

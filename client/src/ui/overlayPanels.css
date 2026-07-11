@@ -2,13 +2,13 @@
 
 #handsCol {
 	position: sticky;
-	z-index: 130;
+	z-index: 0;
 }
 
 #handsCol > .arenaToolbar,
 .arenaToolbar {
 	position: relative;
-	z-index: 135;
+	z-index: 1;
 	background: linear-gradient(180deg, #111827, #050914) !important;
 	border-color: rgba(255, 255, 255, 0.18) !important;
 	box-shadow: 0 16px 34px rgba(0, 0, 0, 0.48) !important;

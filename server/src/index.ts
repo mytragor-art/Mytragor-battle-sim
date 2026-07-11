@@ -45,7 +45,8 @@ async function main() {
 		transport: new WebSocketTransport({ server: httpServer })
 	});
 
-	gameServer.define("lobby", LobbyRoom);
+	gameServer.define("lobby", LobbyRoom).filterBy(["queue"]);
+	gameServer.define("private_lobby", LobbyRoom).filterBy(["queue", "privateCode"]);
 	gameServer.define("match", MatchRoom);
 	gameServer.define("solo_lobby", SoloLobbyRoom);
 	gameServer.define("solo_match", SoloMatchRoom);
@@ -55,7 +56,7 @@ async function main() {
 		try {
 			const rooms = await matchMaker.query({ name: "lobby" });
 			const openRooms = rooms
-				.filter((r: any) => !r.locked)
+				.filter((r: any) => !r.locked && String(r.metadata?.queue || "public") === "public")
 				.map((r: any) => ({
 					roomId: r.roomId,
 					clients: Number(r.clients || 0),
@@ -72,6 +73,22 @@ async function main() {
 		} catch (error) {
 			console.error("[SERVER] Failed to list lobbies", error);
 			res.status(500).json({ rooms: [], error: "failed_to_list_lobbies" });
+		}
+	});
+
+	app.get("/private-lobbies/:code", async (req, res) => {
+		try {
+			const code = String(req.params.code || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+			if (!code) {
+				res.status(400).json({ exists: false, error: "missing_private_code" });
+				return;
+			}
+			const rooms = await matchMaker.query({ name: "private_lobby" });
+			const room = rooms.find((item: any) => !item.locked && String(item.metadata?.privateCode || "") === code);
+			res.json({ exists: !!room, roomId: room ? String(room.roomId || "") : "" });
+		} catch (error) {
+			console.error("[SERVER] Failed to resolve private lobby", error);
+			res.status(500).json({ exists: false, error: "failed_to_resolve_private_lobby" });
 		}
 	});
 

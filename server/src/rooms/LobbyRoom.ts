@@ -4,20 +4,30 @@ import { randomUUID } from "crypto";
 import { Room, Client, matchMaker } from "colyseus";
 import { LobbyState, LobbyPlayer, type Slot } from "./schema/LobbyState";
 
+function normalizePrivateCode(value: unknown) {
+	return String(value || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+}
+
 export class LobbyRoom extends Room<LobbyState> {
 	maxClients = 2;
 	private selectedDeckBySession = new Map<string, { deckId: string; leaderId: string; cards: string[]; accessories?: { sleeve?: string; playmat?: string } }>();
+	private queue = "public";
+	private privateCode = "";
 
 	private sanitizeDisplayName(name: unknown): string {
 		return String(name || "").trim().slice(0, 18);
 	}
 
 	onCreate(options: any) {
+		this.queue = options?.queue === "private" ? "private" : "public";
+		this.privateCode = this.queue === "private" ? normalizePrivateCode(options?.privateCode) : "";
 		this.setState(new LobbyState());
 		this.setMetadata({
-			title: String(options?.title || "Desafio Mytragor"),
+			title: String(options?.title || (this.queue === "private" ? `Sala privada ${this.privateCode || "Mytragor"}` : "Desafio Mytragor")),
 			deckName: String(options?.deckName || ""),
-			leaderId: String(options?.leaderId || "")
+			leaderId: String(options?.leaderId || ""),
+			queue: this.queue,
+			privateCode: this.privateCode
 		});
 
 		this.onMessage("choose_deck", (client, msg: { deckId?: string; leaderId?: string; cards?: string[]; accessories?: { sleeve?: string; playmat?: string } }) => {
@@ -94,11 +104,15 @@ export class LobbyRoom extends Room<LobbyState> {
 
 	private refreshMetadata() {
 		const p1 = this.findBySlot("p1");
-		const titleBase = p1?.displayName ? `Desafio de ${p1.displayName}` : "Desafio Mytragor";
+		const titleBase = this.queue === "private"
+			? `Sala privada ${this.privateCode || "Mytragor"}`
+			: p1?.displayName ? `Desafio de ${p1.displayName}` : "Desafio Mytragor";
 		this.setMetadata({
 			title: titleBase,
 			deckName: String(p1?.deckId || ""),
-			leaderId: String(p1?.leaderId || "")
+			leaderId: String(p1?.leaderId || ""),
+			queue: this.queue,
+			privateCode: this.privateCode
 		});
 	}
 

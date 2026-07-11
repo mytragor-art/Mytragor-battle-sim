@@ -36,8 +36,12 @@ export function getLobbyInputs() {
 		roomIdEl: byId<HTMLInputElement>("roomId"),
 		deckEl: byId<HTMLSelectElement>("deck"),
 		leaderEl: byId<HTMLSelectElement>("leader"),
+		privateCodeEl: byId<HTMLInputElement>("privateCode"),
 		btnJoin: byId<HTMLButtonElement>("btnJoin"),
 		btnReady: byId<HTMLButtonElement>("btnReady"),
+		btnCreatePrivate: byId<HTMLButtonElement>("btnCreatePrivate"),
+		btnJoinPrivate: byId<HTMLButtonElement>("btnJoinPrivate"),
+		btnCopyPrivateCode: byId<HTMLButtonElement>("btnCopyPrivateCode"),
 		btnRefreshRooms: byId<HTMLButtonElement>("btnRefreshRooms"),
 		btnRefreshMatches: byId<HTMLButtonElement>("btnRefreshMatches"),
 		btnJoinSelected: byId<HTMLButtonElement>("btnJoinSelected"),
@@ -45,6 +49,7 @@ export function getLobbyInputs() {
 		phaseEl: byId("phase"),
 		roomIdViewEl: byId("roomIdView"),
 		readyEl: byId("ready") || byId("readyStatus"),
+		privateCodeViewEl: byId("privateCodeView"),
 		leaderViewEl: byId("leaderView"),
 		deckCardsCountEl: byId("deckCardsCount"),
 		playersEl: byId("players"),
@@ -147,7 +152,7 @@ export function renderRooms(
 
 	if (!rooms.length) {
 		const empty = document.createElement("div");
-		empty.textContent = "Nenhuma sala aberta no momento.";
+		empty.textContent = "Nenhuma mesa esperando no momento. A fila cria uma automaticamente.";
 		empty.className = "roomEmpty";
 		roomListEl.appendChild(empty);
 		return;
@@ -156,7 +161,7 @@ export function renderRooms(
 	for (const roomInfo of rooms) {
 		const title = String(roomInfo.metadata?.title || "").trim() || truncateRoomId(roomInfo.roomId);
 		const subParts = [roomInfo.metadata?.deckName, roomInfo.metadata?.leaderId].filter(Boolean);
-		const subtitle = subParts.length ? subParts.join(" • ") : `Sala ${truncateRoomId(roomInfo.roomId)}`;
+		const subtitle = subParts.length ? subParts.join(" • ") : `Mesa ${truncateRoomId(roomInfo.roomId)}`;
 		const row = document.createElement("div");
 		row.className = `roomRow${selectedRoomId === roomInfo.roomId ? " selected" : ""}`;
 		row.innerHTML = `

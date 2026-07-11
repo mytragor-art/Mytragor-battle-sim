@@ -1,6 +1,6 @@
 /* Responsibility: wire Lobby UI with Colyseus network. This is the only place combining UI + NET. */
 
-import { bindLobbyHandlers, connectClient, joinOrCreateLobby } from "../net/mp";
+import { bindLobbyHandlers, connectClient, createPrivateLobby, joinOrCreateLobby, joinPrivateLobby } from "../net/mp";
 import { resolveHttpBase, resolveServerEndpoint } from "../config/runtime";
 import { hydrateSavedDecks, readSavedDecks, type SavedDeck } from "../ui/deckStore";
 import { getLobbyInputs, log, renderMatches, renderPlayers, renderRooms, setReadyUI, setSlotPhase } from "../ui/lobbyView";
@@ -21,6 +21,43 @@ let availableDecks: SavedDeck[] = readSavedDecks();
 let deckRefreshToken = 0;
 let selectedMatchRoomId: string | null = null;
 let pendingDeckId: string | null = null;
+
+function normalizePrivateCode(value: string) {
+	return value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+}
+
+function generatePrivateCode() {
+	const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+	let code = "";
+	for (let i = 0; i < 6; i++) code += alphabet[Math.floor(Math.random() * alphabet.length)];
+	return code;
+}
+
+function setPrivateCode(code: string) {
+	const normalized = normalizePrivateCode(code);
+	if (view.privateCodeEl) view.privateCodeEl.value = normalized;
+	if (view.privateCodeViewEl) view.privateCodeViewEl.textContent = normalized || "—";
+	return normalized;
+}
+
+async function copyPrivateCode() {
+	const code = normalizePrivateCode(view.privateCodeEl?.value || view.privateCodeViewEl?.textContent || "");
+	if (!code) {
+		log("ERROR", { text: "Nenhum código privado para copiar." });
+		return;
+	}
+	try {
+		await navigator.clipboard.writeText(code);
+	} catch {
+		const input = document.createElement("input");
+		input.value = code;
+		document.body.appendChild(input);
+		input.select();
+		document.execCommand("copy");
+		input.remove();
+	}
+	log("PRIVATE_CODE_COPIED", { code });
+}
 
 function applySelectedDeck(deck: SavedDeck | null) {
 	selectedDeck = deck;
@@ -95,6 +132,14 @@ function renderDeckSelector() {
 function syncSelectedDeckFromUI() {
 	if (!view.deckEl) return;
 	applySelectedDeck(availableDecks.find((d) => d.id === view.deckEl!.value) || null);
+}
+
+function sendSelectedDeckReady() {
+	if (!room || !selectedDeck) return false;
+	room.send("choose_deck", { deckId: selectedDeck.id, leaderId: selectedDeck.leaderName, cards: selectedDeck.cards, accessories: selectedDeck.accessories || {} });
+	room.send("choose_leader", { leaderId: selectedDeck.leaderName });
+	room.send("ready", { ready: true });
+	return true;
 }
 
 
@@ -183,7 +228,7 @@ async function joinLobby(forceCreate = false): Promise<boolean> {
 		if (room && roomId && requestedRoomId && roomId !== requestedRoomId) {
 			await leaveCurrentLobby();
 		}
-		log("JOINING", { endpoint: view.endpointEl.value.trim(), roomId: requestedRoomId || "(novo)" });
+		log("JOINING", { endpoint: view.endpointEl.value.trim(), roomId: requestedRoomId || "(fila automática)" });
 		client = await connectClient(view.endpointEl.value.trim());
 		room = await joinOrCreateLobby(client, requestedRoomId, forceCreate);
 		roomId = room.id;
@@ -248,12 +293,106 @@ async function joinLobby(forceCreate = false): Promise<boolean> {
 	}
 }
 
+async function privateCodeExists(code: string) {
+	if (!view.endpointEl) return false;
+	const base = endpointToHttpBase(view.endpointEl.value.trim());
+	const resp = await fetch(`${base}/private-lobbies/${encodeURIComponent(code)}`);
+	if (!resp.ok) throw new Error(`status_${resp.status}`);
+	const data = await resp.json();
+	return !!data?.exists;
+}
+
+async function enterPrivateLobby(mode: "create" | "join") {
+	if (isJoining || !view.endpointEl) return;
+	const code = setPrivateCode(view.privateCodeEl?.value || (mode === "create" ? generatePrivateCode() : ""));
+	if (!code) {
+		log("ERROR", { text: "Digite um código para entrar em sala privada." });
+		return;
+	}
+
+	isJoining = true;
+	try {
+		if (room) await leaveCurrentLobby();
+		client = await connectClient(view.endpointEl.value.trim());
+		if (mode === "create") {
+			if (await privateCodeExists(code)) {
+				log("ERROR", { text: "Esse código privado já está em uso. Escolha outro ou entre por código.", code });
+				return;
+			}
+			room = await createPrivateLobby(client, code);
+		} else {
+			room = await joinPrivateLobby(client, code);
+		}
+
+		roomId = room.id;
+		selectedRoomId = room.id;
+		if (view.roomIdEl) view.roomIdEl.value = room.id;
+		if (view.roomIdViewEl) view.roomIdViewEl.textContent = room.id;
+		setPrivateCode(code);
+
+		const displayName = getDisplayName();
+		if (displayName) room.send("set_name", { name: displayName });
+
+		bindLobbyHandlers(room, {
+			onAssignSlot: (msg) => {
+				mySlot = msg?.slot || null;
+				setSlotPhase(mySlot, view.phaseEl?.textContent || "—");
+				log("ASSIGN_SLOT", msg);
+			},
+			onLobbyState: (msg) => {
+				setSlotPhase(mySlot, String(msg?.phase || "—"));
+				renderPlayers(Array.isArray(msg?.players) ? msg.players : [], mySlot);
+				const me = Array.isArray(msg?.players) ? msg.players.find((p: any) => p.slot === mySlot) : null;
+				if (view.slotEl) view.slotEl.textContent = me?.displayName ? `${me.displayName} (${mySlot || me.slot || "—"})` : (mySlot || "—");
+				myServerReady = !!me?.ready;
+				setReadyUI(myServerReady);
+			},
+			onStartMatch: (msg) => {
+				log("START_MATCH", msg);
+				const endpoint = view.endpointEl?.value.trim() || resolveServerEndpoint(window.location.search);
+				const matchRoomId = String(msg?.matchRoomId || "").trim();
+				const joinToken = String(msg?.joinToken || "").trim();
+				if (matchRoomId) window.location.href = `./game.html?roomId=${encodeURIComponent(matchRoomId)}&endpoint=${encodeURIComponent(endpoint)}&joinToken=${encodeURIComponent(joinToken)}`;
+			},
+			onError: (msg) => log("ERROR", msg),
+			onLeave: (code) => {
+				room = null;
+				roomId = null;
+				mySlot = null;
+				myServerReady = false;
+				setReadyUI(false);
+				setSlotPhase(null, "—");
+				if (view.roomIdViewEl) view.roomIdViewEl.textContent = "—";
+				log("ROOM_LEAVE", { code });
+			}
+		});
+
+		syncSelectedDeckFromUI();
+		if (sendSelectedDeckReady()) {
+			log("READY_SENT", { ready: true, mode: "private" });
+		} else {
+			log("PRIVATE_WAITING_DECK", { text: "Selecione um deck salvo para ficar pronto na sala privada." });
+		}
+		log(mode === "create" ? "PRIVATE_CREATED" : "PRIVATE_JOINED", { code, roomId: room.id });
+	} catch (error) {
+		log("JOIN_ERROR", { text: mode === "create" ? "Não foi possível criar sala privada." : "Código privado não encontrado ou sala cheia.", code, error: String(error) });
+	} finally {
+		isJoining = false;
+	}
+}
+
 if (view.btnJoin) {
 	view.btnJoin.onclick = () => {
 		if (view.roomIdEl && selectedRoomId && !view.roomIdEl.value.trim()) view.roomIdEl.value = selectedRoomId;
 		void joinLobby();
 	};
 }
+if (view.privateCodeEl) {
+	view.privateCodeEl.oninput = () => setPrivateCode(view.privateCodeEl?.value || "");
+}
+if (view.btnCreatePrivate) view.btnCreatePrivate.onclick = () => void enterPrivateLobby("create");
+if (view.btnJoinPrivate) view.btnJoinPrivate.onclick = () => void enterPrivateLobby("join");
+if (view.btnCopyPrivateCode) view.btnCopyPrivateCode.onclick = () => void copyPrivateCode();
 if (view.deckEl) view.deckEl.onchange = syncSelectedDeckFromUI;
 window.addEventListener("storage", (event) => {
 	if (event.key && event.key !== "mytragor_decks" && event.key !== "mytragor_play_deck") return;
@@ -273,9 +412,9 @@ if (view.btnJoinSelected) view.btnJoinSelected.onclick = () => {
 if (view.btnReady) {
 	view.btnReady.onclick = async () => {
 		if (!room) {
-			const joined = await joinLobby(true);
+			const joined = await joinLobby();
 			if (!joined || !room) {
-				log("ERROR", { text: "Não foi possível entrar na sala para marcar Ready." });
+				log("ERROR", { text: "Não foi possível entrar na fila para marcar Ready." });
 				return;
 			}
 		}
@@ -285,10 +424,10 @@ if (view.btnReady) {
 			return;
 		}
 		if (nextReady && selectedDeck) {
-			room?.send("choose_deck", { deckId: selectedDeck.id, leaderId: selectedDeck.leaderName, cards: selectedDeck.cards, accessories: selectedDeck.accessories || {} });
-			room?.send("choose_leader", { leaderId: selectedDeck.leaderName });
+			sendSelectedDeckReady();
+		} else {
+			room?.send("ready", { ready: nextReady });
 		}
-		room?.send("ready", { ready: nextReady });
 		log("READY_SENT", { ready: nextReady });
 	};
 }

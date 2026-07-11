@@ -1862,7 +1862,7 @@ body.lobbyBody::before{
 
 .lobbyGridRefined{
   display:grid;
-  grid-template-columns:minmax(320px, 0.95fr) minmax(360px, 1.05fr);
+  grid-template-columns:minmax(520px, 1.28fr) minmax(320px, .72fr);
   gap:clamp(14px, 1.4vw, 18px);
 }
 
@@ -1888,6 +1888,13 @@ body.lobbyBody::before{
 .lobbyChoiceGrid,
 .lobbyInfoTiles{
   margin-top:10px;
+}
+
+.lobbyDeckChooser{
+  padding:12px;
+  border-radius:16px;
+  border:1px solid rgba(235, 212, 168, 0.12);
+  background:linear-gradient(180deg, rgba(8, 10, 14, 0.44), rgba(5, 7, 11, 0.28));
 }
 
 .lobbyBody label{
@@ -1917,14 +1924,14 @@ body.lobbyBody::before{
 }
 
 .lobbyBody #botDeck{
-  background:#ffffff;
-  color:#111111;
-  border-color:rgba(17, 17, 17, 0.18);
+  background:rgba(8, 10, 14, 0.58);
+  color:#f2ead7;
+  border-color:rgba(141, 198, 214, 0.20);
 }
 
 .lobbyBody #botDeck:focus{
-  border-color:rgba(17, 17, 17, 0.34);
-  box-shadow:0 0 0 3px rgba(255, 255, 255, 0.22);
+  border-color:rgba(141, 198, 214, 0.38);
+  box-shadow:0 0 0 3px rgba(141, 198, 214, 0.12);
 }
 
 .lobbyInfoTiles{
@@ -1943,14 +1950,153 @@ body.lobbyBody::before{
   box-shadow:inset 0 1px 0 rgba(255,255,255,0.04);
 }
 
-.lobbyReadyBlock{
-  margin-top:12px;
-  padding:14px;
+.lobbyModeGrid{
+  margin-top:14px;
   display:grid;
-  gap:10px;
-  border-radius:16px;
-  background:linear-gradient(180deg, rgba(30,23,11,0.24), rgba(8,8,12,0.20));
-  border:1px solid rgba(227, 190, 115, 0.16);
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+
+.lobbyModeCard{
+  min-height:276px;
+  padding:16px;
+  display:grid;
+  align-content:start;
+  gap:12px;
+  border-radius:18px;
+  position:relative;
+  overflow:hidden;
+}
+
+.lobbyModeCard::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:linear-gradient(135deg, rgba(255,255,255,0.06), transparent 38%);
+  opacity:.72;
+}
+
+.lobbyReadyBlock,
+.privateRoomBlock{
+  margin-top:0;
+}
+
+.lobbyModeCardPrimary{
+  background:
+    linear-gradient(180deg, rgba(44, 34, 14, 0.46), rgba(9, 10, 14, 0.32)),
+    rgba(8,8,12,0.18);
+  border:1px solid rgba(227, 190, 115, 0.24);
+}
+
+.lobbyModeCardPrivate{
+  background:
+    linear-gradient(180deg, rgba(10, 30, 40, 0.48), rgba(8,8,12,0.28)),
+    rgba(8,8,12,0.18);
+  border:1px solid rgba(141, 198, 214, 0.22);
+}
+
+.lobbyModeCardSolo{
+  min-height:0;
+  margin-top:14px;
+  background:
+    linear-gradient(180deg, rgba(28, 42, 25, 0.46), rgba(9, 10, 14, 0.32)),
+    rgba(8,8,12,0.18);
+  border:1px solid rgba(146, 208, 127, 0.22);
+}
+
+.soloSetupGrid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  margin-top:10px;
+}
+
+.soloDeckCard{
+  display:grid;
+  gap:12px;
+}
+
+.soloDeckCardBot{
+  border-color:rgba(141, 198, 214, 0.18);
+  background:linear-gradient(180deg, rgba(9, 22, 30, 0.42), rgba(5, 7, 11, 0.28));
+}
+
+.lobbyModeHead{
+  position:relative;
+  display:grid;
+  gap:6px;
+}
+
+.modeBadge{
+  width:max-content;
+  padding:4px 8px;
+  border-radius:999px;
+  border:1px solid rgba(241, 209, 138, 0.28);
+  background:rgba(241, 209, 138, 0.12);
+  color:#f3ead7;
+  font-family:"Cinzel", Georgia, serif;
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:1px;
+  text-transform:uppercase;
+}
+
+.modeBadgePrivate{
+  border-color:rgba(141, 198, 214, 0.32);
+  background:rgba(141, 198, 214, 0.12);
+}
+
+.lobbyModeHead h4{
+  margin:0;
+  font-family:"Cinzel", Georgia, serif;
+  font-size:clamp(18px, 1.6vw, 22px);
+  color:#f3ead7;
+}
+
+.lobbyModeHead p{
+  margin:0;
+  color:rgba(235, 240, 248, 0.78);
+  font-size:14px;
+  line-height:1.25;
+}
+
+.privateActions{
+  margin-top:2px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+}
+
+.privateActions .btnGold,
+.privateActions .btnGhost{
+  min-width:0;
+  width:100%;
+  padding:11px 12px;
+  font-size:13px;
+}
+
+.privateRoomMeta{
+  display:grid;
+  gap:7px;
+}
+
+.privateCodeCopyRow{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.privateCodeCopyRow .pill{
+  flex:1;
+  min-width:0;
+}
+
+.privateCopyBtn{
+  min-width:0;
+  padding:8px 11px;
+  font-size:12px;
+  white-space:nowrap;
 }
 
 .readyPrimary{
@@ -1958,6 +2104,7 @@ body.lobbyBody::before{
   min-height:52px;
   font-size:16px;
   letter-spacing:1px;
+  align-self:end;
 }
 
 .lobbyReadyMeta{
@@ -1985,6 +2132,12 @@ body.lobbyBody::before{
   padding:8px 10px;
 }
 
+.lobbyRoomsPanel{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
 .roomStateRow{
   margin-top:0;
 }
@@ -1995,6 +2148,49 @@ body.lobbyBody::before{
 
 .lobbySubPanel + .lobbySubPanel{
   margin-top:8px;
+}
+
+.lobbyOptionalPanel{
+  padding:0;
+  overflow:hidden;
+}
+
+.lobbyOptionalPanel summary{
+  list-style:none;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:10px 12px;
+  font-family:"Cinzel", Georgia, serif;
+  font-size:11px;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  color:rgba(228, 204, 149, 0.82);
+}
+
+.lobbyOptionalPanel summary::-webkit-details-marker{
+  display:none;
+}
+
+.lobbyOptionalPanel summary::before{
+  content:"+";
+  width:18px;
+  height:18px;
+  display:inline-grid;
+  place-items:center;
+  border-radius:50%;
+  border:1px solid rgba(241, 209, 138, 0.2);
+  color:rgba(241, 209, 138, 0.86);
+}
+
+.lobbyOptionalPanel[open] summary::before{
+  content:"-";
+}
+
+.lobbyOptionalPanel .roomList{
+  padding:0 10px 10px;
 }
 
 .zoneTitle{
@@ -2277,6 +2473,18 @@ body.lobbyBody::before{
 @media (max-width: 980px){
   .lobbyGridRefined{
     grid-template-columns:1fr;
+  }
+
+  .lobbyModeGrid{
+    grid-template-columns:1fr;
+  }
+
+  .soloSetupGrid{
+    grid-template-columns:1fr;
+  }
+
+  .lobbyModeCard{
+    min-height:0;
   }
 
   .page.lobbyPage{

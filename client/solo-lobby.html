@@ -33,43 +33,65 @@
 
 				<div class="lobbyGrid lobbyGridRefined">
 					<section class="card cardPad panel lobbyLeft lobbyDeckPanel">
-						<div class="lobbySectionEyebrow">Preparação solo</div>
+						<div class="lobbySectionEyebrow">Passo 1</div>
 						<div class="lobbySectionHead">
-							<h3>Baralho, líder e prontidão</h3>
+							<h3>Configure o desafio</h3>
+							<p>Escolha seu baralho e o baralho que a IA vai pilotar. Depois basta iniciar.</p>
 						</div>
 
-						<div class="grid2 lobbyChoiceGrid">
-							<div>
-								<label>Selecione o baralho</label>
-								<select id="deck">
-									<option value="">(carregando baralhos salvos...)</option>
-								</select>
+						<div class="soloSetupGrid">
+							<div class="lobbyDeckChooser soloDeckCard">
+								<div class="lobbyModeHead">
+									<span class="modeBadge">Você</span>
+									<h4>Seu baralho</h4>
+								</div>
+								<div class="grid2 lobbyChoiceGrid">
+									<div>
+										<label>Baralho</label>
+										<select id="deck">
+											<option value="">(carregando baralhos salvos...)</option>
+										</select>
+									</div>
+									<div>
+										<label>Líder</label>
+										<select id="leader" disabled>
+											<option value="">(auto pelo baralho salvo)</option>
+										</select>
+									</div>
+								</div>
 							</div>
-							<div>
-								<label>Líder</label>
-								<select id="leader" disabled>
-									<option value="">(auto pelo baralho salvo)</option>
-								</select>
-							</div>
-							<div>
-								<label>Deck da IA</label>
-								<select id="botDeck">
-									<option value="">(carregando baralhos salvos...)</option>
-								</select>
-							</div>
-							<div>
-								<label>Líder da IA</label>
-								<select id="botLeader" disabled>
-									<option value="">(auto pelo baralho salvo)</option>
-								</select>
+
+							<div class="lobbyDeckChooser soloDeckCard soloDeckCardBot">
+								<div class="lobbyModeHead">
+									<span class="modeBadge modeBadgePrivate">IA</span>
+									<h4>Oponente</h4>
+								</div>
+								<div class="grid2 lobbyChoiceGrid">
+									<div>
+										<label>Deck da IA</label>
+										<select id="botDeck">
+											<option value="">(carregando baralhos salvos...)</option>
+										</select>
+									</div>
+									<div>
+										<label>Líder da IA</label>
+										<select id="botLeader" disabled>
+											<option value="">(auto pelo baralho salvo)</option>
+										</select>
+									</div>
+								</div>
 							</div>
 						</div>
 
-						<div class="lobbyReadyBlock">
+						<div class="lobbyReadyBlock lobbyModeCard lobbyModeCardSolo">
+							<div class="lobbyModeHead">
+								<span class="modeBadge">Solo</span>
+								<h4>Desafio contra IA</h4>
+								<p>A partida abre imediatamente quando os dois decks estiverem selecionados.</p>
+							</div>
 							<button class="btnGold readyPrimary" id="btnReady" type="button">Iniciar desafio solo</button>
 							<div class="lobbyReadyMeta">
 								<span class="pill">Status: <b id="ready" class="bad">NÃO PRONTO</b></span>
-								<p class="readyHint">Ao confirmar prontidão, a sala solo cria uma partida exclusiva contra a IA.</p>
 							</div>
 						</div>
 
@@ -93,10 +115,10 @@
 					</section>
 
 					<section class="card cardPad panel lobbyRight lobbyRoomsPanel">
-						<div class="lobbySectionEyebrow">Corredor solo</div>
+						<div class="lobbySectionEyebrow">Mesa atual</div>
 						<div class="lobbySectionHead">
-							<h3>Sala atual e arenas solo</h3>
-							<p>Acompanhe sua sala solo, veja outros desafios contra IA e observe partidas solo ativas sem cruzar dados com o lobby PvP.</p>
+							<h3>Estado do desafio</h3>
+							<p>Quando você estiver pronto e a IA tiver um deck, a partida solo começa automaticamente.</p>
 						</div>
 
 						<div class="actionsRow roomStateRow lobbyCompactState">
@@ -109,21 +131,21 @@
 							<div id="players" class="playersMount">—</div>
 						</div>
 
-						<div class="lobbySubPanel">
-							<div class="roomsHeader">
-								<div class="zoneTitle">Salas solo abertas</div>
+						<details class="lobbySubPanel lobbyOptionalPanel">
+							<summary>
+								<span>Salas solo abertas</span>
 								<button class="btnGhost lobbyUtilityBtn" id="btnRefreshRooms" type="button">Atualizar</button>
-							</div>
+							</summary>
 							<div id="roomList" class="roomList"></div>
-						</div>
+						</details>
 
-						<div class="lobbySubPanel">
-							<div class="roomsHeader">
-								<div class="zoneTitle">Partidas solo em andamento</div>
+						<details class="lobbySubPanel lobbyOptionalPanel">
+							<summary>
+								<span>Partidas solo em andamento</span>
 								<button class="btnGhost lobbyUtilityBtn" id="btnRefreshMatches" type="button">Atualizar</button>
-							</div>
+							</summary>
 							<div id="matchList" class="roomList"></div>
-						</div>
+						</details>
 					</section>
 				</div>
 			</main>

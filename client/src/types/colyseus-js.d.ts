@@ -4,6 +4,7 @@ declare module "colyseus.js" {
 
 	export class Client {
 		constructor(endpoint: string);
+		join<T = any>(roomName: string, options?: any): Promise<Room<T>>;
 		joinOrCreate<T = any>(roomName: string, options?: any): Promise<Room<T>>;
 		create<T = any>(roomName: string, options?: any): Promise<Room<T>>;
 		joinById<T = any>(roomId: string, options?: any): Promise<Room<T>>;
