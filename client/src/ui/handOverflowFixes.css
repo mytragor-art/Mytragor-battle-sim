@@ -97,10 +97,10 @@
 	:root {
 		--arena-w: 560 !important;
 		--arena-h: 740 !important;
-		--cardW-base: 62px !important;
-		--cardH-base: 96px !important;
-		--cardW: 62px !important;
-		--cardH: 96px !important;
+		--cardW-base: 76px !important;
+		--cardH-base: 112px !important;
+		--cardW: 76px !important;
+		--cardH: 112px !important;
 		--arena-screen-w: min(100vw, calc((var(--arena-w) * 1px) * var(--scale))) !important;
 	}
 
@@ -194,6 +194,85 @@
 		width: calc(var(--arena-w) * 1px) !important;
 		height: calc(var(--arena-h) * 1px) !important;
 		max-width: none !important;
+	}
+
+	#opArena,
+	#youArena {
+		width: calc(var(--arena-w) * 1px) !important;
+		max-width: none !important;
+		justify-self: start !important;
+		box-sizing: border-box !important;
+	}
+
+	#opArena,
+	#youArena {
+		--slotW: 72px !important;
+		--slotH: 103px !important;
+		--gap: 5px !important;
+		--pile-col-w: 78px !important;
+		--pile-w: 74px !important;
+		--pile-h: 101px !important;
+		padding-left: 58px !important;
+	}
+
+	#opArena .arenaGrid,
+	#youArena .arenaGrid {
+		gap: 4px !important;
+	}
+
+	#opArena .mainArea,
+	#opArena .lane,
+	#youArena .mainArea,
+	#youArena .lane {
+		gap: 5px !important;
+	}
+
+	#opArena .lane,
+	#youArena .lane {
+		grid-template-columns: repeat(5, var(--slotW)) !important;
+	}
+
+	#opArena .slot,
+	#youArena .slot {
+		width: var(--slotW) !important;
+		height: var(--slotH) !important;
+	}
+
+	#opArena .arenaGrid,
+	#youArena .arenaGrid {
+		grid-template-columns: minmax(0, 1fr) var(--pile-col-w) !important;
+	}
+
+	#opArena .pilesCol,
+	#youArena .pilesCol {
+		width: var(--pile-col-w) !important;
+		min-width: var(--pile-col-w) !important;
+		transform: translateX(12px) !important;
+	}
+
+	#opArena .pilesCol .slot,
+	#youArena .pilesCol .slot,
+	#ai-deck,
+	#you-deck,
+	#ai-grave,
+	#you-grave,
+	#ai-banished,
+	#you-banished {
+		width: var(--pile-w) !important;
+		height: var(--pile-h) !important;
+		min-width: var(--pile-w) !important;
+		min-height: var(--pile-h) !important;
+		max-width: var(--pile-w) !important;
+		max-height: var(--pile-h) !important;
+	}
+
+	#ai-deck .card.slotCard,
+	#you-deck .card.slotCard,
+	#ai-deck .slotCardImg,
+	#you-deck .slotCardImg {
+		width: 100% !important;
+		height: 100% !important;
+		object-fit: cover !important;
 	}
 
 	#youHandDock,
