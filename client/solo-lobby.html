@@ -47,13 +47,13 @@
 								</div>
 								<div class="grid2 lobbyChoiceGrid">
 									<div>
-										<label>Baralho</label>
+										<label for="deck">Baralho</label>
 										<select id="deck">
 											<option value="">(carregando baralhos salvos...)</option>
 										</select>
 									</div>
 									<div>
-										<label>Líder</label>
+										<label for="leader">Líder</label>
 										<select id="leader" disabled>
 											<option value="">(auto pelo baralho salvo)</option>
 										</select>
@@ -68,13 +68,13 @@
 								</div>
 								<div class="grid2 lobbyChoiceGrid">
 									<div>
-										<label>Deck da IA</label>
+										<label for="botDeck">Deck da IA</label>
 										<select id="botDeck">
 											<option value="">(carregando baralhos salvos...)</option>
 										</select>
 									</div>
 									<div>
-										<label>Líder da IA</label>
+										<label for="botLeader">Líder da IA</label>
 										<select id="botLeader" disabled>
 											<option value="">(auto pelo baralho salvo)</option>
 										</select>
@@ -98,10 +98,10 @@
 						<details class="advancedPanel">
 							<summary>Configurações avançadas</summary>
 							<div class="advancedBody">
-								<label>Endpoint (ws)</label>
+								<label for="endpoint">Endpoint (ws)</label>
 								<input class="input" id="endpoint" value="ws://localhost:2567" />
 
-								<label>Room ID (vazio = criar)</label>
+								<label for="roomId">Room ID (vazio = criar)</label>
 								<input class="input" id="roomId" placeholder="ex: SOLO123" />
 
 								<div class="actionsRow advancedActions">

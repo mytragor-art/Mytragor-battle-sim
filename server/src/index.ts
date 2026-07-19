@@ -21,6 +21,7 @@ import { MatchRoom } from "./rooms/MatchRoom";
 import { SoloLobbyRoom } from "./rooms/SoloLobbyRoom";
 import { SoloMatchRoom } from "./rooms/SoloMatchRoom";
 import { SpectatorRoom } from "./rooms/SpectatorRoom";
+import { recordClientDiagnostic } from "./utils/clientDiagnostics";
 
 dotenv.config();
 
@@ -177,6 +178,18 @@ async function main() {
 
 	app.get("/health", (_req, res) => {
 		res.json({ status: "ok", port: PORT, env: process.env.NODE_ENV });
+	});
+
+	app.post("/client-diagnostics", (req, res) => {
+		const diagnostic = recordClientDiagnostic(req.body || {});
+		if (!diagnostic) {
+			res.status(400).json({ error: "missing_room_or_session" });
+			return;
+		}
+		if (diagnostic.event !== "heartbeat") {
+			console.log(`[CLIENT DIAG] room=${diagnostic.roomId} client=${diagnostic.sessionId} event=${diagnostic.event} visibility=${diagnostic.visibility} online=${diagnostic.online} dom=${diagnostic.domNodes} heapMb=${diagnostic.heapMb ?? "n/a"} frameGapMs=${diagnostic.frameGapMs} closeCode=${diagnostic.closeCode ?? "n/a"} detail=${JSON.stringify(diagnostic.detail || "-")} run=${diagnostic.runId || "-"}`);
+		}
+		res.status(204).end();
 	});
 
 	app.get("/matches/:matchRoomId/spectator", async (req, res) => {

@@ -2,6 +2,7 @@
 
 import { Room, Client } from "colyseus";
 import { findCardDef } from "../game/cardCatalog";
+import { describeClientDiagnostic } from "../utils/clientDiagnostics";
 import { MatchState, MatchPlayerState } from "./schema/MatchState";
 import { buildSpectatorSnapshot, disposeSpectatorChannel, publishSpectatorSnapshot, relaySpectatorEvent } from "./spectatorBridge";
 import {
@@ -458,7 +459,8 @@ export class MatchRoom extends Room<MatchState> {
 		try {
 			const leavingPlayer = this.state.players.get(client.sessionId);
 			const leavingSlot = leavingPlayer?.slot === "p1" || leavingPlayer?.slot === "p2" ? leavingPlayer.slot as Slot : null;
-			console.log(`[MATCH] leave room=${this.roomId} client=${client.sessionId} slot=${leavingSlot || "-"} consented=${consented === true} phase=${this.state.phase} gamePhase=${this.state.game.phase} turn=${this.state.game.turn} turnSlot=${this.state.game.turnSlot} clients=${this.clients.length}`);
+			const clientDiagnostic = describeClientDiagnostic(this.roomId, client.sessionId);
+			console.log(`[MATCH] leave room=${this.roomId} client=${client.sessionId} slot=${leavingSlot || "-"} consented=${consented === true} phase=${this.state.phase} gamePhase=${this.state.game.phase} turn=${this.state.game.turn} turnSlot=${this.state.game.turnSlot} clients=${this.clients.length} ${clientDiagnostic}`);
 			if (!consented && leavingSlot && this.state.phase !== "FINISHED") {
 				try {
 					console.log(`[MATCH] waiting reconnect room=${this.roomId} client=${client.sessionId} slot=${leavingSlot} grace=${RECONNECTION_GRACE_SECONDS}s`);

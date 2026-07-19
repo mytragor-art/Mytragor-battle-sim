@@ -1,5 +1,6 @@
 import { Room, Client } from "colyseus";
 import { findCardDef } from "../game/cardCatalog";
+import { describeClientDiagnostic } from "../utils/clientDiagnostics";
 import { MatchState, MatchPlayerState } from "./schema/MatchState";
 import {
 	type Slot,
@@ -1861,7 +1862,8 @@ export class SoloMatchRoom extends Room<MatchState> {
 	async onLeave(client: Client, consented?: boolean) {
 		const leavingPlayer = this.state.players.get(client.sessionId);
 		const leavingSlot = leavingPlayer?.slot === "p1" || leavingPlayer?.slot === "p2" ? (leavingPlayer.slot as Slot) : null;
-		console.log(`[SOLO] leave room=${this.roomId} client=${client.sessionId} slot=${leavingSlot || "-"} consented=${consented === true} phase=${this.state.phase} gamePhase=${this.state.game.phase} turn=${this.state.game.turn} turnSlot=${this.state.game.turnSlot} clients=${this.clients.length}`);
+		const clientDiagnostic = describeClientDiagnostic(this.roomId, client.sessionId);
+		console.log(`[SOLO] leave room=${this.roomId} client=${client.sessionId} slot=${leavingSlot || "-"} consented=${consented === true} phase=${this.state.phase} gamePhase=${this.state.game.phase} turn=${this.state.game.turn} turnSlot=${this.state.game.turnSlot} clients=${this.clients.length} ${clientDiagnostic}`);
 		if (!consented && leavingSlot && this.state.phase !== "FINISHED") {
 			try {
 				console.log(`[SOLO] waiting reconnect room=${this.roomId} client=${client.sessionId} slot=${leavingSlot} grace=${RECONNECTION_GRACE_SECONDS}s`);

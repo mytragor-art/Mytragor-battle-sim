@@ -7,7 +7,7 @@ import { setupBoardScale } from "../ui/boardScale";
 import { setupArenaSlots } from "../ui/arenaSlots";
 import { getDisplayName } from "../ui/profile";
 import { createMobileCardInspect, type MobileInspectCard } from "../ui/mobileCardInspect";
-import { resolveServerEndpoint } from "../config/runtime";
+import { resolveHttpBase, resolveServerEndpoint } from "../config/runtime";
 import { canAttackCardQuiet, canAttackTargetQuiet, endAttackCleanup, resolveAttackOn, selectAttacker, type AttackSelection, type AttackTarget as BattleTarget, type BattleCard, type BattleRuntime, type BattleSide } from "../game/battle";
 
 type CardDef = {
@@ -84,6 +84,7 @@ const cardLookup = new Map<string, CardDef>();
 const CARD_BACK_ASSET = "ui/layout-background.ai.png";
 const ASSET_CACHE_VERSION = "2026-05-17-2";
 const MULLIGAN_TIMEOUT_MS = 40_000;
+const MATCH_RECONNECT_MAX_ATTEMPTS = 12;
 const MOBILE_PREVIEW_FAB_POSITION_KEY = "mytragor_mobile_preview_fab_position";
 const SLEEVE_ASSET_BY_KEY: Record<string, string> = {
 	"sleeve-arcano": "/assets/acessorios/sleeve/sleeve Arcano.png",
@@ -247,6 +248,56 @@ let enemyTurnCount = 0;
 let lastTurnMarker = "";
 let lastMatchEndSeq = -1;
 let revealHideTimer: number | null = null;
+const clientDiagnosticRunId = typeof crypto?.randomUUID === "function" ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+let clientDiagnosticLastTick = performance.now();
+let clientDiagnosticMaxFrameGapMs = 0;
+let clientDiagnosticLastHeartbeatAt = 0;
+
+function reportClientDiagnostic(event: string, detail = "", closeCode?: number): void {
+	if (!roomId || !selfSessionId) return;
+	const endpoint = view.endpointEl?.value.trim() || resolveServerEndpoint(window.location.search);
+	const memory = (performance as Performance & { memory?: { usedJSHeapSize?: number } }).memory;
+	const payload = {
+		roomId,
+		sessionId: selfSessionId,
+		runId: clientDiagnosticRunId,
+		event,
+		clientTimestamp: Date.now(),
+		visibility: document.visibilityState,
+		online: navigator.onLine,
+		domNodes: document.getElementsByTagName("*").length,
+		heapMb: Number.isFinite(Number(memory?.usedJSHeapSize)) ? Math.round(Number(memory?.usedJSHeapSize) / 1024 / 1024) : null,
+		frameGapMs: Math.round(clientDiagnosticMaxFrameGapMs),
+		closeCode: Number.isFinite(Number(closeCode)) ? Number(closeCode) : null,
+		detail
+	};
+	void fetch(`${resolveHttpBase(endpoint)}/client-diagnostics`, {
+		method: "POST",
+		headers: { "content-type": "application/json" },
+		body: JSON.stringify(payload),
+		keepalive: true
+	}).catch(() => {});
+}
+
+window.setInterval(() => {
+	const now = performance.now();
+	const frameGapMs = Math.max(0, now - clientDiagnosticLastTick - 1000);
+	clientDiagnosticLastTick = now;
+	clientDiagnosticMaxFrameGapMs = Math.max(clientDiagnosticMaxFrameGapMs, frameGapMs);
+	if (frameGapMs >= 4000) reportClientDiagnostic("main_thread_stall", `gap=${Math.round(frameGapMs)}ms`);
+	if (Date.now() - clientDiagnosticLastHeartbeatAt >= 10_000) {
+		clientDiagnosticLastHeartbeatAt = Date.now();
+		reportClientDiagnostic("heartbeat");
+		clientDiagnosticMaxFrameGapMs = 0;
+	}
+}, 1000);
+
+window.addEventListener("pagehide", () => reportClientDiagnostic("pagehide"));
+window.addEventListener("offline", () => reportClientDiagnostic("offline"));
+window.addEventListener("online", () => reportClientDiagnostic("online"));
+document.addEventListener("visibilitychange", () => reportClientDiagnostic(`visibility_${document.visibilityState}`));
+window.addEventListener("error", (event) => reportClientDiagnostic("window_error", event.message || "unknown error"));
+window.addEventListener("unhandledrejection", (event) => reportClientDiagnostic("unhandled_rejection", String(event.reason || "unknown rejection")));
 
 function animateChosenPowerActivation(side: BattleSide): void {
 	const leaderSlotId = side === "you" ? "you-leader" : "ai-leader";
@@ -3452,6 +3503,7 @@ function captureMatchReconnectionToken(activeRoom: any) {
 async function reconnectActiveMatch(): Promise<boolean> {
 	if (isSpectator || !matchReconnectionToken) return false;
 	try {
+		reportClientDiagnostic("reconnect_attempt", `attempt=${matchReconnectAttempts}`);
 		const endpoint = view.endpointEl?.value.trim() || resolveServerEndpoint(window.location.search);
 		client = client || await connectClient(endpoint);
 		const nextRoom = await client.reconnect(matchReconnectionToken);
@@ -3461,21 +3513,24 @@ async function reconnectActiveMatch(): Promise<boolean> {
 		captureMatchReconnectionToken(nextRoom);
 		bindActiveMatchRoom();
 		logText("Reconectado à partida.");
+		reportClientDiagnostic("reconnect_success", `attempt=${matchReconnectAttempts}`);
 		matchReconnectAttempts = 0;
 		return true;
 	} catch (error) {
+		reportClientDiagnostic("reconnect_failure", String(error));
 		log("ERROR", { text: `Falha ao reconectar partida: ${String(error)}` });
 		return false;
 	}
 }
 
 function scheduleMatchReconnect(code: number) {
+	if (matchReconnectAttempts === 0) reportClientDiagnostic("websocket_leave", "room.onLeave", code);
 	if (isSpectator || isMatchFinished || !matchReconnectionToken) {
 		log("DISCONNECTED", { code, text: "Conexão encerrada. Voltando ao lobby..." });
 		setTimeout(() => goLobby(), 900);
 		return;
 	}
-	if (matchReconnectAttempts >= 3) {
+	if (matchReconnectAttempts >= MATCH_RECONNECT_MAX_ATTEMPTS) {
 		log("DISCONNECTED", { code, text: "Não foi possível reconectar. Voltando ao lobby..." });
 		setTimeout(() => goLobby(), 900);
 		return;
@@ -3483,12 +3538,13 @@ function scheduleMatchReconnect(code: number) {
 	clearMatchReconnectTimer();
 	const nextAttempt = matchReconnectAttempts + 1;
 	matchReconnectAttempts = nextAttempt;
-	logText(`Reconectando partida (${nextAttempt}/3)...`);
+	const retryDelayMs = Math.min(1000 + ((nextAttempt - 1) * 500), 5000);
+	logText(`Reconectando partida (${nextAttempt}/${MATCH_RECONNECT_MAX_ATTEMPTS})...`);
 	matchReconnectTimer = window.setTimeout(() => {
 		void reconnectActiveMatch().then((ok) => {
 			if (!ok) scheduleMatchReconnect(code);
 		});
-	}, 700);
+	}, retryDelayMs);
 }
 
 async function reconnectSpectator(): Promise<boolean> {
