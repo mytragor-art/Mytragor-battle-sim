@@ -53,7 +53,7 @@ type SoloBotConfig = {
 
 const MULLIGAN_TIMEOUT_MS = 40_000;
 const INACTIVITY_TIMEOUT_MS = 10 * 60_000;
-const RECONNECTION_GRACE_SECONDS = 20;
+const RECONNECTION_GRACE_SECONDS = 60;
 
 export class SoloMatchRoom extends Room<MatchState> {
 	maxClients = 1;
@@ -1853,6 +1853,7 @@ export class SoloMatchRoom extends Room<MatchState> {
 		this.consumedJoinToken = true;
 		if (!this.state.hostSessionId) this.state.hostSessionId = client.sessionId;
 		client.send("assign_slot", { slot: player.slot, sessionId: client.sessionId });
+		console.log(`[SOLO] joined room=${this.roomId} client=${client.sessionId} slot=${player.slot} phase=${this.state.phase} gamePhase=${this.state.game.phase} turn=${this.state.game.turn} turnSlot=${this.state.game.turnSlot} clients=${this.clients.length}`);
 		this.refreshInactivityTimer();
 		this.queueBotTurn();
 	}
@@ -1860,16 +1861,17 @@ export class SoloMatchRoom extends Room<MatchState> {
 	async onLeave(client: Client, consented?: boolean) {
 		const leavingPlayer = this.state.players.get(client.sessionId);
 		const leavingSlot = leavingPlayer?.slot === "p1" || leavingPlayer?.slot === "p2" ? (leavingPlayer.slot as Slot) : null;
+		console.log(`[SOLO] leave room=${this.roomId} client=${client.sessionId} slot=${leavingSlot || "-"} consented=${consented === true} phase=${this.state.phase} gamePhase=${this.state.game.phase} turn=${this.state.game.turn} turnSlot=${this.state.game.turnSlot} clients=${this.clients.length}`);
 		if (!consented && leavingSlot && this.state.phase !== "FINISHED") {
 			try {
-				console.log(`[SOLO] waiting reconnect room=${this.roomId} client=${client.sessionId} slot=${leavingSlot}`);
+				console.log(`[SOLO] waiting reconnect room=${this.roomId} client=${client.sessionId} slot=${leavingSlot} grace=${RECONNECTION_GRACE_SECONDS}s`);
 				await this.allowReconnection(client, RECONNECTION_GRACE_SECONDS);
-				console.log(`[SOLO] reconnected room=${this.roomId} client=${client.sessionId} slot=${leavingSlot}`);
+				console.log(`[SOLO] reconnected room=${this.roomId} client=${client.sessionId} slot=${leavingSlot} phase=${this.state.phase} gamePhase=${this.state.game.phase} turn=${this.state.game.turn} turnSlot=${this.state.game.turnSlot} clients=${this.clients.length}`);
 				this.refreshInactivityTimer();
 				this.queueBotTurn();
 				return;
 			} catch (error) {
-				console.log(`[SOLO] reconnect expired room=${this.roomId} client=${client.sessionId} slot=${leavingSlot}`);
+				console.log(`[SOLO] reconnect expired room=${this.roomId} client=${client.sessionId} slot=${leavingSlot} phase=${this.state.phase} gamePhase=${this.state.game.phase} turn=${this.state.game.turn} turnSlot=${this.state.game.turnSlot} clients=${this.clients.length}`);
 			}
 		}
 		for (const [choiceId, pending] of this.pendingChoices.entries()) {

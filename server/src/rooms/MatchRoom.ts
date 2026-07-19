@@ -28,7 +28,7 @@ type ReservedSeat = {
 
 const MULLIGAN_TIMEOUT_MS = 40_000;
 const INACTIVITY_TIMEOUT_MS = 10 * 60_000;
-const RECONNECTION_GRACE_SECONDS = 20;
+const RECONNECTION_GRACE_SECONDS = 60;
 
 export class MatchRoom extends Room<MatchState> {
 	maxClients = 2;
@@ -445,6 +445,7 @@ export class MatchRoom extends Room<MatchState> {
 			this.consumedJoinTokens.add(reservedSeat.joinToken);
 			if (!this.state.hostSessionId) this.state.hostSessionId = client.sessionId;
 			client.send("assign_slot", { slot: player.slot, sessionId: client.sessionId });
+			console.log(`[MATCH] joined room=${this.roomId} client=${client.sessionId} slot=${player.slot} phase=${this.state.phase} gamePhase=${this.state.game.phase} turn=${this.state.game.turn} turnSlot=${this.state.game.turnSlot} clients=${this.clients.length}`);
 			this.publishSpectatorState();
 			this.refreshInactivityTimer();
 		} catch (err: any) {
@@ -457,16 +458,17 @@ export class MatchRoom extends Room<MatchState> {
 		try {
 			const leavingPlayer = this.state.players.get(client.sessionId);
 			const leavingSlot = leavingPlayer?.slot === "p1" || leavingPlayer?.slot === "p2" ? leavingPlayer.slot as Slot : null;
+			console.log(`[MATCH] leave room=${this.roomId} client=${client.sessionId} slot=${leavingSlot || "-"} consented=${consented === true} phase=${this.state.phase} gamePhase=${this.state.game.phase} turn=${this.state.game.turn} turnSlot=${this.state.game.turnSlot} clients=${this.clients.length}`);
 			if (!consented && leavingSlot && this.state.phase !== "FINISHED") {
 				try {
-					console.log(`[MATCH] waiting reconnect room=${this.roomId} client=${client.sessionId} slot=${leavingSlot}`);
+					console.log(`[MATCH] waiting reconnect room=${this.roomId} client=${client.sessionId} slot=${leavingSlot} grace=${RECONNECTION_GRACE_SECONDS}s`);
 					await this.allowReconnection(client, RECONNECTION_GRACE_SECONDS);
-					console.log(`[MATCH] reconnected room=${this.roomId} client=${client.sessionId} slot=${leavingSlot}`);
+					console.log(`[MATCH] reconnected room=${this.roomId} client=${client.sessionId} slot=${leavingSlot} phase=${this.state.phase} gamePhase=${this.state.game.phase} turn=${this.state.game.turn} turnSlot=${this.state.game.turnSlot} clients=${this.clients.length}`);
 					this.publishSpectatorState();
 					this.refreshInactivityTimer();
 					return;
 				} catch (error) {
-					console.log(`[MATCH] reconnect expired room=${this.roomId} client=${client.sessionId} slot=${leavingSlot}`);
+					console.log(`[MATCH] reconnect expired room=${this.roomId} client=${client.sessionId} slot=${leavingSlot} phase=${this.state.phase} gamePhase=${this.state.game.phase} turn=${this.state.game.turn} turnSlot=${this.state.game.turnSlot} clients=${this.clients.length}`);
 				}
 			}
 			const remainingPlayers = [...this.state.players.values()].filter((player) => player.sessionId !== client.sessionId);
