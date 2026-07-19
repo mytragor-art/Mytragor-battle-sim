@@ -1755,6 +1755,14 @@ function getNewHandEntryFlags(nextCards: string[], previousCards: string[]): boo
 	});
 }
 
+function sameStringArray(left: string[], right: string[]): boolean {
+	if (left.length !== right.length) return false;
+	for (let index = 0; index < left.length; index += 1) {
+		if (left[index] !== right[index]) return false;
+	}
+	return true;
+}
+
 function listRemovedCards(previousCards: string[], nextCards: string[]): string[] {
 	const nextCounts = new Map<string, number>();
 	for (const cardId of nextCards) nextCounts.set(cardId, (nextCounts.get(cardId) || 0) + 1);
@@ -3642,15 +3650,15 @@ function bindActiveMatchRoom() {
 			const previousMyGrave = currentMyGrave.slice();
 			const previousMyBanished = currentMyBanished.slice();
 			const previousMyHand = previousHandCards.youHand.slice();
-			const myHandTransferSnapshots = captureHandTransferSnapshots("youHand");
+			let myHandTransferSnapshots = new Map<string, HandTransferSnapshot[]>();
 			const previousEnemyHand = previousHandCards.aiHand.slice();
-			const enemyHandTransferSnapshots = captureHandTransferSnapshots("aiHand");
+			let enemyHandTransferSnapshots = new Map<string, HandTransferSnapshot[]>();
 			const previousEnemyField = currentEnemyField.slice();
 			const previousEnemyFieldHp = currentEnemyFieldHp.slice();
 			const previousEnemySupport = currentEnemySupport.slice();
 			const previousEnemyGrave = currentEnemyGrave.slice();
 			const previousEnemyBanished = currentEnemyBanished.slice();
-			const boardTransferSnapshots = captureLaneTransferSnapshots(["you-field", "you-support", "ai-field", "ai-support"]);
+			let boardTransferSnapshots = new Map<string, LaneTransferSnapshot[]>();
 			const previousMyLeader = currentMyLeader;
 			const previousMyLeaderHp = currentMyLeaderHp;
 			const previousEnemyLeader = currentEnemyLeader;
@@ -3740,6 +3748,14 @@ function bindActiveMatchRoom() {
 			currentEnemyLeaderBlessing = Number((enemy as any)?.leaderBlessing || 0);
 			currentEnemyLeaderVitalMarks = Number((enemy as any)?.leaderVitalMarks || 0);
 			currentEnemyLeaderSpiderMarks = Number((enemy as any)?.leaderSpiderMarks || 0);
+			const myHandChanged = !sameStringArray(previousMyHand, hand);
+			const enemyHandCount = Number(enemy?.hand?.length ?? 0);
+			const enemyHandChanged = previousEnemyHand.length !== enemyHandCount;
+			const myBoardChanged = !sameStringArray(previousMyField, myField) || !sameStringArray(previousMySupport, mySupport) || !sameStringArray(previousMyGrave, currentMyGrave) || !sameStringArray(previousMyBanished, currentMyBanished);
+			const enemyBoardChanged = !sameStringArray(previousEnemyField, enemyField) || !sameStringArray(previousEnemySupport, enemySupport) || !sameStringArray(previousEnemyGrave, currentEnemyGrave) || !sameStringArray(previousEnemyBanished, currentEnemyBanished);
+			if (myHandChanged) myHandTransferSnapshots = captureHandTransferSnapshots("youHand");
+			if (enemyHandChanged) enemyHandTransferSnapshots = captureHandTransferSnapshots("aiHand");
+			if (myBoardChanged || enemyBoardChanged) boardTransferSnapshots = captureLaneTransferSnapshots(["you-field", "you-support", "ai-field", "ai-support"]);
 			const myBoardCardsToPiles = getBoardCardsMovingToPiles(previousMyField, myField, previousMySupport, mySupport, previousMyGrave, currentMyGrave, previousMyBanished, currentMyBanished);
 			const enemyBoardCardsToPiles = getBoardCardsMovingToPiles(previousEnemyField, enemyField, previousEnemySupport, enemySupport, previousEnemyGrave, currentEnemyGrave, previousEnemyBanished, currentEnemyBanished);
 			queueLanePileFlights("you-field", myBoardCardsToPiles.field);
@@ -3748,7 +3764,6 @@ function bindActiveMatchRoom() {
 			queueLanePileFlights("ai-support", enemyBoardCardsToPiles.support);
 			const myShadowPenalty = hasShadowPenaltyForPlayer(my, currentMyLeader, currentMyEnv, enemyEnv);
 			const enemyShadowPenalty = hasShadowPenaltyForPlayer(enemy, currentEnemyLeader, enemyEnv, currentMyEnv);
-			const enemyHandCount = Number(enemy?.hand?.length ?? 0);
 			const myTurn = !isSpectator && String(state?.game?.turnSlot || "") === slot;
 			isMatchFinished = String(state?.phase || "IN_MATCH") === "FINISHED";
 			const phase = String(state?.game?.phase || "");
@@ -4057,15 +4072,15 @@ async function joinMatch() {
 				const previousMyGrave = currentMyGrave.slice();
 				const previousMyBanished = currentMyBanished.slice();
 				const previousMyHand = previousHandCards.youHand.slice();
-				const myHandTransferSnapshots = captureHandTransferSnapshots("youHand");
+				let myHandTransferSnapshots = new Map<string, HandTransferSnapshot[]>();
 				const previousEnemyHand = previousHandCards.aiHand.slice();
-				const enemyHandTransferSnapshots = captureHandTransferSnapshots("aiHand");
+				let enemyHandTransferSnapshots = new Map<string, HandTransferSnapshot[]>();
 				const previousEnemyField = currentEnemyField.slice();
 				const previousEnemyFieldHp = currentEnemyFieldHp.slice();
 				const previousEnemySupport = currentEnemySupport.slice();
 				const previousEnemyGrave = currentEnemyGrave.slice();
 				const previousEnemyBanished = currentEnemyBanished.slice();
-				const boardTransferSnapshots = captureLaneTransferSnapshots(["you-field", "you-support", "ai-field", "ai-support"]);
+				let boardTransferSnapshots = new Map<string, LaneTransferSnapshot[]>();
 				const previousMyLeader = currentMyLeader;
 				const previousMyLeaderHp = currentMyLeaderHp;
 				const previousEnemyLeader = currentEnemyLeader;
@@ -4155,6 +4170,14 @@ async function joinMatch() {
 				currentEnemyLeaderBlessing = Number((enemy as any)?.leaderBlessing || 0);
 				currentEnemyLeaderVitalMarks = Number((enemy as any)?.leaderVitalMarks || 0);
 				currentEnemyLeaderSpiderMarks = Number((enemy as any)?.leaderSpiderMarks || 0);
+				const myHandChanged = !sameStringArray(previousMyHand, hand);
+				const enemyHandCount = Number(enemy?.hand?.length ?? 0);
+				const enemyHandChanged = previousEnemyHand.length !== enemyHandCount;
+				const myBoardChanged = !sameStringArray(previousMyField, myField) || !sameStringArray(previousMySupport, mySupport) || !sameStringArray(previousMyGrave, currentMyGrave) || !sameStringArray(previousMyBanished, currentMyBanished);
+				const enemyBoardChanged = !sameStringArray(previousEnemyField, enemyField) || !sameStringArray(previousEnemySupport, enemySupport) || !sameStringArray(previousEnemyGrave, currentEnemyGrave) || !sameStringArray(previousEnemyBanished, currentEnemyBanished);
+				if (myHandChanged) myHandTransferSnapshots = captureHandTransferSnapshots("youHand");
+				if (enemyHandChanged) enemyHandTransferSnapshots = captureHandTransferSnapshots("aiHand");
+				if (myBoardChanged || enemyBoardChanged) boardTransferSnapshots = captureLaneTransferSnapshots(["you-field", "you-support", "ai-field", "ai-support"]);
 				const myBoardCardsToPiles = getBoardCardsMovingToPiles(
 					previousMyField,
 					myField,
@@ -4181,7 +4204,6 @@ async function joinMatch() {
 				queueLanePileFlights("ai-support", enemyBoardCardsToPiles.support);
 				const myShadowPenalty = hasShadowPenaltyForPlayer(my, currentMyLeader, currentMyEnv, enemyEnv);
 				const enemyShadowPenalty = hasShadowPenaltyForPlayer(enemy, currentEnemyLeader, enemyEnv, currentMyEnv);
-				const enemyHandCount = Number(enemy?.hand?.length ?? 0);
 				const myTurn = !isSpectator && String(state?.game?.turnSlot || "") === slot;
 				isMatchFinished = String(state?.phase || "IN_MATCH") === "FINISHED";
 				const phase = String(state?.game?.phase || "");
