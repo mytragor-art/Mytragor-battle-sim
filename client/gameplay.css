@@ -169,6 +169,14 @@
   color:#86efac;
 }
 
+.reconnectModal[data-state="waiting"] .reconnectSpinner{
+  border-top-color:#fbbf24;
+}
+
+.reconnectModal[data-state="waiting"] .reconnectAttempt{
+  color:#fde68a;
+}
+
 .reconnectModal[data-state="failed"] .reconnectSpinner{
   border-color:#fb7185;
   animation:none;

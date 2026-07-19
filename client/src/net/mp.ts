@@ -16,6 +16,8 @@ export type MatchHandlers = {
 	onCardPlayed?: (msg: any) => void;
 	onEffectChoice?: (msg: any) => void;
 	onRevealTopCard?: (msg: any) => void;
+	onOpponentReconnecting?: (msg: any) => void;
+	onOpponentReconnected?: (msg: any) => void;
 	onError?: (msg: any) => void;
 	onLeave?: (code: number) => void;
 	onLog?: (name: string, msg: any) => void;
@@ -81,6 +83,8 @@ export function bindMatchHandlers(room: Colyseus.Room, handlers: MatchHandlers) 
 	room.onMessage("effect_log", (msg: any) => handlers.onLog?.("EFFECT", msg));
 	room.onMessage("effect_choice_required", (msg: any) => handlers.onEffectChoice?.(msg));
 	room.onMessage("revealed_top_card", (msg: any) => handlers.onRevealTopCard?.(msg));
+	room.onMessage("opponent_reconnecting", (msg: any) => handlers.onOpponentReconnecting?.(msg));
+	room.onMessage("opponent_reconnected", (msg: any) => handlers.onOpponentReconnected?.(msg));
 	room.onMessage("choice_waiting", (msg: any) => handlers.onLog?.("CHOICE_WAITING", msg));
 	room.onMessage("choice_waiting_end", (msg: any) => handlers.onLog?.("CHOICE_WAITING_END", msg));
 	room.onMessage("error", (msg: any) => handlers.onError?.(msg));

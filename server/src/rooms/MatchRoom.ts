@@ -45,6 +45,7 @@ export class MatchRoom extends Room<MatchState> {
 	private consumedJoinTokens = new Set<string>();
 	private pendingMulligans: Record<Slot, number[] | null> = { p1: null, p2: null };
 	private disconnectTimer: NodeJS.Timeout | null = null;
+	private reconnectingSlots = new Set<Slot>();
 
 	private sanitizeDisplayName(name: unknown): string {
 		return String(name || "").trim().slice(0, 18);
@@ -428,6 +429,14 @@ export class MatchRoom extends Room<MatchState> {
 			p.displayName = this.sanitizeDisplayName(msg?.name);
 			this.publishSpectatorState();
 		});
+
+		this.onMessage("request_connection_status", (client) => this.safeRun("request_connection_status", () => {
+			const ownSlot = getSlotBySession(this.state, client.sessionId);
+			const opponentSlot: Slot | null = ownSlot === "p1" ? "p2" : ownSlot === "p2" ? "p1" : null;
+			if (opponentSlot && this.reconnectingSlots.has(opponentSlot)) {
+				client.send("opponent_reconnecting", { slot: opponentSlot, graceSeconds: RECONNECTION_GRACE_SECONDS });
+			}
+		}, client));
 		} catch (err: any) {
 			console.error(`[ROOM ERROR] room=${this.roomId} onCreate`, err && (err.stack || err));
 			throw err;
@@ -462,14 +471,23 @@ export class MatchRoom extends Room<MatchState> {
 			const clientDiagnostic = describeClientDiagnostic(this.roomId, client.sessionId);
 			console.log(`[MATCH] leave room=${this.roomId} client=${client.sessionId} slot=${leavingSlot || "-"} consented=${consented === true} phase=${this.state.phase} gamePhase=${this.state.game.phase} turn=${this.state.game.turn} turnSlot=${this.state.game.turnSlot} clients=${this.clients.length} ${clientDiagnostic}`);
 			if (!consented && leavingSlot && this.state.phase !== "FINISHED") {
+				this.reconnectingSlots.add(leavingSlot);
+				this.broadcast("opponent_reconnecting", { slot: leavingSlot, graceSeconds: RECONNECTION_GRACE_SECONDS });
 				try {
 					console.log(`[MATCH] waiting reconnect room=${this.roomId} client=${client.sessionId} slot=${leavingSlot} grace=${RECONNECTION_GRACE_SECONDS}s`);
 					await this.allowReconnection(client, RECONNECTION_GRACE_SECONDS);
+					this.reconnectingSlots.delete(leavingSlot);
+					for (const connectedClient of this.clients) {
+						if (connectedClient.sessionId !== client.sessionId) {
+							connectedClient.send("opponent_reconnected", { slot: leavingSlot });
+						}
+					}
 					console.log(`[MATCH] reconnected room=${this.roomId} client=${client.sessionId} slot=${leavingSlot} phase=${this.state.phase} gamePhase=${this.state.game.phase} turn=${this.state.game.turn} turnSlot=${this.state.game.turnSlot} clients=${this.clients.length}`);
 					this.publishSpectatorState();
 					this.refreshInactivityTimer();
 					return;
 				} catch (error) {
+					this.reconnectingSlots.delete(leavingSlot);
 					console.log(`[MATCH] reconnect expired room=${this.roomId} client=${client.sessionId} slot=${leavingSlot} phase=${this.state.phase} gamePhase=${this.state.game.phase} turn=${this.state.game.turn} turnSlot=${this.state.game.turnSlot} clients=${this.clients.length}`);
 				}
 			}
@@ -504,6 +522,7 @@ export class MatchRoom extends Room<MatchState> {
 		try {
 			this.clearMulliganTimer(true);
 			this.clearInactivityTimer();
+			this.reconnectingSlots.clear();
 			if (this.disconnectTimer) clearTimeout(this.disconnectTimer);
 			this.disconnectTimer = null;
 			// ensure spectator channel disposed

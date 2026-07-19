@@ -84,7 +84,7 @@ const cardLookup = new Map<string, CardDef>();
 const CARD_BACK_ASSET = "ui/layout-background.ai.png";
 const ASSET_CACHE_VERSION = "2026-05-17-2";
 const MULLIGAN_TIMEOUT_MS = 40_000;
-const MATCH_RECONNECT_MAX_ATTEMPTS = 12;
+const MATCH_RECONNECT_MAX_ATTEMPTS = 15;
 const MOBILE_PREVIEW_FAB_POSITION_KEY = "mytragor_mobile_preview_fab_position";
 const SLEEVE_ASSET_BY_KEY: Record<string, string> = {
 	"sleeve-arcano": "/assets/acessorios/sleeve/sleeve Arcano.png",
@@ -3498,7 +3498,7 @@ function clearMatchReconnectTimer() {
 }
 
 function showReconnectOverlay(
-	state: "reconnecting" | "success" | "failed",
+	state: "reconnecting" | "waiting" | "success" | "failed",
 	title: string,
 	text: string,
 	status: string
@@ -3528,6 +3528,24 @@ function showReconnectSuccess(message: string) {
 	}, 850);
 }
 
+function showOpponentReconnecting(msg: any) {
+	if (isMatchFinished) return;
+	const graceSeconds = Number(msg?.graceSeconds) || 60;
+	showReconnectOverlay(
+		"waiting",
+		"Oponente reconectando",
+		"A conexão do seu oponente foi interrompida. A partida está reservada enquanto ele tenta voltar.",
+		`Aguardando retorno por até ${graceSeconds} segundos`
+	);
+	logText("A conexão do oponente caiu. Aguardando reconexão...");
+}
+
+function showOpponentReconnected() {
+	if (isMatchFinished) return;
+	showReconnectSuccess("Seu oponente voltou à partida.");
+	logText("Oponente reconectado à partida.");
+}
+
 function captureMatchReconnectionToken(activeRoom: any) {
 	matchReconnectionToken = String(activeRoom?.reconnectionToken || matchReconnectionToken || "");
 }
@@ -3548,6 +3566,7 @@ async function reconnectActiveMatch(): Promise<boolean> {
 		reportClientDiagnostic("reconnect_success", `attempt=${matchReconnectAttempts}`);
 		showReconnectSuccess("A partida foi recuperada com sucesso.");
 		matchReconnectAttempts = 0;
+		nextRoom.send("request_connection_status");
 		return true;
 	} catch (error) {
 		reportClientDiagnostic("reconnect_failure", String(error));
@@ -3668,6 +3687,8 @@ function bindActiveMatchRoom() {
 		onRevealTopCard: (msg) => {
 			if (!isSpectator) showRevealTopCardModal(msg);
 		},
+		onOpponentReconnecting: showOpponentReconnecting,
+		onOpponentReconnected: showOpponentReconnected,
 		onError: (msg) => log("ERROR", msg),
 		onLeave: (code) => {
 			hideCardChoiceModal(false);
@@ -4091,6 +4112,8 @@ async function joinMatch() {
 			onRevealTopCard: (msg) => {
 				if (!isSpectator) showRevealTopCardModal(msg);
 			},
+			onOpponentReconnecting: showOpponentReconnecting,
+			onOpponentReconnected: showOpponentReconnected,
 			onError: (msg) => log("ERROR", msg),
 			onLeave: (code) => {
 				hideCardChoiceModal(false);
