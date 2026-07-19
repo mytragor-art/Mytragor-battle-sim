@@ -80,6 +80,19 @@ export class SoloMatchRoom extends Room<MatchState> {
 		return String(name || "").trim().slice(0, 18);
 	}
 
+	private safeRun(context: string, fn: () => void, client?: Client) {
+		try {
+			fn();
+		} catch (err: any) {
+			console.error(`[SOLO ROOM ERROR] room=${this.roomId} context=${context} client=${client?.sessionId || "-"}`, err && (err.stack || err));
+			try {
+				(client || this.clients[0])?.send("server_error", { context, message: String((err && err.message) || "internal_error") });
+			} catch (_) {
+				// ignore send failures while recovering from a room error
+			}
+		}
+	}
+
 	private clearBotTimer() {
 		if (this.botTurnTimer) clearTimeout(this.botTurnTimer);
 		this.botTurnTimer = null;
@@ -100,6 +113,7 @@ export class SoloMatchRoom extends Room<MatchState> {
 		this.clearMulliganTimer();
 		this.state.game.mulliganDeadlineAt = Date.now() + MULLIGAN_TIMEOUT_MS;
 		this.mulliganTimeout = setTimeout(() => {
+			this.safeRun("mulligan_timeout", () => {
 			this.mulliganTimeout = null;
 			if (this.state.phase !== "IN_MATCH" || this.state.game.phase !== "MULLIGAN") {
 				this.state.game.mulliganDeadlineAt = 0;
@@ -111,6 +125,7 @@ export class SoloMatchRoom extends Room<MatchState> {
 			}
 			this.tryResolveOpeningMulligan();
 			this.refreshInactivityTimer();
+			});
 		}, MULLIGAN_TIMEOUT_MS);
 	}
 
@@ -1390,10 +1405,12 @@ export class SoloMatchRoom extends Room<MatchState> {
 			const pick = this.chooseBotOption(payload);
 			this.activeChoiceSessionId = "__bot__";
 			setTimeout(() => {
+				this.safeRun("bot_choice_resolve", () => {
 				if (this.activeChoiceSessionId === "__bot__") this.activeChoiceSessionId = null;
 				onResolve(pick);
 				this.refreshInactivityTimer();
 				this.queueBotTurn();
+				});
 			}, 250);
 			return;
 		}
@@ -1414,6 +1431,7 @@ export class SoloMatchRoom extends Room<MatchState> {
 			.filter(Boolean);
 
 		const timeout = setTimeout(() => {
+			this.safeRun("choice_timeout", () => {
 			const pending = this.pendingChoices.get(choiceId);
 			if (!pending) return;
 			this.pendingChoices.delete(choiceId);
@@ -1422,6 +1440,7 @@ export class SoloMatchRoom extends Room<MatchState> {
 			pending.resolve(fallback);
 			this.refreshInactivityTimer();
 			this.queueBotTurn();
+			});
 		}, timeoutMs);
 
 		this.pendingChoices.set(choiceId, { sessionId, resolve: onResolve, timeout, optionIds, multiSelect: payload.multiSelect === true });
@@ -1467,6 +1486,7 @@ export class SoloMatchRoom extends Room<MatchState> {
 		if (this.state.game.turnSlot === "p1") {
 			if (this.state.game.phase !== "INITIAL") return;
 			this.botTurnTimer = setTimeout(() => {
+				this.safeRun("bot_auto_initial", () => {
 				this.botTurnTimer = null;
 				if (this.state.phase === "FINISHED") return;
 				if (this.activeChoiceSessionId) return;
@@ -1475,13 +1495,16 @@ export class SoloMatchRoom extends Room<MatchState> {
 				nextPhase(this.state, (name, payload) => this.broadcastMatchEvent(name, payload));
 				this.refreshInactivityTimer();
 				this.queueBotTurn();
+				});
 			}, 350);
 			return;
 		}
 		if (this.state.game.turnSlot !== "p2") return;
 		this.botTurnTimer = setTimeout(() => {
+			this.safeRun("bot_turn", () => {
 			this.botTurnTimer = null;
 			this.runBotTurn();
+			});
 		}, 450);
 	}
 
@@ -1716,6 +1739,7 @@ export class SoloMatchRoom extends Room<MatchState> {
 		this.refreshInactivityTimer();
 
 		this.onMessage("submit_mulligan", (client, msg: { indices?: number[] }) => {
+			this.safeRun("submit_mulligan", () => {
 			if (this.state.phase !== "IN_MATCH" || this.state.game.phase !== "MULLIGAN") return;
 			const slot = getSlotBySession(this.state, client.sessionId);
 			if (slot !== "p1" || this.state.game.p1MulliganDone) return;
@@ -1730,23 +1754,29 @@ export class SoloMatchRoom extends Room<MatchState> {
 			this.pendingMulligans.p1 = selection;
 			this.state.game.p1MulliganDone = true;
 			this.tryResolveOpeningMulligan();
+			}, client);
 		});
 
 		this.onMessage("next_phase", (client) => {
+			this.safeRun("next_phase", () => {
 			if (!this.isValidTurnAction(client, ["INITIAL", "PREP", "COMBAT"])) return;
 			nextPhase(this.state, (name, payload) => this.broadcastMatchEvent(name, payload));
 			this.refreshInactivityTimer();
 			this.queueBotTurn();
+			}, client);
 		});
 
 		this.onMessage("end_turn", (client) => {
+			this.safeRun("end_turn", () => {
 			if (!this.isValidTurnAction(client, ["END"])) return;
 			endTurn(this.state, (name, payload) => this.broadcastMatchEvent(name, payload), this.attackedThisTurn, this.summonedThisTurn, this.triggeredLeaderThisTurn, this.askChoice);
 			this.refreshInactivityTimer();
 			this.queueBotTurn();
+			}, client);
 		});
 
 		this.onMessage("play_card", (client, msg: { cardId?: string; targetPos?: number; cardKind?: string }) => {
+			this.safeRun("play_card", () => {
 			if (!this.isValidTurnAction(client, ["PREP"])) return;
 			const slot = getSlotBySession(this.state, client.sessionId);
 			const cardId = String(msg?.cardId || "");
@@ -1756,18 +1786,22 @@ export class SoloMatchRoom extends Room<MatchState> {
 			playCard(this.state, slot, cardId, Number.isInteger(targetPos) ? targetPos : undefined, cardKind, (name, payload) => this.broadcastMatchEvent(name, payload), this.summonedThisTurn, this.triggeredLeaderThisTurn, this.askChoice);
 			this.refreshInactivityTimer();
 			this.queueBotTurn();
+			}, client);
 		});
 
 		this.onMessage("leader_power", (client) => {
+			this.safeRun("leader_power", () => {
 			if (!this.isValidTurnAction(client, ["PREP"])) return;
 			const slot = getSlotBySession(this.state, client.sessionId);
 			if (!slot) return;
 			activateLeaderPower(this.state, slot, (name, payload) => this.broadcastMatchEvent(name, payload), this.askChoice);
 			this.refreshInactivityTimer();
 			this.queueBotTurn();
+			}, client);
 		});
 
 		this.onMessage("effect_choice_submit", (client, msg: { choiceId?: string; optionId?: string | null }) => {
+			this.safeRun("effect_choice_submit", () => {
 			const choiceId = String(msg?.choiceId || "");
 			if (!choiceId) return;
 			const pending = this.pendingChoices.get(choiceId);
@@ -1778,9 +1812,11 @@ export class SoloMatchRoom extends Room<MatchState> {
 			pending.resolve(msg?.optionId == null ? null : String(msg.optionId));
 			this.refreshInactivityTimer();
 			this.queueBotTurn();
+			}, client);
 		});
 
 		this.onMessage("attack", (client, msg: { attackerPos?: number; attackerLeader?: boolean; target?: string; targetPos?: number }) => {
+			this.safeRun("attack", () => {
 			if (!this.isValidTurnAction(client, ["COMBAT"])) return;
 			const slot = getSlotBySession(this.state, client.sessionId);
 			if (!slot) return;
@@ -1792,12 +1828,15 @@ export class SoloMatchRoom extends Room<MatchState> {
 			attack(this.state, slot, attackerPos, target, (name, payload) => this.broadcastMatchEvent(name, payload), this.attackedThisTurn, this.summonedThisTurn, this.triggeredLeaderThisTurn, this.askChoice);
 			this.refreshInactivityTimer();
 			this.queueBotTurn();
+			}, client);
 		});
 
 		this.onMessage("set_name", (client, msg: { name?: string }) => {
+			this.safeRun("set_name", () => {
 			const player = this.state.players.get(client.sessionId);
 			if (!player) return;
 			player.displayName = this.sanitizeDisplayName(msg?.name);
+			}, client);
 		});
 
 		this.refreshInactivityTimer();
