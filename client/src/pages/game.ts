@@ -170,6 +170,7 @@ let spectatorReconnectAttempts = 0;
 let spectatorReconnectTimer: number | null = null;
 let matchReconnectAttempts = 0;
 let matchReconnectTimer: number | null = null;
+let reconnectOverlayHideTimer: number | null = null;
 let matchReconnectionToken = "";
 let selectedHandCardId: string | null = null;
 let selectedInspectorView: InspectorView | null = null;
@@ -3496,6 +3497,37 @@ function clearMatchReconnectTimer() {
 	}
 }
 
+function showReconnectOverlay(
+	state: "reconnecting" | "success" | "failed",
+	title: string,
+	text: string,
+	status: string
+) {
+	if (reconnectOverlayHideTimer) {
+		window.clearTimeout(reconnectOverlayHideTimer);
+		reconnectOverlayHideTimer = null;
+	}
+	const modal = document.getElementById("reconnectModal") as HTMLElement | null;
+	const titleEl = document.getElementById("reconnectTitle");
+	const textEl = document.getElementById("reconnectText");
+	const attemptEl = document.getElementById("reconnectAttempt");
+	if (!modal) return;
+	modal.dataset.state = state;
+	if (titleEl) titleEl.textContent = title;
+	if (textEl) textEl.textContent = text;
+	if (attemptEl) attemptEl.textContent = status;
+	modal.style.display = "flex";
+}
+
+function showReconnectSuccess(message: string) {
+	showReconnectOverlay("success", "Conexão restabelecida", message, "Retomando a partida...");
+	reconnectOverlayHideTimer = window.setTimeout(() => {
+		const modal = document.getElementById("reconnectModal") as HTMLElement | null;
+		if (modal) modal.style.display = "none";
+		reconnectOverlayHideTimer = null;
+	}, 850);
+}
+
 function captureMatchReconnectionToken(activeRoom: any) {
 	matchReconnectionToken = String(activeRoom?.reconnectionToken || matchReconnectionToken || "");
 }
@@ -3514,6 +3546,7 @@ async function reconnectActiveMatch(): Promise<boolean> {
 		bindActiveMatchRoom();
 		logText("Reconectado à partida.");
 		reportClientDiagnostic("reconnect_success", `attempt=${matchReconnectAttempts}`);
+		showReconnectSuccess("A partida foi recuperada com sucesso.");
 		matchReconnectAttempts = 0;
 		return true;
 	} catch (error) {
@@ -3525,14 +3558,20 @@ async function reconnectActiveMatch(): Promise<boolean> {
 
 function scheduleMatchReconnect(code: number) {
 	if (matchReconnectAttempts === 0) reportClientDiagnostic("websocket_leave", "room.onLeave", code);
-	if (isSpectator || isMatchFinished || !matchReconnectionToken) {
-		log("DISCONNECTED", { code, text: "Conexão encerrada. Voltando ao lobby..." });
+	if (isMatchFinished) {
 		setTimeout(() => goLobby(), 900);
+		return;
+	}
+	if (isSpectator || !matchReconnectionToken) {
+		log("DISCONNECTED", { code, text: "Conexão encerrada. Voltando ao lobby..." });
+		showReconnectOverlay("failed", "Conexão encerrada", "Não foi possível manter esta partida ativa.", "Voltando ao lobby...");
+		setTimeout(() => goLobby(), 1600);
 		return;
 	}
 	if (matchReconnectAttempts >= MATCH_RECONNECT_MAX_ATTEMPTS) {
 		log("DISCONNECTED", { code, text: "Não foi possível reconectar. Voltando ao lobby..." });
-		setTimeout(() => goLobby(), 900);
+		showReconnectOverlay("failed", "Não foi possível reconectar", "A partida não respondeu dentro do tempo limite.", "Voltando ao lobby...");
+		setTimeout(() => goLobby(), 1600);
 		return;
 	}
 	clearMatchReconnectTimer();
@@ -3540,6 +3579,15 @@ function scheduleMatchReconnect(code: number) {
 	matchReconnectAttempts = nextAttempt;
 	const retryDelayMs = Math.min(1000 + ((nextAttempt - 1) * 500), 5000);
 	logText(`Reconectando partida (${nextAttempt}/${MATCH_RECONNECT_MAX_ATTEMPTS})...`);
+	const reconnectText = navigator.onLine
+		? "A conexão ficou instável. Aguarde enquanto recuperamos a partida."
+		: "Seu dispositivo está sem internet. A partida voltará assim que a conexão retornar.";
+	showReconnectOverlay(
+		"reconnecting",
+		"Reconectando à partida",
+		reconnectText,
+		`Tentativa ${nextAttempt} de ${MATCH_RECONNECT_MAX_ATTEMPTS}`
+	);
 	matchReconnectTimer = window.setTimeout(() => {
 		void reconnectActiveMatch().then((ok) => {
 			if (!ok) scheduleMatchReconnect(code);
@@ -3558,6 +3606,7 @@ async function reconnectSpectator(): Promise<boolean> {
 		slot = "p1";
 		bindActiveMatchRoom();
 		logText("Reconectado ao modo espectador.");
+		showReconnectSuccess("A transmissão da partida foi recuperada.");
 		spectatorReconnectAttempts = 0;
 		return true;
 	} catch (error) {
@@ -3568,18 +3617,26 @@ async function reconnectSpectator(): Promise<boolean> {
 
 function scheduleSpectatorReconnect(code: number) {
 	if (!isSpectator || !spectatorMatchRoomId) {
-		setTimeout(() => goLobby(), 900);
+		showReconnectOverlay("failed", "Conexão encerrada", "Não foi possível recuperar a transmissão.", "Voltando ao lobby...");
+		setTimeout(() => goLobby(), 1600);
 		return;
 	}
 	if (spectatorReconnectAttempts >= 3) {
 		log("DISCONNECTED", { code, text: "Conexão do espectador encerrada. Voltando ao lobby..." });
-		setTimeout(() => goLobby(), 900);
+		showReconnectOverlay("failed", "Não foi possível reconectar", "A transmissão não respondeu dentro do tempo limite.", "Voltando ao lobby...");
+		setTimeout(() => goLobby(), 1600);
 		return;
 	}
 	clearSpectatorReconnectTimer();
 	const nextAttempt = spectatorReconnectAttempts + 1;
 	spectatorReconnectAttempts = nextAttempt;
 	logText(`Reconectando espectador (${nextAttempt}/3)...`);
+	showReconnectOverlay(
+		"reconnecting",
+		"Reconectando à partida",
+		navigator.onLine ? "A conexão com a transmissão foi interrompida." : "Seu dispositivo está sem internet.",
+		`Tentativa ${nextAttempt} de 3`
+	);
 	spectatorReconnectTimer = window.setTimeout(() => {
 		void reconnectSpectator().then((ok) => {
 			if (!ok) scheduleSpectatorReconnect(code);

@@ -26,6 +26,8 @@ import { recordClientDiagnostic } from "./utils/clientDiagnostics";
 dotenv.config();
 
 const PORT = Number(process.env.PORT) || 2567;
+const WEBSOCKET_PING_INTERVAL_MS = 10_000;
+const WEBSOCKET_PING_MAX_RETRIES = 3;
 
 function parseCorsOrigins(rawValue: string | undefined) {
 	if (!rawValue) return true;
@@ -43,7 +45,11 @@ async function main() {
 
 	const httpServer = createServer(app);
 	const gameServer = new Server({
-		transport: new WebSocketTransport({ server: httpServer })
+		transport: new WebSocketTransport({
+			server: httpServer,
+			pingInterval: WEBSOCKET_PING_INTERVAL_MS,
+			pingMaxRetries: WEBSOCKET_PING_MAX_RETRIES
+		})
 	});
 
 	gameServer.define("lobby", LobbyRoom).filterBy(["queue"]);
