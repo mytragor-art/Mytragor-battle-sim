@@ -1,7 +1,4 @@
 import { defineConfig } from "vite";
-import { fileURLToPath } from "node:url";
-
-const htmlEntry = (path: string) => fileURLToPath(new URL(path, import.meta.url));
 
 const backendProxy = {
 	target: "http://localhost:2567",
@@ -30,11 +27,11 @@ export default defineConfig({
 		assetsDir: "static",
 		rollupOptions: {
 			input: {
-				index: htmlEntry("./index.html"),
-				lobby: htmlEntry("./lobby.html"),
-				soloLobby: htmlEntry("./solo-lobby.html"),
-				game: htmlEntry("./game.html"),
-				manual: htmlEntry("./manual.html")
+				index: "index.html",
+				lobby: "lobby.html",
+				soloLobby: "solo-lobby.html",
+				game: "game.html",
+				manual: "manual.html"
 			}
 		},
 		sourcemap: true

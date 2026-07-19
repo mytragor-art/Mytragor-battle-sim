@@ -66,6 +66,11 @@ const previousHandCards: Record<"youHand" | "aiHand", string[]> = {
 	"aiHand": []
 };
 
+const handRenderSignatures: Record<"youHand" | "aiHand", string> = {
+	"youHand": "",
+	"aiHand": ""
+};
+
 type HandTransferSnapshot = {
 	cardId: string;
 	originRect: DOMRect;
@@ -1589,6 +1594,8 @@ function buildHandCard(cardId: string, selected: boolean, onClick?: () => void, 
 		image.src = asAssetPath(card.img);
 		image.alt = card.name || cardId;
 		image.className = "slotCardImg";
+		image.decoding = "async";
+		image.loading = "lazy";
 		button.appendChild(image);
 	} else {
 		const fallback = document.createElement("div");
@@ -1724,6 +1731,8 @@ function buildBackCard(side: BattleSide, cardId?: string): HTMLDivElement {
 	image.className = "slotCardImg";
 	image.src = asAssetPath(cardBackAssetForSide(side));
 	image.alt = "Carta";
+	image.decoding = "async";
+	image.loading = "lazy";
 	image.onerror = () => {
 		back.textContent = "Carta";
 	};
@@ -2950,7 +2959,10 @@ function renderEnvSlot(slotId: "you-env" | "ai-env", envCardId: string | null, a
 function renderSideHand(containerId: "youHand" | "aiHand", cards: string[], selectable: boolean): void {
 	const container = document.getElementById(containerId);
 	if (!container) return;
+	const signature = `${selectable ? "select" : "hidden"}|${selectable ? selectedHandCardId || "" : ""}|${cards.join("\u001f")}`;
+	if (handRenderSignatures[containerId] === signature) return;
 	const previousCards = previousHandCards[containerId] || [];
+	handRenderSignatures[containerId] = signature;
 	container.innerHTML = "";
 	if (!cards.length) {
 		previousHandCards[containerId] = [];
@@ -2992,6 +3004,7 @@ function renderSideHand(containerId: "youHand" | "aiHand", cards: string[], sele
 function applyHandStackLayout(containerId: "youHand" | "aiHand"): void {
 	const container = document.getElementById(containerId) as HTMLElement | null;
 	if (!container) return;
+	handStackLayoutFrames[containerId] = 0;
 	container.classList.remove("handStacked");
 	container.style.removeProperty("--hand-overlap");
 	if (!window.matchMedia("(max-width: 980px) and (orientation: portrait) and (pointer: coarse)").matches) return;
@@ -3013,8 +3026,11 @@ function applyHandStackLayout(containerId: "youHand" | "aiHand"): void {
 	container.style.setProperty("--hand-overlap", `${overlap}px`);
 }
 
+const handStackLayoutFrames: Record<"youHand" | "aiHand", number> = { youHand: 0, aiHand: 0 };
+
 function queueHandStackLayout(containerId: "youHand" | "aiHand"): void {
-	requestAnimationFrame(() => applyHandStackLayout(containerId));
+	if (handStackLayoutFrames[containerId]) return;
+	handStackLayoutFrames[containerId] = requestAnimationFrame(() => applyHandStackLayout(containerId));
 }
 
 window.addEventListener("resize", () => {
@@ -3041,10 +3057,13 @@ function renderLane(zoneId: "you-field" | "ai-field" | "you-support" | "ai-suppo
 		else if (zoneId === "you-support") slotEl.id = `you-support-${index}`;
 		else if (zoneId === "ai-support") slotEl.id = `ai-support-${index}`;
 		const existingCard = slotEl.querySelector(":scope > .card") as HTMLElement | null;
+		const canReuseCard = !!existingCard && !!incomingCardId && previousCards[index] === incomingCardId && existingCard.dataset.cardId === incomingCardId;
 		if (existingCard && previousCards[index] && previousCards[index] !== incomingCardId) {
 			if (!consumeLanePileFlight(zoneId, previousCards[index])) spawnDeathGhost(slotEl, existingCard);
 		}
-		for (const oldCard of Array.from(slotEl.querySelectorAll(":scope > .card"))) oldCard.remove();
+		if (!canReuseCard) {
+			for (const oldCard of Array.from(slotEl.querySelectorAll(":scope > .card"))) oldCard.remove();
+		}
 		slotEl.classList.remove("clickable", "selected", "dropTarget", "combat-target");
 		slotEl.onclick = null;
 		slotEl.ondragenter = null;
@@ -3091,7 +3110,10 @@ function renderLane(zoneId: "you-field" | "ai-field" | "you-support" | "ai-suppo
 		const side: BattleSide = zoneId.startsWith("you") ? "you" : "ai";
 		const lane: InspectorLane = zoneId.endsWith("field") ? "field" : "support";
 		bindMobileCardInspect(slotEl, { cardId, side, lane, index });
-		const cardEl = buildHandCard(cardId, false, undefined, { cardId, side, lane, index });
+		const cardEl = canReuseCard && existingCard ? existingCard : buildHandCard(cardId, false, undefined, { cardId, side, lane, index });
+		if (canReuseCard) {
+			for (const child of Array.from(cardEl.children).slice(1)) child.remove();
+		}
 		cardEl.className = "card slotCard";
 		if (zoneId === "you-field" && tappedBySide.you.has(index)) cardEl.classList.add("tapped");
 		if (zoneId === "ai-field" && tappedBySide.ai.has(index)) cardEl.classList.add("tapped");
@@ -3120,8 +3142,8 @@ function renderLane(zoneId: "you-field" | "ai-field" | "you-support" | "ai-suppo
 		}
 		slotEl.onmousemove = () => setHoveredInspector({ cardId, side, lane, index });
 		slotEl.onmouseleave = () => setHoveredInspector(null);
-		slotEl.appendChild(cardEl);
-		if (!previousCards[index] && cardId) animateEl(cardEl, "anim-play");
+		if (!canReuseCard) slotEl.appendChild(cardEl);
+		if (!canReuseCard && !previousCards[index] && cardId) animateEl(cardEl, "anim-play");
 		if (activeIndex === index) slotEl.classList.add("selected");
 		if (zoneId === "ai-field" && canSelectCombatTarget({ type: "ally", side: "ai", index })) slotEl.classList.add("combat-target");
 		if (onClick) {
