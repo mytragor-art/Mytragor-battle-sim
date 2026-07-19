@@ -28,6 +28,7 @@ type ReservedSeat = {
 
 const MULLIGAN_TIMEOUT_MS = 40_000;
 const INACTIVITY_TIMEOUT_MS = 10 * 60_000;
+const RECONNECTION_GRACE_SECONDS = 20;
 
 export class MatchRoom extends Room<MatchState> {
 	maxClients = 2;
@@ -452,10 +453,22 @@ export class MatchRoom extends Room<MatchState> {
 		}
 	}
 
-	onLeave(client: Client) {
+	async onLeave(client: Client, consented?: boolean) {
 		try {
 			const leavingPlayer = this.state.players.get(client.sessionId);
 			const leavingSlot = leavingPlayer?.slot === "p1" || leavingPlayer?.slot === "p2" ? leavingPlayer.slot as Slot : null;
+			if (!consented && leavingSlot && this.state.phase !== "FINISHED") {
+				try {
+					console.log(`[MATCH] waiting reconnect room=${this.roomId} client=${client.sessionId} slot=${leavingSlot}`);
+					await this.allowReconnection(client, RECONNECTION_GRACE_SECONDS);
+					console.log(`[MATCH] reconnected room=${this.roomId} client=${client.sessionId} slot=${leavingSlot}`);
+					this.publishSpectatorState();
+					this.refreshInactivityTimer();
+					return;
+				} catch (error) {
+					console.log(`[MATCH] reconnect expired room=${this.roomId} client=${client.sessionId} slot=${leavingSlot}`);
+				}
+			}
 			const remainingPlayers = [...this.state.players.values()].filter((player) => player.sessionId !== client.sessionId);
 			for (const [id, pending] of this.pendingChoices.entries()) {
 				if (pending.sessionId === client.sessionId) {

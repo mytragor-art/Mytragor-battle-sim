@@ -3385,6 +3385,7 @@ function updateArenaTurnPriority(myTurn: boolean): void {
 }
 
 function goLobby() {
+	clearMatchReconnectTimer();
 	const endpoint = view.endpointEl?.value?.trim() || resolveServerEndpoint(window.location.search);
 	const search = new URLSearchParams(window.location.search);
 	const lobbyPath = search.get("solo") === "1" ? "./solo-lobby.html" : "./lobby.html";
@@ -3417,16 +3418,12 @@ function clearMatchReconnectTimer() {
 	}
 }
 
-function isSoloMatchPage(): boolean {
-	return new URLSearchParams(window.location.search).get("solo") === "1";
-}
-
 function captureMatchReconnectionToken(activeRoom: any) {
 	matchReconnectionToken = String(activeRoom?.reconnectionToken || matchReconnectionToken || "");
 }
 
 async function reconnectActiveMatch(): Promise<boolean> {
-	if (!isSoloMatchPage() || isSpectator || !matchReconnectionToken) return false;
+	if (isSpectator || !matchReconnectionToken) return false;
 	try {
 		const endpoint = view.endpointEl?.value.trim() || resolveServerEndpoint(window.location.search);
 		client = client || await connectClient(endpoint);
@@ -3436,17 +3433,17 @@ async function reconnectActiveMatch(): Promise<boolean> {
 		selfSessionId = typeof nextRoom?.sessionId === "string" ? nextRoom.sessionId : selfSessionId;
 		captureMatchReconnectionToken(nextRoom);
 		bindActiveMatchRoom();
-		logText("Reconectado à partida solo.");
+		logText("Reconectado à partida.");
 		matchReconnectAttempts = 0;
 		return true;
 	} catch (error) {
-		log("ERROR", { text: `Falha ao reconectar partida solo: ${String(error)}` });
+		log("ERROR", { text: `Falha ao reconectar partida: ${String(error)}` });
 		return false;
 	}
 }
 
 function scheduleMatchReconnect(code: number) {
-	if (!isSoloMatchPage() || isSpectator || isMatchFinished || !matchReconnectionToken) {
+	if (isSpectator || isMatchFinished || !matchReconnectionToken) {
 		log("DISCONNECTED", { code, text: "Conexão encerrada. Voltando ao lobby..." });
 		setTimeout(() => goLobby(), 900);
 		return;
@@ -3459,7 +3456,7 @@ function scheduleMatchReconnect(code: number) {
 	clearMatchReconnectTimer();
 	const nextAttempt = matchReconnectAttempts + 1;
 	matchReconnectAttempts = nextAttempt;
-	logText(`Reconectando partida solo (${nextAttempt}/3)...`);
+	logText(`Reconectando partida (${nextAttempt}/3)...`);
 	matchReconnectTimer = window.setTimeout(() => {
 		void reconnectActiveMatch().then((ok) => {
 			if (!ok) scheduleMatchReconnect(code);
