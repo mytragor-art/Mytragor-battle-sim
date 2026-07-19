@@ -71,20 +71,6 @@ export function bindLobbyHandlers(room: Colyseus.Room, handlers: LobbyHandlers) 
 }
 
 export function bindMatchHandlers(room: Colyseus.Room, handlers: MatchHandlers) {
-	let pendingState: any = null;
-	let stateFrame = 0;
-	const flushState = () => {
-		stateFrame = 0;
-		const state = pendingState;
-		pendingState = null;
-		if (state) handlers.onStateSync?.(state);
-	};
-	const queueStateSync = (state: any) => {
-		pendingState = state;
-		if (stateFrame) return;
-		stateFrame = window.requestAnimationFrame(flushState);
-	};
-
 	room.onMessage("assign_slot", (msg: any) => handlers.onAssignSlot?.(msg));
 	room.onMessage("card_played", (msg: any) => handlers.onCardPlayed?.(msg));
 	room.onMessage("phase_changed", (msg: any) => handlers.onLog?.("PHASE_CHANGED", msg));
@@ -98,7 +84,7 @@ export function bindMatchHandlers(room: Colyseus.Room, handlers: MatchHandlers) 
 	room.onMessage("choice_waiting", (msg: any) => handlers.onLog?.("CHOICE_WAITING", msg));
 	room.onMessage("choice_waiting_end", (msg: any) => handlers.onLog?.("CHOICE_WAITING_END", msg));
 	room.onMessage("error", (msg: any) => handlers.onError?.(msg));
-	room.onStateChange((state: any) => queueStateSync(state));
-	if ((room as any).state) queueStateSync((room as any).state);
+	room.onStateChange((state: any) => handlers.onStateSync?.(state));
+	if ((room as any).state) handlers.onStateSync?.((room as any).state);
 	room.onLeave((code) => handlers.onLeave?.(code));
 }

@@ -66,11 +66,6 @@ const previousHandCards: Record<"youHand" | "aiHand", string[]> = {
 	"aiHand": []
 };
 
-const handRenderSignatures: Record<"youHand" | "aiHand", string> = {
-	"youHand": "",
-	"aiHand": ""
-};
-
 type HandTransferSnapshot = {
 	cardId: string;
 	originRect: DOMRect;
@@ -2967,10 +2962,7 @@ function renderEnvSlot(slotId: "you-env" | "ai-env", envCardId: string | null, a
 function renderSideHand(containerId: "youHand" | "aiHand", cards: string[], selectable: boolean): void {
 	const container = document.getElementById(containerId);
 	if (!container) return;
-	const signature = `${selectable ? "select" : "hidden"}|${selectable ? selectedHandCardId || "" : ""}|${cards.join("\u001f")}`;
-	if (handRenderSignatures[containerId] === signature) return;
 	const previousCards = previousHandCards[containerId] || [];
-	handRenderSignatures[containerId] = signature;
 	container.innerHTML = "";
 	if (!cards.length) {
 		previousHandCards[containerId] = [];
@@ -3065,13 +3057,10 @@ function renderLane(zoneId: "you-field" | "ai-field" | "you-support" | "ai-suppo
 		else if (zoneId === "you-support") slotEl.id = `you-support-${index}`;
 		else if (zoneId === "ai-support") slotEl.id = `ai-support-${index}`;
 		const existingCard = slotEl.querySelector(":scope > .card") as HTMLElement | null;
-		const canReuseCard = !!existingCard && !!incomingCardId && previousCards[index] === incomingCardId && existingCard.dataset.cardId === incomingCardId;
 		if (existingCard && previousCards[index] && previousCards[index] !== incomingCardId) {
 			if (!consumeLanePileFlight(zoneId, previousCards[index])) spawnDeathGhost(slotEl, existingCard);
 		}
-		if (!canReuseCard) {
-			for (const oldCard of Array.from(slotEl.querySelectorAll(":scope > .card"))) oldCard.remove();
-		}
+		for (const oldCard of Array.from(slotEl.querySelectorAll(":scope > .card"))) oldCard.remove();
 		slotEl.classList.remove("clickable", "selected", "dropTarget", "combat-target");
 		slotEl.onclick = null;
 		slotEl.ondragenter = null;
@@ -3118,10 +3107,7 @@ function renderLane(zoneId: "you-field" | "ai-field" | "you-support" | "ai-suppo
 		const side: BattleSide = zoneId.startsWith("you") ? "you" : "ai";
 		const lane: InspectorLane = zoneId.endsWith("field") ? "field" : "support";
 		bindMobileCardInspect(slotEl, { cardId, side, lane, index });
-		const cardEl = canReuseCard && existingCard ? existingCard : buildHandCard(cardId, false, undefined, { cardId, side, lane, index });
-		if (canReuseCard) {
-			for (const child of Array.from(cardEl.children).slice(1)) child.remove();
-		}
+		const cardEl = buildHandCard(cardId, false, undefined, { cardId, side, lane, index });
 		cardEl.className = "card slotCard";
 		if (zoneId === "you-field" && tappedBySide.you.has(index)) cardEl.classList.add("tapped");
 		if (zoneId === "ai-field" && tappedBySide.ai.has(index)) cardEl.classList.add("tapped");
@@ -3150,8 +3136,8 @@ function renderLane(zoneId: "you-field" | "ai-field" | "you-support" | "ai-suppo
 		}
 		slotEl.onmousemove = () => setHoveredInspector({ cardId, side, lane, index });
 		slotEl.onmouseleave = () => setHoveredInspector(null);
-		if (!canReuseCard) slotEl.appendChild(cardEl);
-		if (!canReuseCard && !previousCards[index] && cardId) animateEl(cardEl, "anim-play");
+		slotEl.appendChild(cardEl);
+		if (!previousCards[index] && cardId) animateEl(cardEl, "anim-play");
 		if (activeIndex === index) slotEl.classList.add("selected");
 		if (zoneId === "ai-field" && canSelectCombatTarget({ type: "ally", side: "ai", index })) slotEl.classList.add("combat-target");
 		if (onClick) {
