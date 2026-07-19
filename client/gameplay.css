@@ -372,11 +372,11 @@ body{
     radial-gradient(circle at center, rgba(10,10,15,0.4) 0%, rgba(5,5,10,0.85) 75%),
     linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.7)),
     radial-gradient(1200px 700px at 15% 10%, rgba(255,255,255,0.07), rgba(255,255,255,0) 42%),
-	url("/dist/static/arena.Mytragor.fundo-DHqMy4Mh.png"),
+	url("/bgambientes/arena.Mytragor.fundo.png"),
     repeating-radial-gradient(circle at 15% 35%, rgba(255,255,255,.02) 0 1px, transparent 1px 12px);
-  background-size: cover, cover, cover, auto;
-  background-position: center center, center center, center center, 0 0;
-  background-attachment: fixed, fixed, fixed, scroll;
+  background-size: cover, cover, cover, cover, auto;
+  background-position: center center, center center, center center, center center, 0 0;
+  background-attachment: fixed, fixed, fixed, fixed, scroll;
   color: var(--ink);
   position:relative;
 }
