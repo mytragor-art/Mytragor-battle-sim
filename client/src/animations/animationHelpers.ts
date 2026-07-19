@@ -88,9 +88,14 @@ export function animateEl(el: Element | null, className: string) {
   el.classList.remove(className);
   void (el as HTMLElement).offsetWidth;
   el.classList.add(className);
-  el.addEventListener("animationend", () => {
+  let cleanupTimer = 0;
+  const cleanup = () => {
+    window.clearTimeout(cleanupTimer);
+    el.removeEventListener("animationend", cleanup);
     el.classList.remove(className);
-  }, { once: true });
+  };
+  el.addEventListener("animationend", cleanup, { once: true });
+  cleanupTimer = window.setTimeout(cleanup, 1600);
 }
 
 type TransferOrigin = Element | DOMRect | DOMRectReadOnly;

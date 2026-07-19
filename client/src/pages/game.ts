@@ -399,7 +399,7 @@ function showVictory(viewState: VictoryView): void {
 	titleEl.textContent = viewState.title;
 	textEl.textContent = viewState.text;
 	if (bannerSrc) {
-		imageEl.src = bannerSrc;
+		setThumbnailSource(imageEl, bannerSrc);
 		imageEl.alt = `${viewState.title} - arte do Escolhido`;
 		imageWrapEl.style.display = "block";
 	}
@@ -414,6 +414,8 @@ function showVictory(viewState: VictoryView): void {
 function hideVictory(): void {
 	const modal = document.getElementById("victoryModal") as HTMLElement | null;
 	if (modal) modal.style.display = "none";
+	const imageEl = document.getElementById("victoryImage") as HTMLImageElement | null;
+	if (imageEl) imageEl.removeAttribute("src");
 }
 
 function ensureRevealModal(): { modal: HTMLElement; title: HTMLElement; text: HTMLElement; img: HTMLImageElement } | null {
@@ -489,11 +491,8 @@ function showRevealTopCardModal(payload: any): void {
 	const source = String(payload?.sourceCardId || "Carta");
 	ui.title.textContent = `Topo revelado de ${owner}`;
 	ui.text.textContent = `${source} revelou ${card?.name || cardId}.`;
-	ui.img.src = asAssetPath(card?.img || CARD_BACK_ASSET);
+	setThumbnailSource(ui.img, card?.img || CARD_BACK_ASSET);
 	ui.img.alt = card?.name || cardId;
-	ui.img.onerror = () => {
-		ui.img.src = asAssetPath(CARD_BACK_ASSET);
-	};
 	ui.modal.style.display = "flex";
 	if (revealHideTimer) window.clearTimeout(revealHideTimer);
 	revealHideTimer = window.setTimeout(() => hideRevealModal(), 5000);
@@ -1045,7 +1044,7 @@ function buildMobileInspectCard(target: string | InspectorView | null): MobileIn
 	return {
 		cardId: nextView.cardId,
 		title: String(card?.name || nextView.cardId || "Carta"),
-		imageSrc: asAssetPath(card?.img || CARD_BACK_ASSET),
+		imageSrc: asThumbnailAssetPath(card?.img || CARD_BACK_ASSET),
 		typeLine: cardSubclassLine(card),
 		filiationLine: previewFiliationLine(card),
 		text: previewTextLine(nextView.cardId, card),
@@ -1072,6 +1071,32 @@ function asAssetPath(path: string | undefined): string {
 	let normalized = String(path).replace(/\\/g, "/").replace(/^\.\//, "").replace(/^\.\.\//, "");
 	if (normalized.startsWith("assets/")) normalized = normalized.slice("assets/".length);
 	return appendVersion(`/${normalized}`);
+}
+
+function asThumbnailAssetPath(path: string): string {
+	if (/^(https?:|data:|file:|\/\/)/i.test(path) || path.includes(".thumb.")) return asAssetPath(path);
+	const cleanPath = String(path).split(/[?#]/, 1)[0];
+	const normalized = cleanPath
+		.replace(/\\/g, "/")
+		.replace(/^\.\//, "")
+		.replace(/^\.\.\//, "")
+		.replace(/^\//, "")
+		.replace(/^assets\//, "");
+	const thumbnailPath = normalized.replace(/\.(png|jpe?g|webp|avif)$/i, ".thumb.webp");
+	if (thumbnailPath === normalized) return asAssetPath(path);
+	return asAssetPath(`/publicadas/${thumbnailPath}`);
+}
+
+function setThumbnailSource(image: HTMLImageElement, path: string): void {
+	const originalSource = asAssetPath(path);
+	const thumbnailSource = asThumbnailAssetPath(path);
+	image.onerror = thumbnailSource === originalSource
+		? null
+		: () => {
+			image.onerror = null;
+			image.src = originalSource;
+		};
+	image.src = thumbnailSource;
 }
 
 function cardKeywords(cardId: string): string[] {
@@ -1364,7 +1389,8 @@ function renderInspector(target: string | InspectorView | null): void {
 		return;
 	}
 	const card = resolveCard(nextView.cardId);
-	img.src = asAssetPath(card?.img);
+	if (card?.img) setThumbnailSource(img, card.img);
+	else img.src = "";
 	img.alt = card?.name || nextView.cardId;
 	stats.innerHTML = "";
 	for (const item of getInspectorStatsSafe(nextView)) {
@@ -1586,7 +1612,7 @@ function buildHandCard(cardId: string, selected: boolean, onClick?: () => void, 
 	const card = resolveCard(cardId);
 	if (card?.img) {
 		const image = document.createElement("img");
-		image.src = asAssetPath(card.img);
+		setThumbnailSource(image, card.img);
 		image.alt = card.name || cardId;
 		image.className = "slotCardImg";
 		image.decoding = "async";
@@ -1724,13 +1750,10 @@ function buildBackCard(side: BattleSide, cardId?: string): HTMLDivElement {
 	if (cardId) back.dataset.cardId = cardId;
 	const image = document.createElement("img");
 	image.className = "slotCardImg";
-	image.src = asAssetPath(cardBackAssetForSide(side));
+	setThumbnailSource(image, cardBackAssetForSide(side));
 	image.alt = "Carta";
 	image.decoding = "async";
 	image.loading = "lazy";
-	image.onerror = () => {
-		back.textContent = "Carta";
-	};
 	back.appendChild(image);
 	return back;
 }
@@ -2264,11 +2287,8 @@ function renderPileModal(): void {
 		button.style.cursor = "default";
 		const image = document.createElement("img");
 		image.className = "slotCardImg";
-		image.src = hideFace ? asAssetPath(cardBackAssetForSide(activePileSide)) : asAssetPath(card?.img || CARD_BACK_ASSET);
+		setThumbnailSource(image, hideFace ? cardBackAssetForSide(activePileSide) : (card?.img || CARD_BACK_ASSET));
 		image.alt = hideFace ? "Carta virada" : (card?.name || cardId);
-		image.onerror = () => {
-			image.src = asAssetPath(hideFace ? cardBackAssetForSide(activePileSide) : CARD_BACK_ASSET);
-		};
 		button.appendChild(image);
 		button.onmouseenter = () => {
 			if (hideFace) return;
@@ -2303,11 +2323,8 @@ function renderVisiblePileSlot(slotId: string, countId: string, cards: string[],
 		cardEl.style.zIndex = String(10 + layer);
 		const image = document.createElement("img");
 		image.className = "slotCardImg";
-		image.src = hideFace ? asAssetPath(cardBackAssetForSide(side)) : asAssetPath(topCard?.img || CARD_BACK_ASSET);
+		setThumbnailSource(image, hideFace ? cardBackAssetForSide(side) : (topCard?.img || CARD_BACK_ASSET));
 		image.alt = hideFace ? "Carta virada" : (topCard?.name || topCardId || "Carta");
-		image.onerror = () => {
-			image.src = asAssetPath(hideFace ? cardBackAssetForSide(side) : CARD_BACK_ASSET);
-		};
 		cardEl.appendChild(image);
 		if (layer === Math.min(3, cards.length) - 1 && !hideFace) {
 			const lane: InspectorLane = slotId.includes("grave") ? "grave" : (slotId.includes("ban") ? "banished" : "deck");
@@ -2530,7 +2547,7 @@ function createChoiceDuelPanel(payload: any): HTMLElement | null {
 		wrap.style.justifyItems = "center";
 		const card = resolveCard(cardId);
 		const thumb = document.createElement("img");
-		thumb.src = asAssetPath(card?.img || CARD_BACK_ASSET);
+		setThumbnailSource(thumb, card?.img || CARD_BACK_ASSET);
 		thumb.alt = name || cardId || (tone === "atk" ? "Atacante" : "Alvo");
 		thumb.style.width = "72px";
 		thumb.style.height = "100px";
@@ -2540,9 +2557,6 @@ function createChoiceDuelPanel(payload: any): HTMLElement | null {
 			? "1px solid rgba(248,113,113,.55)"
 			: "1px solid rgba(125,211,252,.55)";
 		thumb.style.boxShadow = "0 6px 14px rgba(0,0,0,.35)";
-		thumb.onerror = () => {
-			thumb.src = asAssetPath(CARD_BACK_ASSET);
-		};
 		const label = document.createElement("div");
 		label.textContent = name || cardId || (tone === "atk" ? "Atacante" : "Alvo");
 		label.style.fontSize = "11px";
@@ -2765,11 +2779,8 @@ function showEffectChoiceModal(payload: any) {
 		if (card?.img) {
 			const image = document.createElement("img");
 			image.className = "slotCardImg";
-			image.src = asAssetPath(card.img);
+			setThumbnailSource(image, card.img);
 			image.alt = card.name || cardId;
-			image.onerror = () => {
-				image.src = asAssetPath(CARD_BACK_ASSET);
-			};
 			button.appendChild(image);
 		} else {
 			const fallback = document.createElement("div");
@@ -2783,7 +2794,7 @@ function showEffectChoiceModal(payload: any) {
 		button.onmouseenter = () => {
 			if (!cardId) return;
 			setInspector(cardId);
-			previewImg.src = asAssetPath(card?.img || CARD_BACK_ASSET);
+			setThumbnailSource(previewImg, card?.img || CARD_BACK_ASSET);
 			previewImg.style.filter = visual.muted ? "grayscale(1) saturate(0.15) contrast(1.05) brightness(0.92)" : "none";
 			previewMeta.textContent = [String(option?.description || option?.label || "").trim(), cardPreviewDetails(cardId, card, false, false)].filter(Boolean).join("\n\n");
 		};
@@ -2854,7 +2865,7 @@ function renderDeckSlot(slotId: "you-deck" | "ai-deck", countId: "youDeckCount" 
 	back.style.margin = "0";
 	const image = document.createElement("img");
 	image.className = "slotCardImg";
-	image.src = asAssetPath(cardBackAssetForSide(side));
+	setThumbnailSource(image, cardBackAssetForSide(side));
 	image.alt = "Baralho";
 	back.appendChild(image);
 	slotEl.appendChild(back);
@@ -3843,6 +3854,7 @@ function spawnDeathGhost(slotEl: HTMLElement, sourceCard: HTMLElement) {
 	slotEl.appendChild(ghost);
 	animateEl(ghost, "anim-death");
 	ghost.addEventListener("animationend", () => ghost.remove(), { once: true });
+	window.setTimeout(() => ghost.remove(), 1600);
 }
 
 function animateFieldDamage(side: BattleSide, previousCards: string[], nextCards: string[], previousHp: number[], nextHp: number[]) {
