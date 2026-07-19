@@ -167,6 +167,9 @@ let isSpectator = false;
 let spectatorMatchRoomId: string | null = null;
 let spectatorReconnectAttempts = 0;
 let spectatorReconnectTimer: number | null = null;
+let matchReconnectAttempts = 0;
+let matchReconnectTimer: number | null = null;
+let matchReconnectionToken = "";
 let selectedHandCardId: string | null = null;
 let selectedInspectorView: InspectorView | null = null;
 let hoveredInspectorView: InspectorView | null = null;
@@ -370,8 +373,8 @@ function describeMatchEnded(msg: any): VictoryView {
 		return { title, text: "A partida terminou por deck vazio.", mode: "neutral" };
 	}
 	if (reason === "inactivity") {
-		if (youWon) return { title, text: "Você ganhou por inatividade do oponente após 120 segundos sem ação.", mode: "win" };
-		if (youLost) return { title, text: "Você perdeu por inatividade após 120 segundos sem ação.", mode: "lose" };
+		if (youWon) return { title, text: "Você ganhou por inatividade do oponente.", mode: "win" };
+		if (youLost) return { title, text: "Você perdeu por inatividade.", mode: "lose" };
 		return { title, text: "A partida terminou por inatividade.", mode: "neutral" };
 	}
 	if (reason === "opponent_left") {
@@ -3407,6 +3410,63 @@ function clearSpectatorReconnectTimer() {
 	}
 }
 
+function clearMatchReconnectTimer() {
+	if (matchReconnectTimer) {
+		window.clearTimeout(matchReconnectTimer);
+		matchReconnectTimer = null;
+	}
+}
+
+function isSoloMatchPage(): boolean {
+	return new URLSearchParams(window.location.search).get("solo") === "1";
+}
+
+function captureMatchReconnectionToken(activeRoom: any) {
+	matchReconnectionToken = String(activeRoom?.reconnectionToken || matchReconnectionToken || "");
+}
+
+async function reconnectActiveMatch(): Promise<boolean> {
+	if (!isSoloMatchPage() || isSpectator || !matchReconnectionToken) return false;
+	try {
+		const endpoint = view.endpointEl?.value.trim() || resolveServerEndpoint(window.location.search);
+		client = client || await connectClient(endpoint);
+		const nextRoom = await client.reconnect(matchReconnectionToken);
+		room = nextRoom;
+		roomId = nextRoom.id;
+		selfSessionId = typeof nextRoom?.sessionId === "string" ? nextRoom.sessionId : selfSessionId;
+		captureMatchReconnectionToken(nextRoom);
+		bindActiveMatchRoom();
+		logText("Reconectado à partida solo.");
+		matchReconnectAttempts = 0;
+		return true;
+	} catch (error) {
+		log("ERROR", { text: `Falha ao reconectar partida solo: ${String(error)}` });
+		return false;
+	}
+}
+
+function scheduleMatchReconnect(code: number) {
+	if (!isSoloMatchPage() || isSpectator || isMatchFinished || !matchReconnectionToken) {
+		log("DISCONNECTED", { code, text: "Conexão encerrada. Voltando ao lobby..." });
+		setTimeout(() => goLobby(), 900);
+		return;
+	}
+	if (matchReconnectAttempts >= 3) {
+		log("DISCONNECTED", { code, text: "Não foi possível reconectar. Voltando ao lobby..." });
+		setTimeout(() => goLobby(), 900);
+		return;
+	}
+	clearMatchReconnectTimer();
+	const nextAttempt = matchReconnectAttempts + 1;
+	matchReconnectAttempts = nextAttempt;
+	logText(`Reconectando partida solo (${nextAttempt}/3)...`);
+	matchReconnectTimer = window.setTimeout(() => {
+		void reconnectActiveMatch().then((ok) => {
+			if (!ok) scheduleMatchReconnect(code);
+		});
+	}, 700);
+}
+
 async function reconnectSpectator(): Promise<boolean> {
 	if (!isSpectator || !spectatorMatchRoomId || !view.endpointEl) return false;
 	try {
@@ -3479,8 +3539,7 @@ function bindActiveMatchRoom() {
 				scheduleSpectatorReconnect(code);
 				return;
 			}
-			log("DISCONNECTED", { code, text: "Conexão encerrada. Voltando ao lobby..." });
-			setTimeout(() => goLobby(), 900);
+			scheduleMatchReconnect(code);
 		},
 		onLog: (name, msg) => {
 			if (name === "ATTACK_RESOLVED") diaryAttackResolved(msg);
@@ -3858,6 +3917,9 @@ async function joinMatch() {
 		room = await joinMatchById(client, targetJoinRoomId, wantsSpectator ? {} : { joinToken });
 		roomId = room.id;
 		selfSessionId = typeof room?.sessionId === "string" ? room.sessionId : selfSessionId;
+		captureMatchReconnectionToken(room);
+		clearMatchReconnectTimer();
+		matchReconnectAttempts = 0;
 		const displayName = getDisplayName();
 		if (displayName && !isSpectator) {
 			room.send("set_name", { name: displayName });
@@ -3892,8 +3954,7 @@ async function joinMatch() {
 					scheduleSpectatorReconnect(code);
 					return;
 				}
-				log("DISCONNECTED", { code, text: "Conexão encerrada. Voltando ao lobby..." });
-				setTimeout(() => goLobby(), 900);
+				scheduleMatchReconnect(code);
 			},
 			onLog: (name, msg) => {
 				if (name === "ATTACK_RESOLVED") diaryAttackResolved(msg);

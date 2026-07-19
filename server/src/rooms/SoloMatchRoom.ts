@@ -52,6 +52,8 @@ type SoloBotConfig = {
 };
 
 const MULLIGAN_TIMEOUT_MS = 40_000;
+const INACTIVITY_TIMEOUT_MS = 10 * 60_000;
+const RECONNECTION_GRACE_SECONDS = 20;
 
 export class SoloMatchRoom extends Room<MatchState> {
 	maxClients = 1;
@@ -1150,7 +1152,7 @@ export class SoloMatchRoom extends Room<MatchState> {
 			if (!loser) return;
 			this.activeChoiceSessionId = null;
 			finishMatch(this.state, loser, "inactivity", (name, payload) => this.broadcastMatchEvent(name, payload));
-		}, 120_000);
+		}, INACTIVITY_TIMEOUT_MS);
 	}
 
 	private refreshInactivityTimer() {
@@ -1816,9 +1818,21 @@ export class SoloMatchRoom extends Room<MatchState> {
 		this.queueBotTurn();
 	}
 
-	onLeave(client: Client) {
+	async onLeave(client: Client, consented?: boolean) {
 		const leavingPlayer = this.state.players.get(client.sessionId);
 		const leavingSlot = leavingPlayer?.slot === "p1" || leavingPlayer?.slot === "p2" ? (leavingPlayer.slot as Slot) : null;
+		if (!consented && leavingSlot && this.state.phase !== "FINISHED") {
+			try {
+				console.log(`[SOLO] waiting reconnect room=${this.roomId} client=${client.sessionId} slot=${leavingSlot}`);
+				await this.allowReconnection(client, RECONNECTION_GRACE_SECONDS);
+				console.log(`[SOLO] reconnected room=${this.roomId} client=${client.sessionId} slot=${leavingSlot}`);
+				this.refreshInactivityTimer();
+				this.queueBotTurn();
+				return;
+			} catch (error) {
+				console.log(`[SOLO] reconnect expired room=${this.roomId} client=${client.sessionId} slot=${leavingSlot}`);
+			}
+		}
 		for (const [choiceId, pending] of this.pendingChoices.entries()) {
 			if (pending.sessionId !== client.sessionId) continue;
 			this.pendingChoices.delete(choiceId);

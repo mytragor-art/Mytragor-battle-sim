@@ -27,6 +27,7 @@ type ReservedSeat = {
 };
 
 const MULLIGAN_TIMEOUT_MS = 40_000;
+const INACTIVITY_TIMEOUT_MS = 10 * 60_000;
 
 export class MatchRoom extends Room<MatchState> {
 	maxClients = 2;
@@ -143,7 +144,7 @@ export class MatchRoom extends Room<MatchState> {
 			this.activeChoiceSessionId = null;
 			finishMatch(this.state, loser, "inactivity", (name, payload) => this.broadcastMatchEvent(name, payload));
 			this.publishSpectatorState();
-		}, 120_000);
+		}, INACTIVITY_TIMEOUT_MS);
 	}
 
 	private refreshInactivityTimer() {

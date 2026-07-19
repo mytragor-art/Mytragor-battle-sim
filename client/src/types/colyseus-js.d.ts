@@ -8,6 +8,7 @@ declare module "colyseus.js" {
 		joinOrCreate<T = any>(roomName: string, options?: any): Promise<Room<T>>;
 		create<T = any>(roomName: string, options?: any): Promise<Room<T>>;
 		joinById<T = any>(roomId: string, options?: any): Promise<Room<T>>;
+		reconnect<T = any>(reconnectionToken: string): Promise<Room<T>>;
 	}
 
 	export class Room<T = any> {
@@ -16,6 +17,8 @@ declare module "colyseus.js" {
 		send(type: string, message: any): void;
 		onMessage(type: string, callback: (message: any) => void): void;
 		readonly id: string;
+		readonly sessionId?: string;
+		readonly reconnectionToken?: string;
 	}
 }
 
