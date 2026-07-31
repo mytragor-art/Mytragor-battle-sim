@@ -100,7 +100,7 @@ const CARD_DEFS = [
     effect: 'ban_on_enter', effectValue: 1, auraTarget: { nameIncludes: 'Aranhas Negras' }, auraScope: 'allies', auraProp: 'atk', text: 'Quando este aliado for convocado, você pode deslocar uma carta em campo. Aliados que você controla com "Aranhas Negras" no nome recebem +1 de Ataque.'
   },
   {
-    name: 'Goblin Sabotador', kind: 'ally', img: '/allies/layout-goblinsabotador.ai.png', cost: 3, classe: 'Criatura', tipo: 'Humanoide', filiacao: 'Neutra', ac: 1, hp: 4, maxHp: 4, damage: 2, atkBonus: 2, keywords: [], effect: 'destroy_equip_on_enter', text: 'Quando este aliado for convocado, você pode destruir 1 equipamento inimigo.'
+    name: 'Goblin Sabotador', kind: 'ally', img: '/allies/layout-goblinsabotador.ai.png', cost: 3, classe: 'Ladino', tipo: 'Humanóide', filiacao: 'Neutra', ac: 1, hp: 4, maxHp: 4, damage: 2, atkBonus: 2, keywords: [], effect: 'destroy_equip_on_enter', text: 'Quando este aliado for convocado, você pode destruir 1 equipamento inimigo.'
   },
   {
   name: 'Thorn, o Martelo da Montanha', kind: 'ally', img: '/allies/layout-thornmartelomontanha.ai.png', cost: 7, classe: 'Guerreiro', tipo: 'Anão', filiacao: 'Neutra', ac: 1, hp: 8, maxHp: 8, damage: 6, atkBonus: 6, keywords: ['atropelar'], effect: '', text: 'Atropelar — O excesso de dano em um combate atinge diretamente a vida do Escolhido inimigo.'

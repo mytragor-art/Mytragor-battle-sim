@@ -937,13 +937,7 @@ export class SoloMatchRoom extends Room<MatchState> {
 		}
 		if (this.cardHasEffect(leaderDef, "ademais_spider_burst")) {
 			const marks = Number(player.leaderSpiderMarks || 0);
-			const spiders = this.countBlackSpidersProfile();
-			if (marks < 4) return false;
-			if (Number(enemy.hp || 0) <= 12) return true;
-			if (Number(player.hp || 0) <= 10 && this.getEnemyThreatStats().dangerousUnits > spiders.field) return false;
-			if (marks >= 8 && Number(enemy.hp || 0) <= 18) return true;
-			if (spiders.field >= 2 && this.getEnemyThreatStats().blockers >= 2 && Number(enemy.hp || 0) <= 21) return true;
-			return Number(player.hp || 0) >= Number(enemy.hp || 0) && Number(enemy.hp || 0) <= 15;
+			return marks >= 4;
 		}
 		if (this.cardHasEffect(leaderDef, "leafae_vital_guard")) {
 			if (Number(player.leaderVitalMarks || 0) < 3) return false;
@@ -1603,6 +1597,10 @@ export class SoloMatchRoom extends Room<MatchState> {
 			if (this.state.phase === "FINISHED" || this.pendingChoices.size > 0 || this.activeChoiceSessionId) return;
 			if (Number(this.state.game.seq || 0) === beforeSeq) break;
 			actions += 1;
+		}
+
+		if (this.state.game.phase === "PREP" && this.pendingChoices.size === 0 && !this.activeChoiceSessionId && this.shouldUseBotLeaderPower()) {
+			activateLeaderPower(this.state, "p2", (name, payload) => this.broadcastMatchEvent(name, payload), this.askChoice);
 		}
 	}
 
