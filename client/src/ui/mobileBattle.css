@@ -1,0 +1,134 @@
+/* Mobile-only gameplay layout. Keep desktop rules in gameplay.css and desktop-first UI modules. */
+
+@media (max-width: 980px) and (pointer: coarse) {
+	:root {
+		--mobile-safe-inline: 4px;
+		--mobile-toolbar-h: 102px;
+	}
+
+	html,
+	body {
+		height: 100dvh;
+		min-height: 100dvh;
+		overflow: hidden;
+	}
+
+	.app {
+		min-height: 100dvh;
+		height: 100dvh;
+		box-sizing: border-box;
+	}
+
+	.boardWrap,
+	.boardStage,
+	.scaler {
+		min-height: 0;
+	}
+
+	#mobilePreviewFab,
+	.mobilePlayHint {
+		touch-action: manipulation;
+		-webkit-tap-highlight-color: transparent;
+	}
+
+	.hand,
+	#arenaCol,
+	#previewCol {
+		-webkit-overflow-scrolling: touch;
+		scrollbar-width: thin;
+	}
+
+	.card,
+	button,
+	[role="button"] {
+		touch-action: manipulation;
+	}
+}
+
+@media (max-width: 980px) and (orientation: portrait) and (pointer: coarse) {
+	.app {
+		grid-template-columns: 1fr !important;
+		grid-template-rows: var(--mobile-toolbar-h) minmax(0, 1fr);
+		gap: 3px;
+		padding: var(--mobile-safe-inline);
+		align-items: start;
+	}
+
+	#handsCol {
+		grid-column: 1;
+		grid-row: 1;
+		width: 100%;
+		max-width: none;
+		min-width: 0;
+		height: var(--mobile-toolbar-h);
+		max-height: var(--mobile-toolbar-h);
+		overflow: hidden;
+	}
+
+	#arenaCol {
+		grid-column: 1;
+		grid-row: 2;
+		width: 100%;
+		max-width: none;
+		height: 100%;
+		overflow: hidden;
+	}
+
+	.boardWrap {
+		place-items: start start;
+		overflow: hidden;
+	}
+
+	.scaler,
+	.boardStage {
+		justify-content: flex-start;
+		transform-origin: top left;
+	}
+}
+
+@media (max-width: 980px) and (orientation: landscape) and (pointer: coarse) {
+	.app {
+		grid-template-columns: 84px minmax(0, 1fr) !important;
+		grid-template-rows: minmax(0, 1fr);
+		gap: 6px;
+		padding: 6px;
+		align-items: stretch;
+	}
+
+	#handsCol {
+		grid-column: 1;
+		grid-row: 1;
+		width: 92px;
+		max-width: 92px;
+		min-width: 92px;
+		height: calc(100dvh - 12px);
+	}
+
+	#arenaCol {
+		grid-column: 2;
+		grid-row: 1;
+		height: calc(100dvh - 12px);
+		max-width: none;
+		min-width: 0;
+		overflow: hidden;
+	}
+}
+
+@media (max-width: 980px) and (orientation: landscape) and (max-height: 500px) and (pointer: coarse) {
+	.app {
+		grid-template-columns: 76px minmax(0, 1fr) !important;
+		gap: 4px;
+		padding: 4px;
+	}
+
+	#handsCol {
+		width: 76px;
+		max-width: 76px;
+		min-width: 76px;
+		height: calc(100dvh - 8px);
+	}
+
+	#arenaCol {
+		height: calc(100dvh - 8px);
+	}
+}

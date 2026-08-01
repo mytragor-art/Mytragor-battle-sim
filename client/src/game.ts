@@ -2,6 +2,7 @@
 
 import "./animations/animations.css";
 import "./ui/battleTable.css";
+import "./ui/mobileBattle.css";
 import "./ui/handLayout.css";
 import "./ui/responsiveBattle.css";
 import "./ui/playerHandLayout.css";

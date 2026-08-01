@@ -255,6 +255,20 @@
       transform: translateY(-1px);
     }
 
+    #mobileDeckAccessories {
+      background: linear-gradient(180deg, #fecaca 0%, #f87171 100%);
+      color: #3b0a0a;
+      border-color: rgba(248,113,113,.58);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.58), 0 10px 22px rgba(239,68,68,.18);
+      text-shadow: 0 1px 0 rgba(255,255,255,.24);
+      font-weight: 800;
+    }
+
+    #mobileDeckAccessories:hover {
+      filter: brightness(1.04);
+      transform: translateY(-1px);
+    }
+
     .preview-card {
       border: 1px solid rgba(250,204,21,.1);
       border-radius: 10px;
@@ -459,6 +473,24 @@
       flex: 0 0 auto;
     }
 
+    .pool-card-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 32px;
+      margin-top: 2px;
+      padding: 2px 5px;
+      border-radius: 999px;
+      background: rgba(0,0,0,.38);
+      color: #dbe4f1;
+      font-size: 10px;
+      font-weight: 800;
+    }
+
+    .mobileDeckBar {
+      display: none;
+    }
+
     .choices-head {
       display: flex;
       align-items: center;
@@ -553,6 +585,11 @@
 
     .filterClearBtn {
       padding: 8px 10px;
+    }
+
+    #btnMobileFilters,
+    #btnCloseMobileFilters {
+      display: none;
     }
 
     .filters-toggle {
@@ -749,7 +786,11 @@
       .pool-grid {
         grid-template-columns: repeat(3, minmax(0, 1fr));
         grid-template-rows: none;
-        max-height: none;
+        max-height: min(62dvh, 720px);
+        overflow-y: auto;
+        overscroll-behavior-y: contain;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-y;
       }
 
       .pool-card {
@@ -866,7 +907,6 @@
                     <div class="chip" data-kind="env">Ambiente</div>
                     <div class="chip" data-kind="truque">Truque</div>
                     <div class="chip" data-kind="chosen">Escolhido</div>
-                    <div class="chip" data-kind="fragment">Fragmento</div>
                   </div>
                 </div>
               </div>
@@ -1170,6 +1210,43 @@
       margin: 0 auto 4px;
     }
 
+    .fragment-modal-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .fragment-modal-card {
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 9px;
+      padding: 6px;
+      background: rgba(255,255,255,.04);
+      color: var(--txt);
+      cursor: pointer;
+      text-align: center;
+      font-size: 11px;
+    }
+
+    .fragment-modal-card.selected {
+      border-color: rgba(250,204,21,.7);
+      box-shadow: 0 0 0 1px rgba(250,204,21,.25) inset;
+    }
+
+    .fragment-modal-card img {
+      display: block;
+      width: 100%;
+      aspect-ratio: 2 / 3;
+      object-fit: contain;
+      margin-bottom: 5px;
+      border-radius: 5px;
+    }
+
+    @media (max-width: 520px) {
+      .fragment-modal-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
     .accessory-modal-section {
       display: grid;
       gap: 10px;
@@ -1396,6 +1473,150 @@
         line-height: 1.2;
         text-shadow: 0 1px 5px rgba(0,0,0,.72);
       }
+
+      body {
+        padding-bottom: calc(68px + env(safe-area-inset-bottom));
+      }
+
+      .mobileDeckBar {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 10000;
+        display: grid;
+        grid-template-columns: 1.15fr .9fr .95fr .75fr .75fr;
+        gap: 6px;
+        padding: 8px max(8px, env(safe-area-inset-left)) calc(8px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-right));
+        background: rgba(5,10,18,.96);
+        border-top: 1px solid rgba(250,204,21,.22);
+        box-shadow: 0 -8px 24px rgba(0,0,0,.42);
+      }
+
+      .mobileDeckBar .btn {
+        min-width: 0;
+        padding: 8px 6px;
+        font-size: 11px;
+        white-space: nowrap;
+      }
+
+      .mobileDeckBar .mobileDeckBarLeader,
+      .mobileDeckBar .mobileDeckBarCount {
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .deck-panel.mobileDeckDrawer {
+        position: fixed;
+        left: 8px;
+        right: 8px;
+        bottom: calc(68px + env(safe-area-inset-bottom));
+        z-index: 9999;
+        max-height: min(72dvh, 620px);
+        margin: 0;
+        padding: 10px;
+        overflow: auto;
+        transform: translateY(calc(100% + 16px));
+        transition: transform .2s ease;
+        pointer-events: none;
+        box-shadow: 0 14px 34px rgba(0,0,0,.64);
+      }
+
+      .deck-panel.mobileDeckDrawer.is-open {
+        transform: translateY(0);
+        pointer-events: auto;
+      }
+
+      .deck-panel.mobileDeckDrawer .deck-header {
+        flex-direction: row;
+        align-items: center;
+      }
+
+      .deck-panel.mobileDeckDrawer .deck-header h2 {
+        margin: 0;
+        font-size: 15px;
+      }
+
+      .deck-panel.mobileDeckDrawer .deck-actions {
+        display: flex;
+        flex: 1;
+        min-width: 0;
+        justify-content: flex-end;
+      }
+
+      .deck-panel.mobileDeckDrawer .deck-actions > button,
+      .deck-panel.mobileDeckDrawer > div[style*="border-top:1px solid"],
+      .deck-panel.mobileDeckDrawer > div[style*="margin-top:6px"] {
+        display: none;
+      }
+
+      .deck-panel.mobileDeckDrawer .deck-actions input {
+        display: block;
+        width: 100%;
+        min-width: 0;
+      }
+
+      .deck-panel.mobileDeckDrawer .deck-grid {
+        max-height: 46dvh;
+      }
+
+      .pool-card-count {
+        font-size: 9px;
+      }
+
+      #btnMobileFilters {
+        display: block;
+        width: 100%;
+        margin-bottom: 8px;
+      }
+
+      .pool-panel > .filtersBar {
+        display: none;
+        position: fixed;
+        left: 8px;
+        right: 8px;
+        bottom: calc(68px + env(safe-area-inset-bottom));
+        z-index: 10001;
+        max-height: min(72dvh, 620px);
+        overflow-y: auto;
+        margin: 0;
+        padding: 14px;
+        border: 1px solid rgba(250,204,21,.2);
+        border-radius: 14px;
+        background: linear-gradient(180deg, rgba(10,16,28,.99), rgba(7,12,21,.98));
+        box-shadow: 0 14px 34px rgba(0,0,0,.64);
+      }
+
+      .pool-panel > .filtersBar.mobile-open {
+        display: grid;
+      }
+
+      #btnCloseMobileFilters {
+        display: block;
+        width: 100%;
+        order: 10;
+      }
+
+      .pool-panel > .filtersBar .filterChipWrap {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        justify-content: flex-start;
+        padding-bottom: 3px;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-x;
+      }
+
+      .pool-panel > .filtersBar .chip {
+        flex: 0 0 auto;
+      }
+
+      .pool-panel > .filtersBar .filterDropdown,
+      .pool-panel > .filtersBar .filterSearchInput,
+      .pool-panel > .filtersBar #sortCards,
+      .pool-panel > .filtersBar #btnClearFilters {
+        width: 100%;
+        min-width: 0;
+      }
     }
   </style>
 </head>
@@ -1426,7 +1647,7 @@
         </details>
       </section>
 
-      <section class="panel deck-panel">
+      <section class="panel deck-panel mobileDeckDrawer">
         <div class="deck-header">
           <h2>Seu baralho (41 espaços)</h2>
           <div class="deck-actions">
@@ -1472,8 +1693,17 @@
           <span>Segure para visualizar a carta</span>
         </div>
 
+        <button id="btnMobileFilters" class="btn ghost" type="button">Filtros</button>
+
         <div class="filtersBar">
           <input id="filterSearch" class="filterSearchInput" placeholder="Buscar carta...">
+
+          <select id="sortCards" class="filterToggle" aria-label="Ordenar cartas">
+            <option value="default">Ordenar: padrão</option>
+            <option value="cost">Ordenar: custo</option>
+            <option value="kind">Ordenar: tipo</option>
+            <option value="filiation">Ordenar: filiação</option>
+          </select>
 
           <div class="filterDropdown" data-filter-group="kind">
             <button id="kindFilterToggle" class="filterToggle" type="button">Tipo</button>
@@ -1486,7 +1716,6 @@
                 <div class="chip" data-kind="env">Ambiente</div>
                 <div class="chip" data-kind="truque">Truque</div>
                 <div class="chip" data-kind="chosen">Escolhido</div>
-                <div class="chip" data-kind="fragment">Fragmento</div>
               </div>
             </div>
           </div>
@@ -1515,6 +1744,7 @@
           </div>
 
           <button id="btnClearFilters" class="btn ghost filterClearBtn">Limpar filtros</button>
+          <button id="btnCloseMobileFilters" class="btn ghost" type="button">Aplicar filtros</button>
         </div>
 
         <div class="pager">
@@ -1525,6 +1755,14 @@
 
         <div id="cardPool" class="pool-grid"></div>
       </section>
+    </div>
+
+    <div class="mobileDeckBar" aria-label="Controles do baralho">
+      <button id="mobileDeckLeader" class="btn ghost mobileDeckBarLeader" type="button">Escolher líder</button>
+      <button id="mobileDeckCount" class="btn ghost mobileDeckBarCount" type="button">0/40</button>
+      <button id="mobileDeckAccessories" class="btn ghost" type="button">Acessórios</button>
+      <button id="mobileDeckSave" class="btn" type="button" disabled>Salvar</button>
+      <button id="mobileDeckPlay" class="btn" type="button" disabled>Jogar</button>
     </div>
   </div>
 
@@ -1555,6 +1793,12 @@
     const btnVerDecks = document.getElementById('btnVerDecks');
     const deckNameInput = document.getElementById('deckNameInput');
     const deckMeta = document.getElementById('deckMeta');
+    const mobileDeckDrawer = document.querySelector('.mobileDeckDrawer');
+    const mobileDeckLeader = document.getElementById('mobileDeckLeader');
+    const mobileDeckCount = document.getElementById('mobileDeckCount');
+    const mobileDeckAccessories = document.getElementById('mobileDeckAccessories');
+    const mobileDeckSave = document.getElementById('mobileDeckSave');
+    const mobileDeckPlay = document.getElementById('mobileDeckPlay');
 
     const previewImg = document.getElementById('previewImg');
     const previewTitle = document.getElementById('previewTitle');
@@ -1571,6 +1815,10 @@
     const kindFilterToggle = document.getElementById('kindFilterToggle');
     const filiationFilterToggle = document.getElementById('filiationFilterToggle');
     const costFilterToggle = document.getElementById('costFilterToggle');
+    const sortCards = document.getElementById('sortCards');
+    const btnMobileFilters = document.getElementById('btnMobileFilters');
+    const btnCloseMobileFilters = document.getElementById('btnCloseMobileFilters');
+    const filtersBar = document.querySelector('.pool-panel > .filtersBar');
     const pageInfo = document.getElementById('pageInfo');
     const btnPrevPage = document.getElementById('btnPrevPage');
     const btnNextPage = document.getElementById('btnNextPage');
@@ -1649,12 +1897,13 @@
     }));
 
     function getSelectablePool() {
-      return [...BASE_CARD_POOL, ...CHOSEN_POOL, ...FRAGMENT_POOL];
+      return [...BASE_CARD_POOL, ...CHOSEN_POOL];
     }
 
     let deck = [];
     let chosenLeader = null;
     let chosenFragImg = null;
+    let saveFragmentConfirmed = false;
     let editSession = null;
     let accessoryPrefs = readAccessoryPrefs();
 
@@ -1663,6 +1912,7 @@
       kinds: new Set(),
       filiation: null,
       cost: null,
+      sort: 'default',
       page: 1,
       pageSize: 12
     };
@@ -2242,6 +2492,10 @@
       });
     }
 
+    function isMobileDeckBuilderViewport() {
+      return window.matchMedia('(max-width: 900px)').matches;
+    }
+
     function refreshFilterSummary() {
       const parts = [];
       if (filterState.filiation) parts.push(filterState.filiation);
@@ -2298,8 +2552,30 @@
     function renderPool() {
       cardPool.innerHTML = '';
       const filtered = applyFilters(getSelectablePool()).sort((a, b) => {
+        if (chosenLeader) {
+          const leaderFiliation = String(LEADER_FILIACAO[chosenLeader.name] || '').toLowerCase();
+          const getFiliationRank = (card) => {
+            if (card.kind === 'chosen') return -1;
+            const cardFiliation = String(card.filiacao || '').toLowerCase();
+            if (cardFiliation === leaderFiliation) return 0;
+            if (cardFiliation === 'neutra') return 1;
+            return 2;
+          };
+          const filiationRankDelta = getFiliationRank(a) - getFiliationRank(b);
+          if (filiationRankDelta) return filiationRankDelta;
+        }
         if ((a.kind === 'chosen' || a.kind === 'fragment') && !(b.kind === 'chosen' || b.kind === 'fragment')) return -1;
         if (!(a.kind === 'chosen' || a.kind === 'fragment') && (b.kind === 'chosen' || b.kind === 'fragment')) return 1;
+        if (filterState.sort === 'cost') {
+          const costDelta = Number(a.cost ?? 99) - Number(b.cost ?? 99);
+          if (costDelta) return costDelta;
+        } else if (filterState.sort === 'kind') {
+          const kindDelta = String(a.kind || '').localeCompare(String(b.kind || ''), 'pt');
+          if (kindDelta) return kindDelta;
+        } else if (filterState.sort === 'filiation') {
+          const filiationDelta = String(a.filiacao || '').localeCompare(String(b.filiacao || ''), 'pt');
+          if (filiationDelta) return filiationDelta;
+        }
         const fa = String(a.filiacao || '').toLowerCase();
         const fb = String(b.filiacao || '').toLowerCase();
         if (fa !== fb) return fa.localeCompare(fb, 'pt');
@@ -2314,19 +2590,22 @@
         return;
       }
 
+      const mobileViewport = isMobileDeckBuilderViewport();
       const totalPages = Math.max(1, Math.ceil(filtered.length / filterState.pageSize));
       if (filterState.page > totalPages) filterState.page = totalPages;
       const start = (filterState.page - 1) * filterState.pageSize;
-      const pageCards = filtered.slice(start, start + filterState.pageSize);
+      const pageCards = mobileViewport ? filtered : filtered.slice(start, start + filterState.pageSize);
 
-      pageInfo.textContent = `${filterState.page}/${totalPages}`;
+      pageInfo.textContent = mobileViewport ? `${filtered.length} cartas` : `${filterState.page}/${totalPages}`;
       btnPrevPage.disabled = filterState.page <= 1;
       btnNextPage.disabled = filterState.page >= totalPages;
 
       pageCards.forEach(card => {
         const allowed = isCardAllowed(card);
+        const copies = deck.filter(entry => entry.name === card.name).length;
+        const maxCopiesReached = card.kind !== 'chosen' && card.kind !== 'fragment' && copies >= 3;
         const tile = document.createElement('div');
-        tile.className = 'pool-card' + (allowed ? '' : ' disabled');
+        tile.className = 'pool-card' + (allowed && !maxCopiesReached ? '' : ' disabled');
         if ((card.kind === 'chosen' && chosenLeader && chosenLeader.name === card.name) || (card.kind === 'fragment' && chosenFragImg === card.img)) {
           tile.style.borderColor = 'rgba(250,204,21,.6)';
           tile.style.boxShadow = '0 0 0 1px rgba(250,204,21,.25) inset';
@@ -2338,7 +2617,7 @@
             : card.name;
         tile.innerHTML = card.kind === 'fragment'
           ? `<img src="${resolveImg(card.img)}" alt="${displayName}"><div>${displayName}</div><div class="pool-card-note">Somente visual</div>`
-          : `<img src="${resolveImg(card.img)}" alt="${displayName}"><div>${displayName}</div>`;
+          : `<img src="${resolveImg(card.img)}" alt="${displayName}"><div>${displayName}</div>${card.kind !== 'chosen' ? `<span class="pool-card-count">${copies}/3</span>` : ''}`;
         attachGridThumb(tile.querySelector('img'), card.img);
 
         if (card.kind === 'chosen') {
@@ -2354,6 +2633,8 @@
             renderPool();
             setPreview(card);
           };
+        } else if (maxCopiesReached) {
+          tile.onclick = () => alert(`Você já adicionou o máximo de 3 cópias de ${card.name}.`);
         } else if (allowed) {
           tile.onclick = () => addToDeck(card);
         } else {
@@ -2403,6 +2684,19 @@
       deckSize.textContent = `${(chosenLeader ? 1 : 0) + deck.length}/41 cartas`;
       btnSalvar.disabled = !(chosenLeader && deck.length === 40);
       btnPlay.disabled = !(chosenLeader && deck.length === 40);
+      mobileDeckCount.textContent = `${deck.length}/40`;
+      mobileDeckLeader.textContent = chosenLeader ? `Líder: ${chosenLeader.name}` : 'Escolher líder';
+      mobileDeckSave.disabled = btnSalvar.disabled;
+      mobileDeckPlay.disabled = btnPlay.disabled;
+    }
+
+    function toggleMobileDeckDrawer(force) {
+      if (!mobileDeckDrawer) return;
+      const shouldOpen = typeof force === 'boolean'
+        ? force
+        : !mobileDeckDrawer.classList.contains('is-open');
+      mobileDeckDrawer.classList.toggle('is-open', shouldOpen);
+      mobileDeckDrawer.setAttribute('aria-hidden', shouldOpen ? 'false' : 'true');
     }
 
     function openLeaderPickModal(requestedCard) {
@@ -2422,12 +2716,15 @@
       document.body.appendChild(overlay);
 
       const grid = box.querySelector('#leaderModalGrid');
-      LEADERS.forEach(leader => {
+      const requestedFiliation = normalizeText(requestedCard.filiacao);
+      const compatibleLeaders = LEADERS.filter(leader => normalizeText(LEADER_FILIACAO[leader.name]) === requestedFiliation);
+      compatibleLeaders.forEach(leader => {
         const tile = document.createElement('div');
         tile.className = 'leader-modal-card';
         tile.innerHTML = `<img src="${resolveImg(leader.img)}" alt="${leader.name}"><div>${leader.name}</div>`;
         attachGridThumb(tile.querySelector('img'), leader.img);
         tile.onclick = () => {
+          if (normalizeText(LEADER_FILIACAO[leader.name]) !== requestedFiliation) return;
           chosenLeader = leader;
           deck.push(requestedCard);
           renderDeck();
@@ -2594,6 +2891,67 @@
       }
     }
 
+    function showFragmentPickModal() {
+      return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.className = 'modalOverlay';
+
+        const box = document.createElement('div');
+        box.className = 'modalBox';
+        box.style.width = 'min(620px, 94vw)';
+        box.innerHTML = `
+          <h3 style="margin:0 0 6px;color:var(--gold-a);">Escolha seu Fragmento</h3>
+          <p style="margin:0 0 12px;color:#cbd5e1;line-height:1.45;">Somente visual. O fragmento não altera nada em jogo.</p>
+          <div class="fragment-modal-grid" id="fragmentModalGrid"></div>
+          <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
+            <button type="button" class="btn ghost" id="fragmentCancel">Cancelar</button>
+            <button type="button" class="btn" id="fragmentContinue" disabled>Continuar</button>
+          </div>
+        `;
+
+        let selectedImg = chosenFragImg || null;
+        let closed = false;
+        const close = (value) => {
+          if (closed) return;
+          closed = true;
+          document.removeEventListener('keydown', onKeyDown);
+          if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+          resolve(value);
+        };
+        const onKeyDown = (event) => {
+          if (event.key === 'Escape') close({ cancel: true });
+        };
+
+        const grid = box.querySelector('#fragmentModalGrid');
+        const continueButton = box.querySelector('#fragmentContinue');
+        FRAG_OPTIONS.forEach(option => {
+          const tile = document.createElement('button');
+          tile.type = 'button';
+          tile.className = 'fragment-modal-card' + (selectedImg === option.img ? ' selected' : '');
+          tile.innerHTML = `<img src="${resolveImg(option.img)}" alt="Fragmento ${option.label}"><div>${option.label}</div>`;
+          tile.onclick = () => {
+            selectedImg = option.img;
+            grid.querySelectorAll('.fragment-modal-card').forEach(item => item.classList.remove('selected'));
+            tile.classList.add('selected');
+            continueButton.disabled = false;
+          };
+          attachGridThumb(tile.querySelector('img'), option.img);
+          grid.appendChild(tile);
+        });
+
+        continueButton.disabled = !selectedImg;
+        continueButton.onclick = () => close(selectedImg);
+        box.querySelector('#fragmentCancel').onclick = () => close({ cancel: true });
+        overlay.addEventListener('click', event => {
+          if (event.target === overlay) close({ cancel: true });
+        });
+
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+        document.addEventListener('keydown', onKeyDown);
+      });
+    }
+
     function showSaveChoiceModal() {
       return new Promise((resolve) => {
         const overlay = document.createElement('div');
@@ -2640,6 +2998,21 @@
 
     btnSalvar.onclick = async function () {
       if (!chosenLeader || deck.length !== 40) return;
+
+      if (!saveFragmentConfirmed) {
+        const fragmentChoice = await showFragmentPickModal();
+        if (fragmentChoice && fragmentChoice.cancel) return;
+        if (!fragmentChoice) return;
+        chosenFragImg = fragmentChoice;
+        saveFragmentConfirmed = true;
+      }
+
+      if (!deckNameInput.value.trim()) {
+        toggleMobileDeckDrawer(true);
+        deckNameInput.focus();
+        return;
+      }
+
       const all = getSavedDecksLocal();
       let payload = buildDeckPayload(editSession && editSession.mode === 'edit' ? editSession.deck : null);
 
@@ -2671,16 +3044,23 @@
       }
 
       alert(`Baralho salvo: ${payload.deckName || chosenLeader.name}`);
+      saveFragmentConfirmed = false;
     };
 
     btnAccessories.onclick = function () {
       showAccessoriesModal();
     };
 
-    btnPlay.onclick = function () {
+    btnPlay.onclick = async function () {
       if (!chosenLeader || deck.length !== 40) {
-        alert('Selecione um líder e complete 40 cartas antes de testar.');
+        alert('Selecione um líder, um fragmento e complete 40 cartas antes de testar.');
         return;
+      }
+      if (!chosenFragImg) {
+        const fragmentChoice = await showFragmentPickModal();
+        if (fragmentChoice && fragmentChoice.cancel) return;
+        if (!fragmentChoice) return;
+        chosenFragImg = fragmentChoice;
       }
       const deckName = (deckNameInput.value || '').trim();
       const deckId = buildDeckId();
@@ -2698,6 +3078,12 @@
       localStorage.setItem('mytragor_play_deck', JSON.stringify(payload));
       window.location.href = openLobbyWithDeck(deckId);
     };
+
+    mobileDeckLeader.onclick = () => toggleMobileDeckDrawer();
+    mobileDeckCount.onclick = () => toggleMobileDeckDrawer();
+    mobileDeckAccessories.onclick = () => showAccessoriesModal();
+    mobileDeckSave.onclick = () => btnSalvar.click();
+    mobileDeckPlay.onclick = () => btnPlay.click();
 
     btnLimpar.onclick = function () {
       deck = [];
@@ -2808,6 +3194,9 @@
     }
 
     function setupFilters() {
+      btnMobileFilters.onclick = () => filtersBar.classList.add('mobile-open');
+      btnCloseMobileFilters.onclick = () => filtersBar.classList.remove('mobile-open');
+
       filterSearch.addEventListener('input', (e) => {
         filterState.query = e.target.value || '';
         filterState.page = 1;
@@ -2889,9 +3278,11 @@
         filterState.kinds = new Set();
         filterState.filiation = null;
         filterState.cost = null;
+        filterState.sort = 'default';
         filterState.page = 1;
 
         filterSearch.value = '';
+        sortCards.value = 'default';
         document.querySelectorAll('.chip[data-kind], .chip[data-cost]').forEach(x => x.classList.remove('selected'));
         filiationChips.querySelectorAll('.chip').forEach(x => x.classList.remove('selected'));
         allChip.classList.add('selected');
@@ -2899,6 +3290,12 @@
         refreshFilterSummary();
         renderPool();
       };
+
+      sortCards.addEventListener('change', () => {
+        filterState.sort = sortCards.value || 'default';
+        filterState.page = 1;
+        renderPool();
+      });
 
       btnPrevPage.onclick = () => {
         if (filterState.page > 1) {
@@ -2930,7 +3327,7 @@
           <ol style="line-height:1.5;padding-left:18px;">
             <li>Escolha um líder para fixar a filiação.</li>
             <li>Monte 40 cartas (máximo 3 cópias por carta).</li>
-            <li>Use filtros e paginação para navegar.</li>
+            <li>No celular, role a coleção com o dedo e toque no contador inferior para abrir o deck.</li>
             <li>Salve ou teste com o botão Jogar.</li>
           </ol>
           <div style="text-align:right;"><button class="btn" id="closeTutorial">Fechar</button></div>
