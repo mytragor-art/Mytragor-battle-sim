@@ -39,6 +39,28 @@
 							<p>Escolha seu baralho e o baralho que a IA vai pilotar. Depois basta iniciar.</p>
 						</div>
 
+						<section class="activeDeckCard" aria-live="polite">
+							<div class="activeDeckArt">
+								<img id="activeDeckLeaderArt" src="/publicadas/ui/layout-background.ai.thumb.webp" alt="Líder do baralho selecionado" />
+								<img id="activeDeckFragmentArt" class="activeDeckFragment" hidden alt="Fragmento selecionado" />
+							</div>
+							<div class="activeDeckInfo">
+								<div class="lobbySectionEyebrow">Seu baralho ativo</div>
+								<h4 id="activeDeckName">Escolha um baralho</h4>
+								<p id="activeDeckLeader">Líder: —</p>
+								<div class="activeDeckMeta">
+									<span class="pill"><b id="activeDeckCards">—</b> cartas</span>
+									<span id="activeDeckFragmentLabel" class="pill">Fragmento: —</span>
+								</div>
+							</div>
+							<div class="activeDeckActions">
+								<button id="btnPreviousDeck" class="btnGhost activeDeckCycle" type="button" aria-label="Baralho anterior">◀</button>
+								<button id="btnNextDeck" class="btnGhost activeDeckCycle" type="button" aria-label="Próximo baralho">▶</button>
+								<button id="btnEditActiveDeck" class="btnGhost" type="button">Editar</button>
+								<button id="btnOpenDeckBuilder" class="btnGold secondary" type="button">Novo baralho</button>
+							</div>
+						</section>
+
 						<div class="soloSetupGrid">
 							<div class="lobbyDeckChooser soloDeckCard">
 								<div class="lobbyModeHead">
@@ -78,6 +100,15 @@
 										<select id="botLeader" disabled>
 											<option value="">(auto pelo baralho salvo)</option>
 										</select>
+									</div>
+								</div>
+								<div class="soloOpponentPreview" aria-live="polite">
+									<img id="botDeckLeaderArt" src="/publicadas/ui/layout-background.ai.thumb.webp" alt="Líder do deck da IA" />
+									<div>
+										<span class="lobbySectionEyebrow">Oponente IA</span>
+										<strong id="botDeckName">Escolha um deck</strong>
+										<span id="botDeckLeader">Líder: —</span>
+										<span id="botDeckCards">— cartas</span>
 									</div>
 								</div>
 							</div>
@@ -152,6 +183,13 @@
 			<div class="lobbyReserveColumn" aria-hidden="true"></div>
 		</div>
 	</div>
+
+	<nav class="mobileLobbyNav" aria-label="Navegação principal">
+		<a class="mobileLobbyNavItem is-active" href="solo-lobby.html" aria-current="page">Batalha</a>
+		<a class="mobileLobbyNavItem" href="public/ui/decks_salvos.html">Baralhos</a>
+		<a class="mobileLobbyNavItem" href="index.html">Início</a>
+		<a class="mobileLobbyNavItem" href="manual.html">Manual</a>
+	</nav>
 
 	<script type="module" src="/src/solo-lobby.ts"></script>
 	<script src="/mobile.js"></script>

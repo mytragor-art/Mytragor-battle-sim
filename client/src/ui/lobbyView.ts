@@ -2,7 +2,7 @@
 
 type Slot = "p1" | "p2" | null;
 
-type LobbyPlayer = { slot: string; displayName?: string; deckId?: string; leaderId?: string; ready?: boolean };
+type LobbyPlayer = { slot: string; displayName?: string; avatarId?: string; deckId?: string; leaderId?: string; ready?: boolean };
 type LobbyRoom = {
 	roomId: string;
 	clients: number;
@@ -30,18 +30,40 @@ type SpectatorMatch = {
 
 const byId = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T | null;
 
+const AVATAR_PATHS: Record<string, string> = {
+	"chosen:valbrak": "/avatars/chosens/valbrak.png",
+	"chosen:katsu": "/avatars/chosens/katsu.png",
+	"chosen:leafae": "/avatars/chosens/leafae.png",
+	"chosen:ademais": "/avatars/chosens/ademais.png",
+	"filiacao:arcana": "/avatars/filiaçoes/arcano.png",
+	"filiacao:marcial": "/avatars/filiaçoes/marcial.png",
+	"filiacao:religioso": "/avatars/filiaçoes/religioso.png",
+	"filiacao:sombras": "/avatars/filiaçoes/sombras1.png"
+};
+
 export function getLobbyInputs() {
 	return {
 		endpointEl: byId<HTMLInputElement>("endpoint"),
 		roomIdEl: byId<HTMLInputElement>("roomId"),
 		deckEl: byId<HTMLSelectElement>("deck"),
 		leaderEl: byId<HTMLSelectElement>("leader"),
+		activeDeckNameEl: byId("activeDeckName"),
+		activeDeckLeaderEl: byId("activeDeckLeader"),
+		activeDeckCardsEl: byId("activeDeckCards"),
+		activeDeckFragmentArtEl: byId<HTMLImageElement>("activeDeckFragmentArt"),
+		activeDeckFragmentLabelEl: byId("activeDeckFragmentLabel"),
+		activeDeckLeaderArtEl: byId<HTMLImageElement>("activeDeckLeaderArt"),
+		btnPreviousDeck: byId<HTMLButtonElement>("btnPreviousDeck"),
+		btnNextDeck: byId<HTMLButtonElement>("btnNextDeck"),
+		btnEditActiveDeck: byId<HTMLButtonElement>("btnEditActiveDeck"),
+		btnOpenDeckBuilder: byId<HTMLButtonElement>("btnOpenDeckBuilder"),
 		privateCodeEl: byId<HTMLInputElement>("privateCode"),
 		btnJoin: byId<HTMLButtonElement>("btnJoin"),
 		btnReady: byId<HTMLButtonElement>("btnReady"),
 		btnCreatePrivate: byId<HTMLButtonElement>("btnCreatePrivate"),
 		btnJoinPrivate: byId<HTMLButtonElement>("btnJoinPrivate"),
 		btnCopyPrivateCode: byId<HTMLButtonElement>("btnCopyPrivateCode"),
+		btnSharePrivateCode: byId<HTMLButtonElement>("btnSharePrivateCode"),
 		btnRefreshRooms: byId<HTMLButtonElement>("btnRefreshRooms"),
 		btnRefreshMatches: byId<HTMLButtonElement>("btnRefreshMatches"),
 		btnJoinSelected: byId<HTMLButtonElement>("btnJoinSelected"),
@@ -109,11 +131,14 @@ export function renderPlayers(players: LobbyPlayer[], mySlot: Slot = null) {
 		const statusClass = player.ready ? "ok" : "wait";
 		const statusText = player.ready ? "PRONTO" : "ESPERANDO";
 		const label = player.displayName ? `${perspective}: ${player.displayName}` : perspective;
+		const avatarPath = AVATAR_PATHS[player.avatarId || ""];
+		const avatar = avatarPath ? `<img class="playerAvatar" src="${avatarPath}" alt="">` : "";
 
 		return `
 			<article class="playerCard" data-slot="${slot}">
 				<div class="playerTop">
 					<div class="playerIdentity">
+						${avatar}
 						<div class="playerName">${label}</div>
 						<div class="playerSlot">${slot}</div>
 					</div>

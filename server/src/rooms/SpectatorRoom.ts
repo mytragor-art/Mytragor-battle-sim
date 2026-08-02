@@ -56,14 +56,14 @@ export class SpectatorRoom extends Room<MatchState> {
 		this.closeTimer = setTimeout(() => {
 			this.closeTimer = null;
 			try { this.disconnect(); } catch (_) {}
-		}, 1200);
+		}, 20_000);
 	}
 
 	private applySnapshot(snapshot: SpectatorSnapshot) {
 		this.state.phase = snapshot.phase;
 		this.state.serverSeq = snapshot.serverSeq;
-		this.syncPublicPlayer("p1", snapshot.players.p1.displayName);
-		this.syncPublicPlayer("p2", snapshot.players.p2.displayName);
+		this.syncPublicPlayer("p1", snapshot.players.p1.displayName, snapshot.players.p1.avatarId);
+		this.syncPublicPlayer("p2", snapshot.players.p2.displayName, snapshot.players.p2.avatarId);
 		this.state.hostSessionId = "";
 		this.state.game.starterSlot = snapshot.game.starterSlot;
 		this.state.game.turnSlot = snapshot.game.turnSlot;
@@ -75,7 +75,7 @@ export class SpectatorRoom extends Room<MatchState> {
 		if (this.state.phase === "FINISHED") this.scheduleClose();
 	}
 
-	private syncPublicPlayer(slot: "p1" | "p2", displayName: string) {
+	private syncPublicPlayer(slot: "p1" | "p2", displayName: string, avatarId: string) {
 		let player = this.state.players.get(slot);
 		if (!player) {
 			player = new MatchPlayerState();
@@ -84,6 +84,7 @@ export class SpectatorRoom extends Room<MatchState> {
 			this.state.players.set(slot, player);
 		}
 		player.displayName = String(displayName || "");
+		player.avatarId = String(avatarId || "");
 	}
 
 	private applyGamePlayer(target: any, source: SpectatorSnapshot["game"]["p1"]) {

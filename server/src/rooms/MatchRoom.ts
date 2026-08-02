@@ -25,6 +25,7 @@ type ReservedSeat = {
 	lobbySessionId: string;
 	slot: Slot;
 	displayName: string;
+	avatarId: string;
 };
 
 const MULLIGAN_TIMEOUT_MS = 40_000;
@@ -49,6 +50,11 @@ export class MatchRoom extends Room<MatchState> {
 
 	private sanitizeDisplayName(name: unknown): string {
 		return String(name || "").trim().slice(0, 18);
+	}
+
+	private sanitizeAvatarId(avatarId: unknown): string {
+		const value = String(avatarId || "").trim();
+		return ["chosen:valbrak", "chosen:katsu", "chosen:leafae", "chosen:ademais", "filiacao:arcana", "filiacao:marcial", "filiacao:religioso", "filiacao:sombras"].includes(value) ? value : "";
 	}
 
 	private safeRun(context: string, fn: () => void, client?: Client) {
@@ -315,7 +321,8 @@ export class MatchRoom extends Room<MatchState> {
 				joinToken,
 				lobbySessionId,
 				slot: reservation?.slot === "p2" ? "p2" : "p1",
-				displayName: this.sanitizeDisplayName(reservation?.displayName)
+				displayName: this.sanitizeDisplayName(reservation?.displayName),
+				avatarId: this.sanitizeAvatarId(reservation?.avatarId)
 			});
 		}
 		const starterSlot: Slot = options?.starterSlot === "p2" ? "p2" : "p1";
@@ -363,6 +370,14 @@ export class MatchRoom extends Room<MatchState> {
 			if (!this.isValidTurnAction(client, ["END"])) return;
 			endTurn(this.state, (name, payload) => this.broadcastMatchEvent(name, payload), this.attackedThisTurn, this.summonedThisTurn, this.triggeredLeaderThisTurn, this.askChoice);
 			this.autoAdvanceFromInitial();
+			this.publishSpectatorState();
+			this.refreshInactivityTimer();
+		}, client));
+
+		this.onMessage("concede", (client) => this.safeRun("concede", () => {
+			const slot = getSlotBySession(this.state, client.sessionId);
+			if (!slot || this.state.phase === "FINISHED") return;
+			finishMatch(this.state, slot, "concede", (name, payload) => this.broadcastMatchEvent(name, payload));
 			this.publishSpectatorState();
 			this.refreshInactivityTimer();
 		}, client));
@@ -423,10 +438,11 @@ export class MatchRoom extends Room<MatchState> {
 			this.refreshInactivityTimer();
 		}, client));
         
-		this.onMessage("set_name", (client, msg: { name?: string }) => {
+		this.onMessage("set_name", (client, msg: { name?: string; avatarId?: string }) => {
 			const p = this.state.players.get(client.sessionId);
 			if (!p) return;
 			p.displayName = this.sanitizeDisplayName(msg?.name);
+			p.avatarId = this.sanitizeAvatarId(msg?.avatarId);
 			this.publishSpectatorState();
 		});
 
@@ -451,6 +467,7 @@ export class MatchRoom extends Room<MatchState> {
 			player.sessionId = client.sessionId;
 			player.slot = reservedSeat.slot;
 			player.displayName = reservedSeat.displayName;
+			player.avatarId = reservedSeat.avatarId;
 			this.state.players.set(client.sessionId, player);
 			this.consumedJoinTokens.add(reservedSeat.joinToken);
 			if (!this.state.hostSessionId) this.state.hostSessionId = client.sessionId;

@@ -1,8 +1,8 @@
 import { bindLobbyHandlers, connectClient, joinOrCreateNamedRoom } from "../net/mp";
 import { resolveHttpBase, resolveServerEndpoint } from "../config/runtime";
-import { hydrateSavedDecks, readSavedDecks, type SavedDeck } from "../ui/deckStore";
+import { hydrateSavedDecks, readSavedDecks, resolveDeckAssetPath, resolveLeaderArtwork, type SavedDeck } from "../ui/deckStore";
 import { getLobbyInputs, log, renderPlayers, renderRooms, setReadyUI, setSlotPhase } from "../ui/lobbyView";
-import { getDisplayName } from "../ui/profile";
+import { getAvatarId, getDisplayName } from "../ui/profile";
 
 const view = getLobbyInputs();
 
@@ -23,10 +23,21 @@ let pendingDeckId: string | null = null;
 
 const botDeckEl = document.getElementById("botDeck") as HTMLSelectElement | null;
 const botLeaderEl = document.getElementById("botLeader") as HTMLSelectElement | null;
+const botDeckNameEl = document.getElementById("botDeckName");
+const botDeckLeaderEl = document.getElementById("botDeckLeader");
+const botDeckCardsEl = document.getElementById("botDeckCards");
+const botDeckLeaderArtEl = document.getElementById("botDeckLeaderArt") as HTMLImageElement | null;
 
 function applySelectedBotDeck(deck: SavedDeck | null) {
 	selectedBotDeck = deck;
 	if (botLeaderEl) botLeaderEl.value = selectedBotDeck?.leaderName || "";
+	if (botDeckNameEl) botDeckNameEl.textContent = selectedBotDeck?.deckName || "Escolha um deck";
+	if (botDeckLeaderEl) botDeckLeaderEl.textContent = `Líder: ${selectedBotDeck?.leaderName || "—"}`;
+	if (botDeckCardsEl) botDeckCardsEl.textContent = selectedBotDeck ? `${selectedBotDeck.cards.length} cartas` : "— cartas";
+	if (botDeckLeaderArtEl) {
+		botDeckLeaderArtEl.src = selectedBotDeck ? resolveLeaderArtwork(selectedBotDeck) : "/publicadas/ui/layout-background.ai.thumb.webp";
+		botDeckLeaderArtEl.alt = selectedBotDeck ? `Líder da IA: ${selectedBotDeck.leaderName}` : "Líder do deck da IA";
+	}
 	if (room && selectedBotDeck) {
 		room.send("choose_bot_deck", {
 			deckId: selectedBotDeck.id,
@@ -42,6 +53,21 @@ function applySelectedDeck(deck: SavedDeck | null) {
 	if (view.leaderViewEl) view.leaderViewEl.textContent = selectedDeck?.leaderName || "—";
 	if (view.deckCardsCountEl) view.deckCardsCountEl.textContent = selectedDeck ? String(selectedDeck.cards.length) : "—";
 	if (view.leaderEl) view.leaderEl.value = selectedDeck?.leaderName || "";
+	if (view.activeDeckNameEl) view.activeDeckNameEl.textContent = selectedDeck?.deckName || "Escolha um baralho";
+	if (view.activeDeckLeaderEl) view.activeDeckLeaderEl.textContent = `Líder: ${selectedDeck?.leaderName || "—"}`;
+	if (view.activeDeckCardsEl) view.activeDeckCardsEl.textContent = selectedDeck ? String(selectedDeck.cards.length) : "—";
+	if (view.activeDeckFragmentLabelEl) view.activeDeckFragmentLabelEl.textContent = selectedDeck?.fragImg ? "Fragmento selecionado" : "Fragmento: —";
+	if (view.activeDeckLeaderArtEl) {
+		view.activeDeckLeaderArtEl.src = selectedDeck ? resolveLeaderArtwork(selectedDeck) : "/publicadas/ui/layout-background.ai.thumb.webp";
+		view.activeDeckLeaderArtEl.alt = selectedDeck ? `Líder ${selectedDeck.leaderName}` : "Líder do baralho selecionado";
+	}
+	if (view.activeDeckFragmentArtEl) {
+		view.activeDeckFragmentArtEl.hidden = !selectedDeck?.fragImg;
+		if (selectedDeck?.fragImg) view.activeDeckFragmentArtEl.src = resolveDeckAssetPath(selectedDeck.fragImg);
+	}
+	if (view.btnPreviousDeck) view.btnPreviousDeck.disabled = availableDecks.length < 2;
+	if (view.btnNextDeck) view.btnNextDeck.disabled = availableDecks.length < 2;
+	if (view.btnEditActiveDeck) view.btnEditActiveDeck.disabled = !selectedDeck;
 
 	if (room && selectedDeck) {
 		room.send("choose_deck", {
@@ -129,6 +155,14 @@ function renderDeckSelector() {
 function syncSelectedDeckFromUI() {
 	if (!view.deckEl) return;
 	applySelectedDeck(availableDecks.find((deck) => deck.id === view.deckEl!.value) || null);
+}
+
+function cycleSelectedDeck(direction: 1 | -1) {
+	if (!view.deckEl || availableDecks.length < 2) return;
+	const currentIndex = Math.max(0, availableDecks.findIndex((deck) => deck.id === view.deckEl!.value));
+	const nextIndex = (currentIndex + direction + availableDecks.length) % availableDecks.length;
+	view.deckEl.value = availableDecks[nextIndex].id;
+	syncSelectedDeckFromUI();
 }
 
 function syncSelectedBotDeckFromUI() {
@@ -250,8 +284,7 @@ async function joinLobby(forceCreate = false): Promise<boolean> {
 		view.roomIdEl.value = room.id;
 		if (view.roomIdViewEl) view.roomIdViewEl.textContent = room.id;
 
-		const displayName = getDisplayName();
-		if (displayName) room.send("set_name", { name: displayName });
+		room.send("set_name", { name: getDisplayName(), avatarId: getAvatarId() });
 
 		bindLobbyHandlers(room, {
 			onAssignSlot: (msg) => {
@@ -313,6 +346,16 @@ if (view.btnJoin) {
 }
 if (view.deckEl) view.deckEl.onchange = syncSelectedDeckFromUI;
 if (botDeckEl) botDeckEl.onchange = syncSelectedBotDeckFromUI;
+if (view.btnPreviousDeck) view.btnPreviousDeck.onclick = () => cycleSelectedDeck(-1);
+if (view.btnNextDeck) view.btnNextDeck.onclick = () => cycleSelectedDeck(1);
+if (view.btnOpenDeckBuilder) view.btnOpenDeckBuilder.onclick = () => { window.location.href = "./public/ui/deckbuilder.html"; };
+if (view.btnEditActiveDeck) view.btnEditActiveDeck.onclick = () => {
+	if (!selectedDeck) return;
+	try {
+		localStorage.setItem("mytragor_deck_edit_draft", JSON.stringify({ mode: "edit", deck: selectedDeck }));
+	} catch {}
+	window.location.href = "./public/ui/deckbuilder.html?edit=1";
+};
 window.addEventListener("storage", (event) => {
 	if (event.key && event.key !== "mytragor_decks" && event.key !== "mytragor_play_deck") return;
 	void refreshSavedDecks();

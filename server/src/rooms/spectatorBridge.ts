@@ -10,6 +10,7 @@ export type SpectatorEventName = "card_played" | "phase_changed" | "turn_start" 
 export type SpectatorPlayerInfo = {
 	slot: PublicSlot;
 	displayName: string;
+	avatarId: string;
 };
 
 export type SpectatorPlayerView = {
@@ -119,6 +120,13 @@ function findDisplayName(state: MatchState, slot: PublicSlot): string {
 	return slot === "p1" ? "Jogador 1" : "Jogador 2";
 }
 
+function findAvatarId(state: MatchState, slot: PublicSlot): string {
+	for (const player of state.players.values()) {
+		if (player.slot === slot) return String(player.avatarId || "").trim();
+	}
+	return "";
+}
+
 function sanitizePlayer(player: any, slot: PublicSlot): SpectatorPlayerView {
 	return {
 		slot,
@@ -162,8 +170,8 @@ export function buildSpectatorSnapshot(state: MatchState): SpectatorSnapshot {
 		phase: String(state.phase || "IN_MATCH"),
 		serverSeq: Number(state.serverSeq || 0),
 		players: {
-			p1: { slot: "p1", displayName: findDisplayName(state, "p1") },
-			p2: { slot: "p2", displayName: findDisplayName(state, "p2") }
+			p1: { slot: "p1", displayName: findDisplayName(state, "p1"), avatarId: findAvatarId(state, "p1") },
+			p2: { slot: "p2", displayName: findDisplayName(state, "p2"), avatarId: findAvatarId(state, "p2") }
 		},
 		game: {
 			starterSlot: state.game.starterSlot === "p2" ? "p2" : "p1",

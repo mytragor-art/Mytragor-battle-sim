@@ -414,6 +414,45 @@
       text-align:center;
     }
 
+    .profileRow{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:12px;
+    }
+
+    .avatarPreviewBtn{
+      flex:0 0 auto;
+      width:56px;
+      height:56px;
+      border-radius:6px;
+      border:2px solid rgba(245, 201, 106, 0.55);
+      background-color:#0a0c12;
+      background-repeat:no-repeat;
+      background-size:contain;
+      background-position:center;
+      cursor:pointer;
+      padding:0;
+      box-shadow:0 6px 18px rgba(0,0,0,0.45);
+      transition:transform .15s ease, box-shadow .15s ease;
+    }
+    .avatarPreviewBtn:hover{ transform:scale(1.05); box-shadow:0 8px 22px rgba(0,0,0,0.55); }
+    .avatarPreviewBtn.empty{
+      border-color:rgba(255,255,255,0.18);
+      background-image:none;
+      position:relative;
+    }
+    .avatarPreviewBtn.empty::after{
+      content:"+";
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:var(--muted);
+      font-size:20px;
+    }
+
     .modalBackdrop{
       position:fixed;
       inset:0;
@@ -461,6 +500,55 @@
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
     }
     .nameInput:focus{ border-color:rgba(245, 201, 106, 0.55); box-shadow: 0 0 0 4px rgba(245, 201, 106, 0.10); }
+
+    .avatarPickerSection{
+      margin:14px 0 4px;
+    }
+    .avatarPickerLabel{
+      display:block;
+      font-size:13px;
+      color:var(--muted);
+      margin-bottom:8px;
+    }
+    .avatarGroup{ margin-bottom:10px; }
+    .avatarGroupTitle{
+      display:block;
+      font-size:11px;
+      color:var(--muted);
+      opacity:.8;
+      letter-spacing:.5px;
+      text-transform:uppercase;
+      margin-bottom:6px;
+    }
+    .avatarGrid{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .avatarOption{
+      width:52px;
+      height:52px;
+      border-radius:6px;
+      border:2px solid rgba(255,255,255,0.16);
+      background-color:#0a0c12;
+      background-repeat:no-repeat;
+      background-size:contain;
+      background-position:center;
+      cursor:pointer;
+      padding:0;
+      transition:border-color .15s ease, transform .15s ease;
+    }
+    .avatarOption:hover{ transform:scale(1.06); border-color:rgba(245,201,106,0.5); }
+    .avatarOption.selected{ border-color:#f5c96a; box-shadow:0 0 0 3px rgba(245,201,106,0.22); }
+    .avatarOption.avatarOptionNone{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:var(--muted);
+      font-size:10px;
+      text-align:center;
+      line-height:1.1;
+    }
 
     .modalActions{
       margin-top:14px;
@@ -634,7 +722,10 @@
       </div>
 
       <div class="actions">
-        <button class="gold-btn secondary" id="btnProfile" type="button">Meu nome</button>
+        <div class="profileRow">
+          <button class="avatarPreviewBtn empty" id="btnAvatarPreview" type="button" aria-label="Editar avatar"></button>
+          <button class="gold-btn secondary" id="btnProfile" type="button">Meu nome</button>
+        </div>
         <div class="startStack">
             <button class="gold-btn primary" onclick="location.href='lobby.html'">DESAFIAR JOGADOR</button>
               <button class="gold-btn secondary aiChallengeBtn" onclick="location.href='solo-lobby.html'">DESAFIAR A IA</button>
@@ -652,6 +743,21 @@
       <h2 id="profileTitle">Meu nome</h2>
       <p>Esse nome aparece no lobby neste navegador.</p>
       <input id="displayNameInput" class="nameInput" type="text" maxlength="18" placeholder="Digite seu nome" />
+
+      <div class="avatarPickerSection">
+        <span class="avatarPickerLabel">Escolha seu avatar</span>
+        <div class="avatarGroup">
+          <span class="avatarGroupTitle">Escolhidos</span>
+          <div class="avatarGrid" id="avatarGridChosen">
+            <button class="avatarOption avatarOptionNone" id="btnAvatarNone" type="button" title="Nenhum" aria-label="Nenhum avatar">Nenhum</button>
+          </div>
+        </div>
+        <div class="avatarGroup">
+          <span class="avatarGroupTitle">Filiações</span>
+          <div class="avatarGrid" id="avatarGridFiliacao"></div>
+        </div>
+      </div>
+
       <div class="modalActions">
         <button class="gold-btn secondary" id="btnCancelName" type="button">Fechar</button>
         <button class="gold-btn secondary" id="btnClearName" type="button">Limpar</button>
@@ -662,12 +768,28 @@
 
   <script>
     const DISPLAY_NAME_KEY = "mytragor.displayName";
+    const AVATAR_KEY = "mytragor.avatar";
+    const AVATAR_OPTIONS = [
+      { id: "chosen:valbrak", label: "Valbrak", img: "/avatars/chosens/valbrak.png", kind: "chosen" },
+      { id: "chosen:katsu", label: "Katsu", img: "/avatars/chosens/katsu.png", kind: "chosen" },
+      { id: "chosen:leafae", label: "Leafae", img: "/avatars/chosens/leafae.png", kind: "chosen" },
+      { id: "chosen:ademais", label: "Ademais", img: "/avatars/chosens/ademais.png", kind: "chosen" },
+      { id: "filiacao:arcana", label: "Arcana", img: "/avatars/filiaçoes/arcano.png", kind: "filiacao" },
+      { id: "filiacao:marcial", label: "Marcial", img: "/avatars/filiaçoes/marcial.png", kind: "filiacao" },
+      { id: "filiacao:religioso", label: "Religioso", img: "/avatars/filiaçoes/religioso.png", kind: "filiacao" },
+      { id: "filiacao:sombras", label: "Sombras", img: "/avatars/filiaçoes/sombras1.png", kind: "filiacao" }
+    ];
     const modal = document.getElementById("profileModal");
     const input = document.getElementById("displayNameInput");
     const btnProfile = document.getElementById("btnProfile");
     const btnCancel = document.getElementById("btnCancelName");
     const btnClear = document.getElementById("btnClearName");
     const btnSave = document.getElementById("btnSaveName");
+    const btnAvatarPreview = document.getElementById("btnAvatarPreview");
+    const btnAvatarNone = document.getElementById("btnAvatarNone");
+    const avatarGridChosen = document.getElementById("avatarGridChosen");
+    const avatarGridFiliacao = document.getElementById("avatarGridFiliacao");
+    let pendingAvatar = "";
 
     function getName() {
       return localStorage.getItem(DISPLAY_NAME_KEY) || "";
@@ -681,6 +803,67 @@
       localStorage.removeItem(DISPLAY_NAME_KEY);
     }
 
+    function getAvatar() {
+      return localStorage.getItem(AVATAR_KEY) || "";
+    }
+
+    function setAvatar(value) {
+      if (value) localStorage.setItem(AVATAR_KEY, value);
+      else localStorage.removeItem(AVATAR_KEY);
+    }
+
+    function findAvatarOption(id) {
+      return AVATAR_OPTIONS.find((option) => option.id === id) || null;
+    }
+
+    function applyAvatarVisual(el, option) {
+      if (!el) return;
+      if (!option) {
+        el.style.backgroundImage = "";
+        el.classList.add("empty");
+        return;
+      }
+      el.classList.remove("empty");
+      el.style.backgroundImage = `url('${option.img}')`;
+      el.style.backgroundSize = "contain";
+      el.style.backgroundPosition = "center";
+    }
+
+    function syncAvatarPreview() {
+      applyAvatarVisual(btnAvatarPreview, findAvatarOption(getAvatar()));
+    }
+
+    function markSelectedAvatar() {
+      btnAvatarNone && btnAvatarNone.classList.toggle("selected", !pendingAvatar);
+      AVATAR_OPTIONS.forEach((option) => {
+        const btn = modal && modal.querySelector(`[data-avatar-id="${option.id}"]`);
+        if (btn) btn.classList.toggle("selected", pendingAvatar === option.id);
+      });
+    }
+
+    function renderAvatarGrids() {
+      if (!avatarGridChosen || !avatarGridFiliacao) return;
+      AVATAR_OPTIONS.forEach((option) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "avatarOption";
+        btn.title = option.label;
+        btn.dataset.avatarId = option.id;
+        btn.setAttribute("aria-label", option.label);
+        applyAvatarVisual(btn, option);
+        btn.onclick = () => {
+          pendingAvatar = option.id;
+          markSelectedAvatar();
+        };
+        (option.kind === "chosen" ? avatarGridChosen : avatarGridFiliacao).appendChild(btn);
+      });
+    }
+
+    btnAvatarNone && (btnAvatarNone.onclick = () => {
+      pendingAvatar = "";
+      markSelectedAvatar();
+    });
+
     function syncProfileButtonLabel() {
       if (!btnProfile) return;
       const savedName = getName().trim();
@@ -692,6 +875,8 @@
       modal.classList.add("show");
       modal.setAttribute("aria-hidden", "false");
       input.value = getName();
+      pendingAvatar = getAvatar();
+      markSelectedAvatar();
       input.focus();
       input.select();
     }
@@ -703,11 +888,14 @@
     }
 
     btnProfile && (btnProfile.onclick = openModal);
+    btnAvatarPreview && (btnAvatarPreview.onclick = openModal);
     btnCancel && (btnCancel.onclick = closeModal);
     btnSave && (btnSave.onclick = () => {
       if (!input) return;
       setName(input.value);
+      setAvatar(pendingAvatar);
       syncProfileButtonLabel();
+      syncAvatarPreview();
       closeModal();
     });
     btnClear && (btnClear.onclick = () => {
@@ -757,7 +945,9 @@
     });
     window.addEventListener("resize", updateBackgroundMetrics);
     window.addEventListener("load", updateBackgroundMetrics);
+    renderAvatarGrids();
     syncProfileButtonLabel();
+    syncAvatarPreview();
     updateBackgroundMetrics();
   </script>
   <script src="/mobile.js"></script>

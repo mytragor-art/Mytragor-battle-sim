@@ -28,6 +28,7 @@
         <div class="pill">Fase: <b id="turnPhase">—</b></div>
         <div class="pill">Vez: <b id="turnSlot">—</b></div>
       </div>
+      <button id="btnConcede" class="btn" type="button">Conceder</button>
       <button id="btnBackLobby" class="btn">Sair</button>
     </div>
     <div class="mobilePlayHint" aria-hidden="true">
@@ -49,17 +50,6 @@
 
             <div class="arena opponentArena" id="opArena">
               <div class="fragDock" id="ai-fragsDock" aria-label="Fragmentos do oponente"></div>
-
-              <div class="sideTitle">
-                <div class="nameLine">
-                  <b id="aiName">Oponente</b>
-                  <span class="tag" id="aiDeckTag">—</span>
-                </div>
-                <div class="miniLine">
-                  <span class="pill">HP: <b id="aiHP">—</b></span>
-                  <span class="pill">CA: <b id="aiCA">—</b></span>
-                </div>
-              </div>
 
               <div class="arenaGrid">
                 <div class="mainArea">
@@ -92,6 +82,18 @@
                 </div>
               </div>
 
+              <div class="sideTitle">
+                <div class="nameLine">
+                  <b id="aiName">Oponente</b>
+                  <img class="playerArenaAvatar" id="aiAvatar" alt="" hidden>
+                  <span class="tag" id="aiDeckTag">—</span>
+                </div>
+                <div class="miniLine">
+                  <span class="pill">HP: <b id="aiHP">—</b></span>
+                  <span class="pill">CA: <b id="aiCA">—</b></span>
+                </div>
+              </div>
+
             </div>
 
             <div class="centerBar centerArena">
@@ -114,6 +116,7 @@
               <div class="sideTitle bottom">
                 <div class="nameLine">
                   <b id="youName">Você</b>
+                  <img class="playerArenaAvatar" id="youAvatar" alt="" hidden>
                   <span class="tag" id="youDeckTag">—</span>
                 </div>
                 <div class="miniLine">

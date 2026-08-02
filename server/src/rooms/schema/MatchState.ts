@@ -7,6 +7,7 @@ export class MatchPlayerState extends Schema {
 	@type("string") sessionId: string = "";
 	@type("string") slot: string = "";
 	@type("string") displayName: string = "";
+	@type("string") avatarId: string = "";
 }
 
 export class MatchState extends Schema {

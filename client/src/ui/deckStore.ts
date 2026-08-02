@@ -19,6 +19,27 @@ export type SavedDeck = {
 const LOCAL_DECKS_KEY = "mytragor_decks";
 const PLAY_DECK_KEY = "mytragor_play_deck";
 
+const LEADER_ART_BY_KEY: Record<string, string> = {
+	valbrak: "/chosens/layout-valbrak.ai.png",
+	katsu: "/chosens/layout-katsuvingador.ai.png",
+	leafae: "/chosens/layout-leafaefloresta.ai.png",
+	ademais: "/chosens/layout-ademais.ai.png"
+};
+
+export function resolveDeckAssetPath(path: string | undefined, fallback = "/publicadas/ui/layout-background.ai.thumb.webp"): string {
+	const assetPath = String(path || "").trim();
+	if (!assetPath) return fallback;
+	if (/^(?:https?:|data:|\/)/i.test(assetPath)) return assetPath;
+	return `/${assetPath.replace(/^(?:\.\.\/|\.\/)+/, "")}`;
+}
+
+export function resolveLeaderArtwork(deck: Pick<SavedDeck, "leaderImg" | "leaderKey" | "leaderName">): string {
+	if (deck.leaderImg) return resolveDeckAssetPath(deck.leaderImg);
+	const leaderKey = `${deck.leaderKey || ""} ${deck.leaderName || ""}`.toLowerCase();
+	const artwork = Object.entries(LEADER_ART_BY_KEY).find(([key]) => leaderKey.includes(key))?.[1];
+	return artwork || "/publicadas/ui/layout-background.ai.thumb.webp";
+}
+
 function normalizeCards(cards: unknown): string[] {
 	if (!Array.isArray(cards)) return [];
 	return cards

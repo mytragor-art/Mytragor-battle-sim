@@ -25,6 +25,12 @@ export class SoloLobbyRoom extends Room<LobbyState> {
 		return String(name || "").trim().slice(0, 18);
 	}
 
+	private sanitizeAvatarId(avatarId: unknown): string {
+		const allowed = new Set(["chosen:valbrak", "chosen:katsu", "chosen:leafae", "chosen:ademais", "filiacao:arcana", "filiacao:marcial", "filiacao:religioso", "filiacao:sombras"]);
+		const value = String(avatarId || "").trim();
+		return allowed.has(value) ? value : "";
+	}
+
 	onCreate(options: any) {
 		this.setState(new LobbyState());
 		this.setMetadata({
@@ -101,10 +107,11 @@ export class SoloLobbyRoom extends Room<LobbyState> {
 			this.broadcastLobby();
 		});
 
-		this.onMessage("set_name", (client, msg: { name?: string }) => {
+		this.onMessage("set_name", (client, msg: { name?: string; avatarId?: string }) => {
 			const player = this.state.players.get(client.sessionId);
 			if (!player) return;
 			player.displayName = this.sanitizeDisplayName(msg?.name);
+			player.avatarId = this.sanitizeAvatarId(msg?.avatarId);
 			this.refreshMetadata();
 			this.broadcastLobby();
 		});
@@ -170,6 +177,7 @@ export class SoloLobbyRoom extends Room<LobbyState> {
 		const players = [...this.state.players.values()].map((player) => ({
 			slot: player.slot,
 			displayName: player.displayName,
+			avatarId: player.avatarId,
 			deckId: player.deckId,
 			leaderId: player.leaderId,
 			ready: player.ready
@@ -201,7 +209,8 @@ export class SoloLobbyRoom extends Room<LobbyState> {
 			joinToken: randomUUID(),
 			lobbySessionId: human.sessionId,
 			slot: "p1" as const,
-			displayName: human.displayName
+			displayName: human.displayName,
+			avatarId: human.avatarId
 		};
 		const botName = randomItem(SOLO_BOT_NAMES);
 

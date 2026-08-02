@@ -180,6 +180,116 @@
       color: var(--gold);
     }
 
+    .manualTabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .manualTab {
+      min-height: 40px;
+      padding: 0 14px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: rgba(255,255,255,.04);
+      color: var(--text);
+      font: 700 12px "Cinzel", Georgia, serif;
+      cursor: pointer;
+    }
+
+    .manualTab.is-active {
+      border-color: rgba(250,204,21,.42);
+      background: rgba(250,204,21,.14);
+      color: #fff0bd;
+    }
+
+    .manualView[hidden] { display: none; }
+
+    .quickGuide {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .quickGuideCard {
+      display: grid;
+      gap: 8px;
+      align-content: start;
+      min-height: 150px;
+      padding: 15px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: linear-gradient(180deg, rgba(15,23,42,.86), rgba(8,12,20,.9));
+    }
+
+    .quickGuideCard h2 { margin: 0; color: #f3ead7; font: 700 17px "Cinzel", Georgia, serif; }
+    .quickGuideCard p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.45; }
+    .quickGuideCard button { justify-self: start; }
+
+    .manualKeywordSearch {
+      display: grid;
+      gap: 8px;
+      grid-column: 1 / -1;
+      padding: 14px;
+      border: 1px solid rgba(250,204,21,.22);
+      border-radius: 12px;
+      background: rgba(10,16,28,.78);
+    }
+
+    .manualKeywordSearch label { color: #f3ead7; font: 700 14px "Cinzel", Georgia, serif; }
+    .manualKeywordSearch input { width: 100%; min-height: 42px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; background: #0b1425; color: var(--text); font-size: 15px; }
+    .manualSearchResults { display: grid; gap: 6px; }
+    .manualSearchResult { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; padding: 9px 10px; border: 1px solid rgba(255,255,255,.1); border-radius: 8px; background: rgba(255,255,255,.04); color: var(--text); cursor: pointer; text-align: left; }
+    .manualSearchResult strong { color: #fff0bd; }
+    .manualSearchEmpty { margin: 0; color: var(--muted); font-size: 13px; }
+
+    .manualReaderLayout {
+      display: grid;
+      grid-template-columns: 230px minmax(0, 1fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .manualIndex {
+      position: sticky;
+      top: 16px;
+      display: grid;
+      gap: 6px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(8,12,20,.78);
+    }
+
+    .manualIndex h2 { margin: 0 0 4px; font: 700 16px "Cinzel", Georgia, serif; color: #f3ead7; }
+    .manualIndexButton { width: 100%; padding: 9px; border: 0; border-radius: 7px; background: transparent; color: var(--muted); text-align: left; cursor: pointer; font-size: 13px; }
+    .manualIndexButton:hover, .manualIndexButton.is-active { background: rgba(250,204,21,.12); color: #fff0bd; }
+
+    .manualReader {
+      display: grid;
+      gap: 12px;
+      min-width: 0;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: linear-gradient(180deg, rgba(15,23,42,.8), rgba(8,12,20,.9));
+      box-shadow: 0 16px 34px rgba(0,0,0,.34);
+    }
+
+    .manualReaderHeader, .manualReaderControls { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .manualReaderHeader h2 { margin: 0; color: #f3ead7; font: 700 19px "Cinzel", Georgia, serif; }
+    .manualReaderImage { width: min(100%, 760px); max-height: 72vh; object-fit: contain; justify-self: center; cursor: zoom-in; border: 1px solid rgba(255,255,255,.14); border-radius: 9px; background: #fff; }
+    .manualReaderControls { justify-content: center; }
+    .manualReaderControls button, .quickGuideCard button { min-height: 40px; padding: 0 12px; border: 1px solid rgba(255,224,160,.28); border-radius: 8px; background: rgba(255,255,255,.06); color: #f3ead7; font: 700 12px "Cinzel", Georgia, serif; cursor: pointer; }
+    .manualReaderControls button:disabled { opacity: .45; cursor: not-allowed; }
+    .manualPageSelect { min-height: 40px; max-width: 190px; padding: 0 8px; border: 1px solid var(--line); border-radius: 8px; background: #0b1425; color: var(--text); }
+    .manualZoomHint { margin: 0; text-align: center; color: var(--muted); font-size: 12px; }
+
+    .manualLightbox { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 18px; background: rgba(0,0,0,.88); }
+    .manualLightbox[hidden] { display: none; }
+    .manualLightbox img { max-width: 100%; max-height: calc(100dvh - 72px); object-fit: contain; cursor: zoom-out; }
+    .manualLightboxClose { position: fixed; top: 14px; right: 14px; min-height: 40px; padding: 0 12px; border: 1px solid rgba(255,255,255,.22); border-radius: 8px; background: rgba(0,0,0,.6); color: #fff; cursor: pointer; }
+
     @media (max-width: 900px) {
       .page {
         width: min(calc(100% - 20px), var(--content-max));
@@ -212,6 +322,36 @@
       .manualFrame {
         width: min(100%, 560px);
       }
+
+      .quickGuide {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .manualReaderLayout {
+        grid-template-columns: 1fr;
+      }
+
+      .manualIndex {
+        position: static;
+        grid-auto-flow: column;
+        grid-template-rows: auto auto;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .manualIndex h2 {
+        grid-column: 1 / -1;
+      }
+
+      #manualIndexButtons {
+        display: flex;
+        gap: 6px;
+      }
+
+      .manualIndexButton {
+        flex: 0 0 auto;
+        width: auto;
+      }
     }
 
     @media (max-width: 720px) {
@@ -236,6 +376,48 @@
       .manualFrame {
         height: min(66vh, 860px);
       }
+
+      .quickGuide {
+        grid-template-columns: 1fr;
+      }
+
+      .manualTabs {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .manualTab {
+        padding: 0 8px;
+        font-size: 11px;
+      }
+
+      .manualReader {
+        padding: 10px;
+      }
+
+      .manualReaderHeader {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .manualPageSelect {
+        max-width: none;
+        width: 100%;
+      }
+
+      .manualReaderImage {
+        max-height: 62dvh;
+      }
+
+      .manualReaderControls {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+      }
+
+      .manualReaderControls button {
+        min-width: 0;
+        padding: 0 8px;
+      }
     }
   </style>
 </head>
@@ -248,10 +430,51 @@
       </div>
       <p class="subtitle">Manual visual do Mytragor em ordem de leitura. A capa vem primeiro, seguida pelas páginas numeradas.</p>
       <div class="manualCount" id="manualCount"></div>
+      <div class="manualTabs" role="tablist" aria-label="Modo de leitura">
+        <button class="manualTab is-active" id="quickTab" type="button" role="tab" aria-selected="true">Consulta rápida</button>
+        <button class="manualTab" id="bookTab" type="button" role="tab" aria-selected="false">Livro ilustrado</button>
+      </div>
     </section>
 
-    <section class="manualList" id="manualList"></section>
+    <section class="manualView quickGuide" id="quickGuide" role="tabpanel">
+      <div class="manualKeywordSearch">
+        <label for="manualKeywordInput">Buscar palavra-chave no livro</label>
+        <input id="manualKeywordInput" type="search" placeholder="Ex.: dano" autocomplete="off">
+        <div class="manualSearchResults" id="manualSearchResults" aria-live="polite"></div>
+      </div>
+      <article class="quickGuideCard"><h2>Capa</h2><p>Abra a capa oficial do manual.</p><button type="button" data-page="0">Abrir capa</button></article>
+      <article class="quickGuideCard"><h2>Introdução</h2><p>Páginas 1 a 6: conceitos e apresentação do universo de jogo.</p><button type="button" data-page="1">Abrir introdução</button></article>
+      <article class="quickGuideCard"><h2>Estrutura de jogo</h2><p>Páginas 7 a 13: estrutura e elementos que organizam a partida.</p><button type="button" data-page="7">Abrir estrutura</button></article>
+      <article class="quickGuideCard"><h2>Combate</h2><p>Páginas 14 a 16: regras e resolução de combate.</p><button type="button" data-page="14">Abrir combate</button></article>
+      <article class="quickGuideCard"><h2>Agradecimento</h2><p>Página 16: agradecimento da equipe.</p><button type="button" data-page="16">Abrir agradecimento</button></article>
+      <article class="quickGuideCard"><h2>Glossário</h2><p>Página 17: termos de referência do Mytragor.</p><button type="button" data-page="17">Abrir glossário</button></article>
+    </section>
+
+    <section class="manualView manualReaderLayout" id="bookView" role="tabpanel" hidden>
+      <aside class="manualIndex" aria-label="Índice do livro">
+        <h2>Índice</h2>
+        <div id="manualIndexButtons"></div>
+      </aside>
+      <article class="manualReader">
+        <div class="manualReaderHeader">
+          <h2 id="manualPageTitle">Capa</h2>
+          <select class="manualPageSelect" id="manualPageSelect" aria-label="Ir para página"></select>
+        </div>
+        <img class="manualReaderImage" id="manualReaderImage" alt="Página do manual" tabindex="0">
+        <p class="manualZoomHint">Toque ou clique na página para ampliar.</p>
+        <div class="manualReaderControls">
+          <button id="previousPage" type="button">Anterior</button>
+          <span class="manualCount" id="pagePosition"></span>
+          <button id="nextPage" type="button">Próxima</button>
+        </div>
+      </article>
+    </section>
   </main>
+
+  <div class="manualLightbox" id="manualLightbox" hidden aria-modal="true" role="dialog" aria-label="Página ampliada">
+    <button class="manualLightboxClose" id="closeManualLightbox" type="button">Fechar</button>
+    <img id="manualLightboxImage" alt="Página ampliada do manual">
+  </div>
 
   <script>
     const MANUAL_CACHE_VERSION = "2026-06-25-1";
@@ -274,36 +497,145 @@
       return entries;
     }
 
+    const chapters = [
+      { label: "Capa", page: 0 },
+      { label: "Introdução", page: 1 },
+      { label: "Estrutura de jogo", page: 7 },
+      { label: "Combate", page: 14 },
+      { label: "Agradecimento", page: 16 },
+      { label: "Glossário", page: 17 }
+    ];
+
+    const keywordIndex = [
+      { keyword: "Escolhido", aliases: ["escolhido", "escolhidos"], pages: [8, 9, 10, 12, 13, 14, 16] },
+      { keyword: "Deslocados", aliases: ["deslocado", "deslocados", "deslocar"], pages: [10] },
+      { keyword: "Combate", aliases: ["combate", "atacar", "ataque"], pages: [8, 14, 15] },
+      { keyword: "Dano", aliases: ["dano", "danos"], pages: [12, 15] },
+      { keyword: "Fragmentos", aliases: ["fragmento", "fragmentos"], pages: [7, 10, 11, 12, 13] },
+      { keyword: "Exaurido", aliases: ["exaurido", "exauridos", "exausto", "exaustos"], pages: [7, 8, 14] },
+      { keyword: "Disposto", aliases: ["disposto", "dispostos"], pages: [7, 8, 14] },
+      { keyword: "Aliados", aliases: ["aliado", "aliados"], pages: [7, 8, 9, 10, 11, 12, 13, 14] },
+      { keyword: "Cemitério", aliases: ["cemiterio", "cemitério"], pages: [10, 11, 12, 13, 15] },
+      { keyword: "Magia", aliases: ["magia", "magias"], pages: [12] },
+      { keyword: "Truque", aliases: ["truque", "truques"], pages: [12] },
+      { keyword: "Equipamento", aliases: ["equipamento", "equipamentos"], pages: [13] },
+      { keyword: "Vida", aliases: ["vida", "vidas", "vitoria", "vitória"], pages: [9, 15, 16] }
+    ];
+
+    let currentPage = 0;
+
     function renderManual() {
-      const manualList = document.getElementById("manualList");
       const manualCount = document.getElementById("manualCount");
-      if (!manualList) return;
       const entries = manualEntries();
-      manualList.innerHTML = "";
-      if (manualCount) manualCount.textContent = `${entries.length} imagens em ordem (${MANUAL_PAGE_COUNT} páginas + capa)`;
+      const pageTitle = document.getElementById("manualPageTitle");
+      const pageImage = document.getElementById("manualReaderImage");
+      const pagePosition = document.getElementById("pagePosition");
+      const pageSelect = document.getElementById("manualPageSelect");
+      const indexButtons = document.getElementById("manualIndexButtons");
+      if (manualCount) manualCount.textContent = `${entries.length} páginas no livro oficial`;
 
-      for (const entry of entries) {
-        const article = document.createElement("article");
-        article.className = "manualCard";
+      entries.forEach((entry, index) => {
+        const option = document.createElement("option");
+        option.value = String(index);
+        option.textContent = entry.title;
+        pageSelect.appendChild(option);
+      });
 
-        const heading = document.createElement("div");
-        heading.className = "manualHeading";
-        const title = document.createElement("h2");
-        title.textContent = entry.title;
-        heading.appendChild(title);
+      chapters.forEach((chapter) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "manualIndexButton";
+        button.dataset.page = String(chapter.page);
+        button.textContent = chapter.label;
+        button.onclick = () => goToPage(chapter.page);
+        indexButtons.appendChild(button);
+      });
 
-        const image = document.createElement("img");
-        image.className = "manualFrame";
-        image.src = manualAssetPath(entry.src);
-        image.alt = entry.alt;
-        image.loading = "lazy";
-        image.decoding = "async";
-
-        article.appendChild(heading);
-        article.appendChild(image);
-        manualList.appendChild(article);
-      }
+      pageSelect.onchange = () => goToPage(Number(pageSelect.value));
+      document.getElementById("previousPage").onclick = () => goToPage(currentPage - 1);
+      document.getElementById("nextPage").onclick = () => goToPage(currentPage + 1);
+      document.getElementById("manualReaderImage").onclick = openLightbox;
+      document.getElementById("manualReaderImage").onkeydown = (event) => { if (event.key === "Enter" || event.key === " ") openLightbox(); };
+      document.getElementById("closeManualLightbox").onclick = closeLightbox;
+      document.getElementById("manualLightbox").onclick = (event) => { if (event.target.id === "manualLightbox") closeLightbox(); };
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") closeLightbox();
+        if (document.getElementById("bookView").hidden) return;
+        if (event.key === "ArrowLeft") goToPage(currentPage - 1);
+        if (event.key === "ArrowRight") goToPage(currentPage + 1);
+      });
+      document.querySelectorAll("[data-page]").forEach((button) => button.onclick = () => openBookAt(Number(button.dataset.page)));
+      document.getElementById("quickTab").onclick = () => setView("quick");
+      document.getElementById("bookTab").onclick = () => setView("book");
+      document.getElementById("manualKeywordInput").oninput = (event) => renderKeywordResults(event.target.value);
+      goToPage(0);
     }
+
+    function normalizeKeyword(value) {
+      return String(value || "").trim().toLocaleLowerCase("pt-BR").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    }
+
+    function renderKeywordResults(query) {
+      const results = document.getElementById("manualSearchResults");
+      const normalizedQuery = normalizeKeyword(query);
+      results.innerHTML = "";
+      if (!normalizedQuery) return;
+
+      const matches = keywordIndex.filter((entry) => [entry.keyword, ...(entry.aliases || [])]
+        .some((term) => normalizeKeyword(term).includes(normalizedQuery)));
+      if (!matches.length) {
+        results.innerHTML = '<p class="manualSearchEmpty">Nenhuma ocorrência mapeada para essa palavra-chave.</p>';
+        return;
+      }
+
+      matches.forEach((entry) => {
+        entry.pages.forEach((page) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "manualSearchResult";
+          button.innerHTML = `<strong>${entry.keyword}</strong><span>Página ${page}</span>`;
+          button.onclick = () => openBookAt(page);
+          results.appendChild(button);
+        });
+      });
+    }
+
+    function goToPage(page) {
+      const entries = manualEntries();
+      currentPage = Math.min(Math.max(0, page), entries.length - 1);
+      const entry = entries[currentPage];
+      document.getElementById("manualPageTitle").textContent = entry.title;
+      document.getElementById("manualReaderImage").src = manualAssetPath(entry.src);
+      document.getElementById("manualReaderImage").alt = entry.alt;
+      document.getElementById("manualPageSelect").value = String(currentPage);
+      document.getElementById("pagePosition").textContent = `${currentPage + 1} de ${entries.length}`;
+      document.getElementById("previousPage").disabled = currentPage === 0;
+      document.getElementById("nextPage").disabled = currentPage === entries.length - 1;
+      const activeChapter = chapters.reduce((current, chapter) => chapter.page <= currentPage ? chapter : current, chapters[0]);
+      document.querySelectorAll(".manualIndexButton").forEach((button) => button.classList.toggle("is-active", Number(button.dataset.page) === activeChapter.page));
+    }
+
+    function setView(view) {
+      const isBook = view === "book";
+      document.getElementById("quickGuide").hidden = isBook;
+      document.getElementById("bookView").hidden = !isBook;
+      document.getElementById("quickTab").classList.toggle("is-active", !isBook);
+      document.getElementById("bookTab").classList.toggle("is-active", isBook);
+      document.getElementById("quickTab").setAttribute("aria-selected", String(!isBook));
+      document.getElementById("bookTab").setAttribute("aria-selected", String(isBook));
+    }
+
+    function openBookAt(page) { setView("book"); goToPage(page); }
+
+    function openLightbox() {
+      const image = document.getElementById("manualReaderImage");
+      const lightbox = document.getElementById("manualLightbox");
+      document.getElementById("manualLightboxImage").src = image.src;
+      document.getElementById("manualLightboxImage").alt = image.alt;
+      lightbox.hidden = false;
+    }
+
+    function closeLightbox() { document.getElementById("manualLightbox").hidden = true; }
 
     renderManual();
   </script>

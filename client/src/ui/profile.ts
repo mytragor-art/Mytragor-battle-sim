@@ -1,4 +1,5 @@
 const DISPLAY_NAME_KEY = "mytragor.displayName";
+const AVATAR_KEY = "mytragor.avatar";
 
 export function getDisplayName(): string {
 	try {
@@ -22,5 +23,13 @@ export function clearDisplayName(): void {
 		localStorage.removeItem(DISPLAY_NAME_KEY);
 	} catch {
 		// no-op
+	}
+}
+
+export function getAvatarId(): string {
+	try {
+		return localStorage.getItem(AVATAR_KEY) || "";
+	} catch {
+		return "";
 	}
 }

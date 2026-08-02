@@ -5,7 +5,7 @@ import { animateCardTransfer, animateEl, bindAttackTargetHover, setChosenReady, 
 import { getGameInputs, log, logText, renderButtonRow } from "../ui/gameView";
 import { setupBoardScale } from "../ui/boardScale";
 import { setupArenaSlots } from "../ui/arenaSlots";
-import { getDisplayName } from "../ui/profile";
+import { getAvatarId, getDisplayName } from "../ui/profile";
 import { createMobileCardInspect, type MobileInspectCard } from "../ui/mobileCardInspect";
 import { resolveHttpBase, resolveServerEndpoint } from "../config/runtime";
 import { canAttackCardQuiet, canAttackTargetQuiet, endAttackCleanup, resolveAttackOn, selectAttacker, type AttackSelection, type AttackTarget as BattleTarget, type BattleCard, type BattleRuntime, type BattleSide } from "../game/battle";
@@ -46,6 +46,17 @@ setupArenaSlots();
 setupAttackArrow();
 setupMobilePreviewToggle();
 const mobileCardInspect = createMobileCardInspect();
+
+const AVATAR_PATHS: Record<string, string> = {
+	"chosen:valbrak": "/avatars/chosens/valbrak.png",
+	"chosen:katsu": "/avatars/chosens/katsu.png",
+	"chosen:leafae": "/avatars/chosens/leafae.png",
+	"chosen:ademais": "/avatars/chosens/ademais.png",
+	"filiacao:arcana": "/avatars/filiaçoes/arcano.png",
+	"filiacao:marcial": "/avatars/filiaçoes/marcial.png",
+	"filiacao:religioso": "/avatars/filiaçoes/religioso.png",
+	"filiacao:sombras": "/avatars/filiaçoes/sombras1.png"
+};
 
 const previousLaneCards: Record<"you-field" | "ai-field" | "you-support" | "ai-support", string[]> = {
 	"you-field": [],
@@ -339,6 +350,11 @@ const justUntappedLeaderBySide: Record<BattleSide, boolean> = {
 	ai: false
 };
 
+const publicPlayerNames: Record<"p1" | "p2", string> = {
+	p1: "Jogador 1",
+	p2: "Jogador 2"
+};
+
 const summonedBySide: Record<BattleSide, Set<number>> = {
 	you: new Set<number>(),
 	ai: new Set<number>()
@@ -355,7 +371,7 @@ function currentBattlePhase(): string {
 }
 
 function ownerLabel(serverSlotRaw: string): string {
-	if (isSpectator) return serverSlotRaw === "p2" ? "Jogador 2" : "Jogador 1";
+	if (isSpectator) return serverSlotRaw === "p2" ? publicPlayerNames.p2 : publicPlayerNames.p1;
 	const side = sideFromServerSlot((serverSlotRaw || "") as "p1" | "p2");
 	return side === "you" ? "Você" : "Oponente";
 }
@@ -416,6 +432,14 @@ function describeMatchEnded(msg: any): VictoryView {
 	const winnerSlot = String(msg?.winner || "");
 	const loserSlot = String(msg?.loser || "");
 	const reason = String(msg?.reason || "hp_zero");
+	const winner = ownerLabel(winnerSlot);
+	if (isSpectator) {
+		if (reason === "deckout") return { title: "Fim de jogo", text: `${winner} venceu porque o adversário tentou comprar carta com o deck vazio.`, mode: "neutral" };
+		if (reason === "inactivity") return { title: "Fim de jogo", text: `${winner} venceu por inatividade do adversário.`, mode: "neutral" };
+		if (reason === "opponent_left") return { title: "Fim de jogo", text: `${winner} venceu porque o adversário saiu da sala.`, mode: "neutral" };
+		if (reason === "concede") return { title: "Fim de jogo", text: `${winner} venceu porque o adversário concedeu a partida.`, mode: "neutral" };
+		return { title: "Fim de jogo", text: `${winner} venceu ao reduzir a vida do Escolhido adversário a zero.`, mode: "neutral" };
+	}
 	const youWon = !!slot && winnerSlot === slot;
 	const youLost = !!slot && loserSlot === slot;
 	const title = youWon ? "Você ganhou" : youLost ? "Você perdeu" : "Fim de jogo";
@@ -434,9 +458,13 @@ function describeMatchEnded(msg: any): VictoryView {
 		if (youLost) return { title, text: "Você perdeu porque saiu da sala.", mode: "lose" };
 		return { title, text: "A partida terminou porque um jogador saiu da sala.", mode: "neutral" };
 	}
+	if (reason === "concede") {
+		if (youWon) return { title, text: "Você venceu porque o oponente concedeu a partida.", mode: "win" };
+		if (youLost) return { title, text: "Você concedeu a partida.", mode: "lose" };
+		return { title, text: `${winner} venceu porque o adversário concedeu a partida.`, mode: "neutral" };
+	}
 	if (youWon) return { title, text: "Você venceu ao reduzir a vida do Escolhido inimigo a zero.", mode: "win" };
 	if (youLost) return { title, text: "Você perdeu porque a vida do seu Escolhido chegou a zero.", mode: "lose" };
-	const winner = ownerLabel(winnerSlot);
 	return { title, text: `${winner} venceu a partida.`, mode: "neutral" };
 }
 
@@ -3414,12 +3442,65 @@ function getPublicPlayerName(state: any, targetSlot: "p1" | "p2"): string {
 	const fallback = targetSlot === "p1" ? "Jogador 1" : "Jogador 2";
 	const players = state?.players;
 	if (!players || typeof players !== "object") return fallback;
+	if (typeof players.forEach === "function") {
+		let resolvedName = "";
+		players.forEach((player: any) => {
+			if (player?.slot !== targetSlot || resolvedName) return;
+			resolvedName = String(player?.displayName || "").trim();
+		});
+		return resolvedName || fallback;
+	}
 	for (const player of Object.values(players as Record<string, any>)) {
 		if (player?.slot !== targetSlot) continue;
 		const displayName = String(player?.displayName || "").trim();
 		return displayName || fallback;
 	}
 	return fallback;
+}
+
+function getPublicPlayerAvatar(state: any, targetSlot: "p1" | "p2"): string {
+	const players = state?.players;
+	if (!players || typeof players !== "object") return "";
+	if (typeof players.forEach === "function") {
+		let avatarId = "";
+		players.forEach((player: any) => {
+			if (player?.slot !== targetSlot || avatarId) return;
+			avatarId = String(player?.avatarId || "").trim();
+		});
+		return avatarId;
+	}
+	for (const player of Object.values(players as Record<string, any>)) {
+		if (player?.slot === targetSlot) return String(player?.avatarId || "").trim();
+	}
+	return "";
+}
+
+function setArenaAvatar(avatarEl: HTMLImageElement | null, avatarId: string, playerName: string): void {
+	if (!avatarEl) return;
+	const avatarPath = AVATAR_PATHS[avatarId];
+	avatarEl.hidden = !avatarPath;
+	if (!avatarPath) {
+		avatarEl.removeAttribute("src");
+		avatarEl.alt = "";
+		return;
+	}
+	if (avatarEl.getAttribute("src") !== avatarPath) avatarEl.src = avatarPath;
+	avatarEl.alt = `Avatar de ${playerName}`;
+}
+
+function syncArenaPlayerNames(state: any): void {
+	const mySlot = slot === "p2" ? "p2" : "p1";
+	const enemySlot = mySlot === "p1" ? "p2" : "p1";
+	const myNameEl = document.getElementById("youName");
+	const enemyNameEl = document.getElementById("aiName");
+	const myName = getPublicPlayerName(state, mySlot);
+	const enemyName = getPublicPlayerName(state, enemySlot);
+	publicPlayerNames[mySlot] = myName;
+	publicPlayerNames[enemySlot] = enemyName;
+	if (myNameEl) myNameEl.textContent = myName;
+	if (enemyNameEl) enemyNameEl.textContent = enemyName;
+	setArenaAvatar(document.getElementById("youAvatar") as HTMLImageElement | null, getPublicPlayerAvatar(state, mySlot), myName);
+	setArenaAvatar(document.getElementById("aiAvatar") as HTMLImageElement | null, getPublicPlayerAvatar(state, enemySlot), enemyName);
 }
 
 function syncHandTitles(state: any): void {
@@ -3635,6 +3716,7 @@ async function reconnectSpectator(): Promise<boolean> {
 }
 
 function scheduleSpectatorReconnect(code: number) {
+	if (isMatchFinished) return;
 	if (!isSpectator || !spectatorMatchRoomId) {
 		showReconnectOverlay("failed", "Conexão encerrada", "Não foi possível recuperar a transmissão.", "Voltando ao lobby...");
 		setTimeout(() => goLobby(), 1600);
@@ -3757,6 +3839,7 @@ function bindActiveMatchRoom() {
 			}
 		},
 		onStateSync: (state) => {
+			if (String(state?.phase || "") === "FINISHED") isMatchFinished = true;
 			if (view.turnPhaseEl) view.turnPhaseEl.textContent = formatPhaseLabel(state?.game?.phase);
 			if (view.roomIdViewEl) view.roomIdViewEl.textContent = roomId ?? "—";
 			if (view.slotEl) view.slotEl.textContent = isSpectator ? "Espectador" : (slot ?? "—");
@@ -3772,6 +3855,7 @@ function bindActiveMatchRoom() {
 			if (isSpectator && !slot) slot = "p1";
 			if (!slot && !isSpectator) slot = inferSlotFromState(state);
 			if (!slot) return;
+			syncArenaPlayerNames(state);
 			syncHandTitles(state);
 
 			const previousMyField = currentMyField.slice();
@@ -4088,7 +4172,7 @@ async function joinMatch() {
 		matchReconnectAttempts = 0;
 		const displayName = getDisplayName();
 		if (displayName && !isSpectator) {
-			room.send("set_name", { name: displayName });
+			room.send("set_name", { name: displayName, avatarId: getAvatarId() });
 		}
 		bindMatchHandlers(room, {
 			onAssignSlot: (msg) => {
@@ -4182,6 +4266,7 @@ async function joinMatch() {
 				}
 			},
 			onStateSync: (state) => {
+				if (String(state?.phase || "") === "FINISHED") isMatchFinished = true;
 				if (view.turnPhaseEl) view.turnPhaseEl.textContent = formatPhaseLabel(state?.game?.phase);
 				if (view.roomIdViewEl) view.roomIdViewEl.textContent = roomId ?? "—";
 				if (view.slotEl) view.slotEl.textContent = isSpectator ? "Espectador" : (slot ?? "—");
@@ -4197,6 +4282,7 @@ async function joinMatch() {
 				if (isSpectator && !slot) slot = "p1";
 				if (!slot && !isSpectator) slot = inferSlotFromState(state);
 				if (!slot) return;
+				syncArenaPlayerNames(state);
 				syncHandTitles(state);
 
 				const previousMyField = currentMyField.slice();
@@ -4513,6 +4599,10 @@ if (attackConfirmEls.modal) {
 }
 if (view.btnNextPhase) view.btnNextPhase.onclick = () => !isSpectator && room?.send("next_phase");
 if (view.btnEndTurn) view.btnEndTurn.onclick = () => !isSpectator && room?.send("end_turn");
+if (view.btnConcede) view.btnConcede.onclick = () => {
+	if (isSpectator || isMatchFinished || !room) return;
+	if (window.confirm("Conceder a partida? O oponente vencerá automaticamente.")) room.send("concede");
+};
 if (view.btnBackLobby) view.btnBackLobby.onclick = goLobby;
 
 const logModal = document.getElementById("logModal") as HTMLElement | null;

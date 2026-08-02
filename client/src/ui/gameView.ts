@@ -13,6 +13,7 @@ export function getGameInputs() {
 		btnTargetLeader: byId<HTMLButtonElement>("btnTargetLeader"),
 		btnNextPhase: byId<HTMLButtonElement>("btnNextPhase"),
 		btnEndTurn: byId<HTMLButtonElement>("btnEndTurn"),
+		btnConcede: byId<HTMLButtonElement>("btnConcede"),
 		btnBackLobby: byId<HTMLButtonElement>("btnBackLobby"),
 		turnPhaseEl: byId("turnPhase"),
 		roomIdViewEl: byId("roomIdView"),

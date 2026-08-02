@@ -627,6 +627,17 @@ html,body{height:100%;font-family:-apple-system,system-ui,'Segoe UI',Roboto,'Hel
   filter: brightness(1.08);
 }
 
+#btnConcede{
+  background: rgba(34,197,94,.16);
+  border-color: rgba(34,197,94,.58);
+  color: #dcfce7;
+  font-weight: 700;
+}
+
+#btnConcede:hover{
+  filter: brightness(1.12);
+}
+
 .panel{background:rgba(10,10,15,0.82);border:1px solid rgba(214,181,112,0.12);border-radius:12px;padding:10px;box-shadow:0 14px 30px rgba(0,0,0,0.28)}
 .hr{height:1px;background:rgba(255,255,255,0.08);margin:10px 0}
 .btn{
@@ -868,12 +879,25 @@ html,body{height:100%;font-family:-apple-system,system-ui,'Segoe UI',Roboto,'Hel
   background-size: auto, auto, cover, 100% 100%;
 }
 
-.sideTitle{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
-.arena#opArena .sideTitle{display:none}
-.sideTitle.bottom{margin-top:6px;margin-bottom:0}
-.arena#youArena .sideTitle.bottom{display:none}
-.nameLine{display:flex;align-items:center;gap:6px}
+.sideTitle{position:absolute;left:calc(10px + 96px);right:10px;z-index:4;display:flex;min-height:38px;justify-content:space-between;align-items:center;pointer-events:none}
+#opArena .sideTitle{bottom:10px}
+#youArena .sideTitle{top:10px}
+.sideTitle.bottom{margin:0}
+.nameLine{display:flex;min-width:0;align-items:center;gap:6px}
+.playerArenaAvatar{width:36px;height:36px;flex:0 0 36px;object-fit:contain;border:1px solid rgba(241,209,138,.55);border-radius:6px;background:rgba(2,6,23,.66);box-shadow:0 3px 10px rgba(0,0,0,.3)}
+#aiName,#youName{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;color:#fff;text-shadow:-1px -1px 0 #05070d,1px -1px 0 #05070d,-1px 1px 0 #05070d,1px 1px 0 #05070d,0 2px 4px rgba(0,0,0,.9)}
 .miniLine{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+
+@media (max-width: 980px) and (pointer: coarse){
+  .sideTitle{left:calc(2px + 32px);right:2px;min-height:24px}
+  #opArena .sideTitle{bottom:2px}
+  #youArena .sideTitle{left:60px;top:2px}
+  .nameLine{display:grid;grid-template-columns:minmax(0, 1fr);gap:2px;font-size:10px}
+  .playerArenaAvatar{width:22px;height:22px;flex-basis:22px;border-radius:4px;grid-row:2}
+  .nameLine .tag{display:none}
+  #aiName,#youName{max-width:120px}
+  .miniLine{gap:3px}
+}
 .fragDock{
   position:absolute;
   left:10px;

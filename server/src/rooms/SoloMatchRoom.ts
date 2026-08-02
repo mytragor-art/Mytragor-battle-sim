@@ -39,6 +39,7 @@ type ReservedSeat = {
 	lobbySessionId: string;
 	slot: Slot;
 	displayName: string;
+	avatarId: string;
 };
 
 type SoloBotConfig = {
@@ -79,6 +80,11 @@ export class SoloMatchRoom extends Room<MatchState> {
 
 	private sanitizeDisplayName(name: unknown): string {
 		return String(name || "").trim().slice(0, 18);
+	}
+
+	private sanitizeAvatarId(avatarId: unknown): string {
+		const value = String(avatarId || "").trim();
+		return ["chosen:valbrak", "chosen:katsu", "chosen:leafae", "chosen:ademais", "filiacao:arcana", "filiacao:marcial", "filiacao:religioso", "filiacao:sombras"].includes(value) ? value : "";
 	}
 
 	private safeRun(context: string, fn: () => void, client?: Client) {
@@ -1693,7 +1699,8 @@ export class SoloMatchRoom extends Room<MatchState> {
 			joinToken: String(options.seatReservation.joinToken || ""),
 			lobbySessionId: String(options.seatReservation.lobbySessionId || ""),
 			slot: options.seatReservation.slot === "p2" ? "p2" : "p1",
-			displayName: this.sanitizeDisplayName(options.seatReservation.displayName)
+			displayName: this.sanitizeDisplayName(options.seatReservation.displayName),
+			avatarId: this.sanitizeAvatarId(options.seatReservation.avatarId)
 		} : null;
 		this.bot = {
 			displayName: this.sanitizeDisplayName(options?.bot?.displayName || "IA"),
@@ -1714,6 +1721,11 @@ export class SoloMatchRoom extends Room<MatchState> {
 			p2LeaderId: this.bot.leaderId,
 			mode: "solo"
 		});
+		const botPlayer = new MatchPlayerState();
+		botPlayer.sessionId = "bot";
+		botPlayer.slot = "p2";
+		botPlayer.displayName = this.bot.displayName;
+		this.state.players.set(botPlayer.sessionId, botPlayer);
 
 		const starterSlot: Slot = options?.starterSlot === "p2" ? "p2" : "p1";
 		initGame(
@@ -1774,6 +1786,16 @@ export class SoloMatchRoom extends Room<MatchState> {
 			}, client);
 		});
 
+		this.onMessage("concede", (client) => {
+			this.safeRun("concede", () => {
+			const slot = getSlotBySession(this.state, client.sessionId);
+			if (!slot || this.state.phase === "FINISHED") return;
+			this.clearBotTimer();
+			finishMatch(this.state, slot, "concede", (name, payload) => this.broadcastMatchEvent(name, payload));
+			this.refreshInactivityTimer();
+			}, client);
+		});
+
 		this.onMessage("play_card", (client, msg: { cardId?: string; targetPos?: number; cardKind?: string }) => {
 			this.safeRun("play_card", () => {
 			if (!this.isValidTurnAction(client, ["PREP"])) return;
@@ -1830,11 +1852,12 @@ export class SoloMatchRoom extends Room<MatchState> {
 			}, client);
 		});
 
-		this.onMessage("set_name", (client, msg: { name?: string }) => {
+		this.onMessage("set_name", (client, msg: { name?: string; avatarId?: string }) => {
 			this.safeRun("set_name", () => {
 			const player = this.state.players.get(client.sessionId);
 			if (!player) return;
 			player.displayName = this.sanitizeDisplayName(msg?.name);
+			player.avatarId = this.sanitizeAvatarId(msg?.avatarId);
 			}, client);
 		});
 
@@ -1848,6 +1871,7 @@ export class SoloMatchRoom extends Room<MatchState> {
 		player.sessionId = client.sessionId;
 		player.slot = auth.slot;
 		player.displayName = auth.displayName;
+		player.avatarId = auth.avatarId;
 		this.state.players.set(client.sessionId, player);
 		this.consumedJoinToken = true;
 		if (!this.state.hostSessionId) this.state.hostSessionId = client.sessionId;

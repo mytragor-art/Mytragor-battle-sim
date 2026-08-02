@@ -786,8 +786,10 @@
       .pool-grid {
         grid-template-columns: repeat(3, minmax(0, 1fr));
         grid-template-rows: none;
+        grid-auto-rows: 142px;
         max-height: min(62dvh, 720px);
         overflow-y: auto;
+        align-content: start;
         overscroll-behavior-y: contain;
         -webkit-overflow-scrolling: touch;
         touch-action: pan-y;
@@ -889,55 +891,23 @@
 
     @media (max-width: 520px) {
       .deck-actions,
-        <details id="filtersDetails" class="filters-toggle" open>
-          <summary><span>Buscar e filtrar</span></summary>
-          <details id="filtersDetails" class="filters-toggle" open>
-            <summary><span>Buscar e filtrar</span></summary>
-            <div class="filtersBar">
-              <input id="filterSearch" class="filterSearchInput" placeholder="Buscar carta...">
+      .filtersBar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+      }
+    }
 
-              <div class="filterDropdown" data-filter-group="kind">
-                <button id="kindFilterToggle" class="filterToggle" type="button">Tipo</button>
-                <div class="filterMenu" id="kindFilterMenu">
-                  <div class="filterMenuTitle">Tipo de carta</div>
-                  <div class="filterChipWrap">
-                    <div class="chip" data-kind="ally">Aliado</div>
-                    <div class="chip" data-kind="spell">Magia</div>
-                    <div class="chip" data-kind="equip">Equipamento</div>
-                    <div class="chip" data-kind="env">Ambiente</div>
-                    <div class="chip" data-kind="truque">Truque</div>
-                    <div class="chip" data-kind="chosen">Escolhido</div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="filterDropdown" data-filter-group="filiation">
-                <button id="filiationFilterToggle" class="filterToggle" type="button">Filiação</button>
-                <div class="filterMenu" id="filiationFilterMenu">
-                  <div class="filterMenuTitle">Filiação</div>
-                  <div class="filterChipWrap" id="filiationChips"></div>
-                </div>
-              </div>
-
-              <div class="filterDropdown" data-filter-group="cost">
-                <button id="costFilterToggle" class="filterToggle" type="button">Custo</button>
-                <div class="filterMenu" id="costFilterMenu">
-                  <div class="filterMenuTitle">Custo</div>
-                  <div class="filterChipWrap">
-                    <div class="chip" data-cost="0">0</div>
-                    <div class="chip" data-cost="1">1</div>
-                    <div class="chip" data-cost="2">2</div>
-                    <div class="chip" data-cost="3">3</div>
-                    <div class="chip" data-cost="4">4</div>
-                    <div class="chip" data-cost="5">5+</div>
-                  </div>
-                </div>
-              </div>
-
-              <button id="btnClearFilters" class="btn ghost filterClearBtn">Limpar filtros</button>
-            </div>
-          </details>
-        </details>
+    .pool-card {
+      border-radius: 9px;
+      background: linear-gradient(180deg, rgba(16,32,57,.65), rgba(8,18,32,.65));
+      border: 1px solid rgba(250,200,60,.15);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      padding: 4px;
       cursor: pointer;
       text-align: center;
       overflow: hidden;

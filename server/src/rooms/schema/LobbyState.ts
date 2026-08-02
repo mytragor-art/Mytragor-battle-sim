@@ -8,6 +8,7 @@ export class LobbyPlayer extends Schema {
 	@type("string") sessionId = "";
 	@type("string") slot: Slot = "p1";
 	@type("string") displayName = "";
+	@type("string") avatarId = "";
 	@type("string") deckId = "";
 	@type("string") leaderId = "";
 	@type("boolean") ready = false;

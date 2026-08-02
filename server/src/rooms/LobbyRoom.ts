@@ -18,6 +18,12 @@ export class LobbyRoom extends Room<LobbyState> {
 		return String(name || "").trim().slice(0, 18);
 	}
 
+	private sanitizeAvatarId(avatarId: unknown): string {
+		const allowed = new Set(["chosen:valbrak", "chosen:katsu", "chosen:leafae", "chosen:ademais", "filiacao:arcana", "filiacao:marcial", "filiacao:religioso", "filiacao:sombras"]);
+		const value = String(avatarId || "").trim();
+		return allowed.has(value) ? value : "";
+	}
+
 	onCreate(options: any) {
 		this.queue = options?.queue === "private" ? "private" : "public";
 		this.privateCode = this.queue === "private" ? normalizePrivateCode(options?.privateCode) : "";
@@ -73,10 +79,11 @@ export class LobbyRoom extends Room<LobbyState> {
 			void this.tryStartMatch();
 		});
 
-		this.onMessage("set_name", (client, msg: { name?: string }) => {
+		this.onMessage("set_name", (client, msg: { name?: string; avatarId?: string }) => {
 			const p = this.state.players.get(client.sessionId);
 			if (!p) return;
 			p.displayName = this.sanitizeDisplayName(msg?.name);
+			p.avatarId = this.sanitizeAvatarId(msg?.avatarId);
 			this.refreshMetadata();
 			this.broadcastLobby();
 		});
@@ -126,6 +133,7 @@ export class LobbyRoom extends Room<LobbyState> {
 		const players = [...this.state.players.values()].map((p) => ({
 			slot: p.slot,
 			displayName: p.displayName,
+			avatarId: p.avatarId,
 			deckId: p.deckId,
 			leaderId: p.leaderId,
 			ready: p.ready
@@ -173,13 +181,15 @@ export class LobbyRoom extends Room<LobbyState> {
 				joinToken: randomUUID(),
 				lobbySessionId: p1.sessionId,
 				slot: "p1" as Slot,
-				displayName: p1.displayName
+				displayName: p1.displayName,
+				avatarId: p1.avatarId
 			},
 			{
 				joinToken: randomUUID(),
 				lobbySessionId: p2.sessionId,
 				slot: "p2" as Slot,
-				displayName: p2.displayName
+				displayName: p2.displayName,
+				avatarId: p2.avatarId
 			}
 		];
 

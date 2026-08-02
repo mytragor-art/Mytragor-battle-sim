@@ -39,6 +39,28 @@
 							<p>O baralho escolhido será usado tanto na fila pública quanto na partida privada.</p>
 						</div>
 
+						<section class="activeDeckCard" aria-live="polite">
+							<div class="activeDeckArt">
+								<img id="activeDeckLeaderArt" src="/publicadas/ui/layout-background.ai.thumb.webp" alt="Líder do baralho selecionado" />
+								<img id="activeDeckFragmentArt" class="activeDeckFragment" hidden alt="Fragmento selecionado" />
+							</div>
+							<div class="activeDeckInfo">
+								<div class="lobbySectionEyebrow">Baralho ativo</div>
+								<h4 id="activeDeckName">Escolha um baralho</h4>
+								<p id="activeDeckLeader">Líder: —</p>
+								<div class="activeDeckMeta">
+									<span class="pill"><b id="activeDeckCards">—</b> cartas</span>
+									<span id="activeDeckFragmentLabel" class="pill">Fragmento: —</span>
+								</div>
+							</div>
+							<div class="activeDeckActions">
+								<button id="btnPreviousDeck" class="btnGhost activeDeckCycle" type="button" aria-label="Baralho anterior">◀</button>
+								<button id="btnNextDeck" class="btnGhost activeDeckCycle" type="button" aria-label="Próximo baralho">▶</button>
+								<button id="btnEditActiveDeck" class="btnGhost" type="button">Editar</button>
+								<button id="btnOpenDeckBuilder" class="btnGold secondary" type="button">Novo baralho</button>
+							</div>
+						</section>
+
 						<div class="grid2 lobbyChoiceGrid lobbyDeckChooser">
 							<div>
 								<label for="deck">Baralho</label>
@@ -83,6 +105,7 @@
 									<div class="privateCodeCopyRow">
 										<span class="pill">Código atual: <b id="privateCodeView">—</b></span>
 										<button class="btnGhost privateCopyBtn" id="btnCopyPrivateCode" type="button">Copiar</button>
+										<button class="btnGhost privateCopyBtn" id="btnSharePrivateCode" type="button">Compartilhar</button>
 									</div>
 								</div>
 							</div>
@@ -132,7 +155,7 @@
 							<div id="roomList" class="roomList"></div>
 						</details>
 
-						<details class="lobbySubPanel lobbyOptionalPanel">
+						<details class="lobbySubPanel lobbyOptionalPanel" open>
 							<summary>
 								<span>Partidas para assistir</span>
 								<button class="btnGhost lobbyUtilityBtn" id="btnRefreshMatches" type="button">Atualizar</button>
@@ -145,6 +168,13 @@
 			<div class="lobbyReserveColumn" aria-hidden="true"></div>
 		</div>
 	</div>
+
+	<nav class="mobileLobbyNav" aria-label="Navegação principal">
+		<a class="mobileLobbyNavItem is-active" href="lobby.html" aria-current="page">Batalha</a>
+		<a class="mobileLobbyNavItem" href="public/ui/decks_salvos.html">Baralhos</a>
+		<a class="mobileLobbyNavItem" href="index.html">Início</a>
+		<a class="mobileLobbyNavItem" href="manual.html">Manual</a>
+	</nav>
 
 	<script type="module" src="/src/lobby.ts"></script>
 	<script src="/mobile.js"></script>

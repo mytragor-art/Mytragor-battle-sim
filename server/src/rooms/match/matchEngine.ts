@@ -27,7 +27,7 @@ export type ChoicePayload = {
 	targetMaxHp?: number;
 };
 export type AskChoiceFn = (slot: Slot, payload: ChoicePayload, onResolve: (optionId: string | null) => void) => void;
-export type MatchEndReason = "hp_zero" | "deckout" | "inactivity" | "opponent_left";
+export type MatchEndReason = "hp_zero" | "deckout" | "inactivity" | "opponent_left" | "concede";
 
 function ensureFieldSlots(field: { length: number; push: (value: string) => number }) {
 	while (field.length < 5) field.push("");
