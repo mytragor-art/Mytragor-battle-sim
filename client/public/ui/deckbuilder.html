@@ -1455,7 +1455,7 @@
         bottom: 0;
         z-index: 10000;
         display: grid;
-        grid-template-columns: 1.15fr .9fr .95fr .75fr .75fr;
+        grid-template-columns: 1.15fr .9fr .95fr .75fr .75fr .9fr;
         gap: 6px;
         padding: 8px max(8px, env(safe-area-inset-left)) calc(8px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-right));
         background: rgba(5,10,18,.96);
@@ -1733,6 +1733,7 @@
       <button id="mobileDeckAccessories" class="btn ghost" type="button">Acessórios</button>
       <button id="mobileDeckSave" class="btn" type="button" disabled>Salvar</button>
       <button id="mobileDeckPlay" class="btn" type="button" disabled>Jogar</button>
+      <button id="mobileDecks" class="btn ghost" type="button">Baralhos</button>
     </div>
   </div>
 
@@ -1769,6 +1770,7 @@
     const mobileDeckAccessories = document.getElementById('mobileDeckAccessories');
     const mobileDeckSave = document.getElementById('mobileDeckSave');
     const mobileDeckPlay = document.getElementById('mobileDeckPlay');
+    const mobileDecks = document.getElementById('mobileDecks');
 
     const previewImg = document.getElementById('previewImg');
     const previewTitle = document.getElementById('previewTitle');
@@ -3054,6 +3056,7 @@
     mobileDeckAccessories.onclick = () => showAccessoriesModal();
     mobileDeckSave.onclick = () => btnSalvar.click();
     mobileDeckPlay.onclick = () => btnPlay.click();
+    mobileDecks.onclick = () => btnVerDecks.click();
 
     btnLimpar.onclick = function () {
       deck = [];

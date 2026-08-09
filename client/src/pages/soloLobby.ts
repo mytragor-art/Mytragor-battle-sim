@@ -350,9 +350,10 @@ if (view.btnPreviousDeck) view.btnPreviousDeck.onclick = () => cycleSelectedDeck
 if (view.btnNextDeck) view.btnNextDeck.onclick = () => cycleSelectedDeck(1);
 if (view.btnOpenDeckBuilder) view.btnOpenDeckBuilder.onclick = () => { window.location.href = "./public/ui/deckbuilder.html"; };
 if (view.btnEditActiveDeck) view.btnEditActiveDeck.onclick = () => {
-	if (!selectedDeck) return;
+	const deckToEdit = selectedDeck || availableDecks.find((deck) => deck.id === view.deckEl?.value);
+	if (!deckToEdit) return;
 	try {
-		localStorage.setItem("mytragor_deck_edit_draft", JSON.stringify({ mode: "edit", deck: selectedDeck }));
+		localStorage.setItem("mytragor_deck_edit_draft", JSON.stringify({ mode: "edit", deck: deckToEdit }));
 	} catch {}
 	window.location.href = "./public/ui/deckbuilder.html?edit=1";
 };
