@@ -435,11 +435,11 @@ if (view.btnSharePrivateCode) view.btnSharePrivateCode.onclick = () => void shar
 if (view.deckEl) view.deckEl.onchange = syncSelectedDeckFromUI;
 if (view.btnPreviousDeck) view.btnPreviousDeck.onclick = () => cycleSelectedDeck(-1);
 if (view.btnNextDeck) view.btnNextDeck.onclick = () => cycleSelectedDeck(1);
-if (view.btnOpenDeckBuilder) view.btnOpenDeckBuilder.onclick = () => { window.location.href = "./public/ui/deckbuilder.html"; };
+if (view.btnOpenDeckBuilder) view.btnOpenDeckBuilder.onclick = () => { window.location.href = "./ui/deckbuilder.html"; };
 if (view.btnEditActiveDeck) view.btnEditActiveDeck.onclick = () => {
 	const deckToEdit = selectedDeck || availableDecks.find((deck) => deck.id === view.deckEl?.value);
 	if (!deckToEdit) {
-		window.location.href = "./public/ui/deckbuilder.html";
+		window.location.href = "./ui/deckbuilder.html";
 		return;
 	}
 	try {
@@ -447,7 +447,7 @@ if (view.btnEditActiveDeck) view.btnEditActiveDeck.onclick = () => {
 	} catch {
 		// The deckbuilder remains available even if storage cannot be updated.
 	}
-	window.location.href = "./public/ui/deckbuilder.html?edit=1";
+	window.location.href = "./ui/deckbuilder.html?edit=1";
 };
 window.addEventListener("storage", (event) => {
 	if (event.key && event.key !== "mytragor_decks" && event.key !== "mytragor_play_deck") return;

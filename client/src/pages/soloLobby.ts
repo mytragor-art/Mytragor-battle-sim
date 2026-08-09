@@ -347,17 +347,17 @@ if (view.deckEl) view.deckEl.onchange = syncSelectedDeckFromUI;
 if (botDeckEl) botDeckEl.onchange = syncSelectedBotDeckFromUI;
 if (view.btnPreviousDeck) view.btnPreviousDeck.onclick = () => cycleSelectedDeck(-1);
 if (view.btnNextDeck) view.btnNextDeck.onclick = () => cycleSelectedDeck(1);
-if (view.btnOpenDeckBuilder) view.btnOpenDeckBuilder.onclick = () => { window.location.href = "./public/ui/deckbuilder.html"; };
+if (view.btnOpenDeckBuilder) view.btnOpenDeckBuilder.onclick = () => { window.location.href = "./ui/deckbuilder.html"; };
 if (view.btnEditActiveDeck) view.btnEditActiveDeck.onclick = () => {
 	const deckToEdit = selectedDeck || availableDecks.find((deck) => deck.id === view.deckEl?.value);
 	if (!deckToEdit) {
-		window.location.href = "./public/ui/deckbuilder.html";
+		window.location.href = "./ui/deckbuilder.html";
 		return;
 	}
 	try {
 		localStorage.setItem("mytragor_deck_edit_draft", JSON.stringify({ mode: "edit", deck: deckToEdit }));
 	} catch {}
-	window.location.href = "./public/ui/deckbuilder.html?edit=1";
+	window.location.href = "./ui/deckbuilder.html?edit=1";
 };
 window.addEventListener("storage", (event) => {
 	if (event.key && event.key !== "mytragor_decks" && event.key !== "mytragor_play_deck") return;
