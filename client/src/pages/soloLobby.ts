@@ -67,7 +67,6 @@ function applySelectedDeck(deck: SavedDeck | null) {
 	}
 	if (view.btnPreviousDeck) view.btnPreviousDeck.disabled = availableDecks.length < 2;
 	if (view.btnNextDeck) view.btnNextDeck.disabled = availableDecks.length < 2;
-	if (view.btnEditActiveDeck) view.btnEditActiveDeck.disabled = !selectedDeck;
 
 	if (room && selectedDeck) {
 		room.send("choose_deck", {
@@ -351,7 +350,10 @@ if (view.btnNextDeck) view.btnNextDeck.onclick = () => cycleSelectedDeck(1);
 if (view.btnOpenDeckBuilder) view.btnOpenDeckBuilder.onclick = () => { window.location.href = "./public/ui/deckbuilder.html"; };
 if (view.btnEditActiveDeck) view.btnEditActiveDeck.onclick = () => {
 	const deckToEdit = selectedDeck || availableDecks.find((deck) => deck.id === view.deckEl?.value);
-	if (!deckToEdit) return;
+	if (!deckToEdit) {
+		window.location.href = "./public/ui/deckbuilder.html";
+		return;
+	}
 	try {
 		localStorage.setItem("mytragor_deck_edit_draft", JSON.stringify({ mode: "edit", deck: deckToEdit }));
 	} catch {}
