@@ -101,7 +101,7 @@ async function main() {
 
 	app.get("/matches", async (_req, res) => {
 		try {
-			const [matches, spectators] = await Promise.all([
+			const [matches, soloMatches, spectators] = await Promise.all([
 				matchMaker.query({ name: "match" }),
 				matchMaker.query({ name: "solo_match" }),
 				matchMaker.query({ name: "spectator" })
@@ -111,7 +111,7 @@ async function main() {
 				const matchRoomId = String(room.metadata?.matchRoomId || "");
 				if (matchRoomId) spectatorByMatchRoomId.set(matchRoomId, room);
 			}
-			const activeMatches = [...matches]
+			const activeMatches = [...matches, ...soloMatches]
 				.filter((room: any) => Number(room.clients || 0) > 0)
 				.map((room: any) => ({
 					roomId: String(room.roomId || ""),

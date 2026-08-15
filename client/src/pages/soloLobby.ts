@@ -221,12 +221,23 @@ function renderMatchList(matches: Array<{ roomId: string; clients: number; maxCl
 			</span>
 			<span class="roomRight">
 				<span class="roomPill">Em andamento</span>
+				<button type="button" class="btnGold roomEnterBtn">Ver</button>
 			</span>
 		`;
 		row.onclick = () => {
 			selectedMatchRoomId = match.roomId;
 			renderMatchList(matches);
 		};
+
+		const watchBtn = row.querySelector(".roomEnterBtn") as HTMLButtonElement | null;
+		if (watchBtn) {
+			watchBtn.onclick = (event) => {
+				event.stopPropagation();
+				selectedMatchRoomId = match.roomId;
+				const endpoint = view.endpointEl?.value.trim() || resolveServerEndpoint(window.location.search);
+				window.location.href = `./game.html?roomId=${encodeURIComponent(match.roomId)}&endpoint=${encodeURIComponent(endpoint)}&spectator=1`;
+			};
+		}
 		matchListEl.appendChild(row);
 	}
 }
