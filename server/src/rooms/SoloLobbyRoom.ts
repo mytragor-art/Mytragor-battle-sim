@@ -238,10 +238,15 @@ export class SoloLobbyRoom extends Room<LobbyState> {
 			}
 		});
 
+		const spectatorRoom = await matchMaker.createRoom("spectator", {
+			matchRoomId: matchRoom.roomId
+		});
+
 		const targetClient = this.clients.find((entry) => entry.sessionId === human.sessionId);
 		if (targetClient) {
 			targetClient.send("start_match", {
 				matchRoomId: matchRoom.roomId,
+				spectatorRoomId: spectatorRoom.roomId,
 				joinToken: seatReservation.joinToken,
 				slot: "p1",
 				starterSlot,

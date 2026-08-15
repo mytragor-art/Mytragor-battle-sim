@@ -103,6 +103,7 @@ async function main() {
 		try {
 			const [matches, spectators] = await Promise.all([
 				matchMaker.query({ name: "match" }),
+				matchMaker.query({ name: "solo_match" }),
 				matchMaker.query({ name: "spectator" })
 			]);
 			const spectatorByMatchRoomId = new Map<string, any>();
@@ -110,7 +111,7 @@ async function main() {
 				const matchRoomId = String(room.metadata?.matchRoomId || "");
 				if (matchRoomId) spectatorByMatchRoomId.set(matchRoomId, room);
 			}
-			const activeMatches = matches
+			const activeMatches = [...matches]
 				.filter((room: any) => Number(room.clients || 0) > 0)
 				.map((room: any) => ({
 					roomId: String(room.roomId || ""),
@@ -161,9 +162,16 @@ async function main() {
 
 	app.get("/solo-matches", async (_req, res) => {
 		try {
+			const spectators = await matchMaker.query({ name: "spectator" });
+			const spectatorByMatchRoomId = new Map<string, any>();
+			for (const room of spectators) {
+				const matchRoomId = String(room.metadata?.matchRoomId || "");
+				if (matchRoomId) spectatorByMatchRoomId.set(matchRoomId, room);
+			}
 			const matches = await matchMaker.query({ name: "solo_match" });
 			const activeMatches = matches.map((room: any) => ({
 				roomId: String(room.roomId || ""),
+				spectatorRoomId: String(spectatorByMatchRoomId.get(String(room.roomId || ""))?.roomId || ""),
 				clients: Number(room.clients || 0),
 				maxClients: Number(room.maxClients || 1),
 				locked: !!room.locked,
@@ -205,8 +213,11 @@ async function main() {
 				res.status(400).json({ error: "missing_match_room_id" });
 				return;
 			}
-			const matches = await matchMaker.query({ name: "match" });
-			const activeMatch = matches.find((item: any) => String(item.roomId || "") === targetMatchRoomId && Number(item.clients || 0) > 0);
+			const [matches, soloMatches] = await Promise.all([
+				matchMaker.query({ name: "match" }),
+				matchMaker.query({ name: "solo_match" })
+			]);
+			const activeMatch = [...matches, ...soloMatches].find((item: any) => String(item.roomId || "") === targetMatchRoomId && Number(item.clients || 0) > 0);
 			if (!activeMatch) {
 				res.status(404).json({ error: "match_room_not_found" });
 				return;

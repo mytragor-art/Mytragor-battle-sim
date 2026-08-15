@@ -2,6 +2,7 @@ import { Room, Client } from "colyseus";
 import { findCardDef } from "../game/cardCatalog";
 import { describeClientDiagnostic } from "../utils/clientDiagnostics";
 import { MatchState, MatchPlayerState } from "./schema/MatchState";
+import { buildSpectatorSnapshot, disposeSpectatorChannel, publishSpectatorSnapshot, relaySpectatorEvent } from "./spectatorBridge";
 import {
 	type Slot,
 	type AttackTarget,
@@ -138,6 +139,12 @@ export class SoloMatchRoom extends Room<MatchState> {
 
 	private broadcastMatchEvent(name: string, payload: any) {
 		this.broadcast(name, payload);
+		relaySpectatorEvent(this.roomId, name, payload);
+		publishSpectatorSnapshot(this.roomId, buildSpectatorSnapshot(this.state));
+	}
+
+	private publishSpectatorState() {
+		publishSpectatorSnapshot(this.roomId, buildSpectatorSnapshot(this.state));
 	}
 
 	private sessionIdBySlot(slot: Slot): string | null {
@@ -1747,6 +1754,7 @@ export class SoloMatchRoom extends Room<MatchState> {
 		this.pendingMulligans = { p1: null, p2: this.chooseBotOpeningMulligan() };
 		this.state.game.p2MulliganDone = true;
 		this.startMulliganTimer();
+		this.publishSpectatorState();
 		this.refreshInactivityTimer();
 
 		this.onMessage("submit_mulligan", (client, msg: { indices?: number[] }) => {
@@ -1918,6 +1926,7 @@ export class SoloMatchRoom extends Room<MatchState> {
 		this.clearBotTimer();
 		this.clearMulliganTimer(true);
 		this.clearInactivityTimer();
+		disposeSpectatorChannel(this.roomId);
 	}
 
 	private isValidTurnAction(client: Client, phases: string[]) {
