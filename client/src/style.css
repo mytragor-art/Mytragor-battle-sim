@@ -1726,10 +1726,16 @@ html, body {
 
 body.lobbyBody{
   overflow:auto;
+  height:auto;
   min-height:100vh;
   position:relative;
   font-family:"Cormorant Garamond", Georgia, serif;
   background:#07070b url("/bgambientes/fundostartdeck.png") center 12% / cover no-repeat fixed;
+}
+
+html:has(body.lobbyBody){
+  height:auto;
+  overflow:auto;
 }
 
 body.lobbyBody::before{
@@ -2658,7 +2664,7 @@ body.lobbyBody::before{
   }
 
   .page.lobbyPage{
-    padding-bottom:calc(100px + env(safe-area-inset-bottom));
+    padding-bottom:calc(220px + env(safe-area-inset-bottom));
   }
 
   .mobileLobbyNav{
@@ -2733,6 +2739,10 @@ body.lobbyBody::before{
   .lobbyDeckPanel,
   .lobbyRoomsPanel{
     border-radius:20px;
+  }
+
+  .lobbyRoomsPanel:last-child{
+    margin-bottom:88px;
   }
 
   .lobbyTopBar{
