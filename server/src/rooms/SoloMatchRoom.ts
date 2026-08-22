@@ -57,6 +57,8 @@ type SoloBotConfig = {
 const MULLIGAN_TIMEOUT_MS = 40_000;
 const INACTIVITY_TIMEOUT_MS = 10 * 60_000;
 const RECONNECTION_GRACE_SECONDS = 60;
+const BOT_ACTION_DELAY_MS = 3_500;
+const BOT_PHASE_DELAY_MS = 1_500;
 
 export class SoloMatchRoom extends Room<MatchState> {
 	maxClients = 1;
@@ -1486,7 +1488,7 @@ export class SoloMatchRoom extends Room<MatchState> {
 		});
 	};
 
-	private queueBotTurn() {
+	private queueBotTurn(delayMs = BOT_ACTION_DELAY_MS) {
 		this.clearBotTimer();
 		if (this.state.phase === "FINISHED") return;
 		if (this.activeChoiceSessionId) return;
@@ -1513,7 +1515,7 @@ export class SoloMatchRoom extends Room<MatchState> {
 			this.botTurnTimer = null;
 			this.runBotTurn();
 			});
-		}, 450);
+		}, delayMs);
 	}
 
 	private canBotPlayCardNow(cardId: string, def: ReturnType<typeof findCardDef>): boolean {
@@ -1573,51 +1575,32 @@ export class SoloMatchRoom extends Room<MatchState> {
 		return targets[0] || { type: "leader" };
 	}
 
-	private performBotPrep() {
-		let actions = 0;
+	private performBotPrep(): boolean {
 		const leaderSeq = Number(this.state.game.seq || 0);
 		if (this.shouldUseBotLeaderPower()) {
 			activateLeaderPower(this.state, "p2", (name, payload) => this.broadcastMatchEvent(name, payload), this.askChoice);
 		}
-		if (this.state.phase === "FINISHED" || this.pendingChoices.size > 0 || this.activeChoiceSessionId) return;
-		if (Number(this.state.game.seq || 0) !== leaderSeq) actions += 1;
+		if (this.state.phase === "FINISHED" || this.pendingChoices.size > 0 || this.activeChoiceSessionId) return true;
+		if (Number(this.state.game.seq || 0) !== leaderSeq) return true;
 
-		while (actions < 4 && this.state.game.phase === "PREP" && this.pendingChoices.size === 0 && !this.activeChoiceSessionId) {
-			const beforeLeaderSeq = Number(this.state.game.seq || 0);
-			if (this.shouldUseBotLeaderPower()) {
-				activateLeaderPower(this.state, "p2", (name, payload) => this.broadcastMatchEvent(name, payload), this.askChoice);
-			}
-			if (this.state.phase === "FINISHED" || this.pendingChoices.size > 0 || this.activeChoiceSessionId) return;
-			if (Number(this.state.game.seq || 0) !== beforeLeaderSeq) {
-				actions += 1;
-				continue;
-			}
-
-			const nextCard = this.pickPlayableBotCards()[0];
-			if (!nextCard) break;
-			const beforeSeq = Number(this.state.game.seq || 0);
-			playCard(
-				this.state,
-				"p2",
-				nextCard.cardId,
-				undefined,
-				String(nextCard.def?.kind || nextCard.def?.tipo || ""),
-				(name, payload) => this.broadcastMatchEvent(name, payload),
-				this.summonedThisTurn,
-				this.triggeredLeaderThisTurn,
-				this.askChoice
-			);
-			if (this.state.phase === "FINISHED" || this.pendingChoices.size > 0 || this.activeChoiceSessionId) return;
-			if (Number(this.state.game.seq || 0) === beforeSeq) break;
-			actions += 1;
-		}
-
-		if (this.state.game.phase === "PREP" && this.pendingChoices.size === 0 && !this.activeChoiceSessionId && this.shouldUseBotLeaderPower()) {
-			activateLeaderPower(this.state, "p2", (name, payload) => this.broadcastMatchEvent(name, payload), this.askChoice);
-		}
+		const nextCard = this.pickPlayableBotCards()[0];
+		if (!nextCard) return false;
+		const beforeSeq = Number(this.state.game.seq || 0);
+		playCard(
+			this.state,
+			"p2",
+			nextCard.cardId,
+			undefined,
+			String(nextCard.def?.kind || nextCard.def?.tipo || ""),
+			(name, payload) => this.broadcastMatchEvent(name, payload),
+			this.summonedThisTurn,
+			this.triggeredLeaderThisTurn,
+			this.askChoice
+		);
+		return Number(this.state.game.seq || 0) !== beforeSeq || this.pendingChoices.size > 0 || !!this.activeChoiceSessionId;
 	}
 
-	private performBotCombat() {
+	private performBotCombat(): boolean {
 		for (let pos = 0; pos < this.state.game.p2.field.length; pos += 1) {
 			if (!canAttackServer(this.state, "p2", pos, this.attackedThisTurn, this.summonedThisTurn)) continue;
 			const attackerId = String(this.state.game.p2.field[pos] || "");
@@ -1636,7 +1619,7 @@ export class SoloMatchRoom extends Room<MatchState> {
 				this.triggeredLeaderThisTurn,
 				this.askChoice
 			);
-			if (this.state.phase === "FINISHED" || this.pendingChoices.size > 0 || this.activeChoiceSessionId) return;
+			if (this.state.phase === "FINISHED" || this.pendingChoices.size > 0 || this.activeChoiceSessionId) return true;
 			if (Number(this.state.game.seq || 0) === beforeSeq) {
 				attack(
 					this.state,
@@ -1650,8 +1633,9 @@ export class SoloMatchRoom extends Room<MatchState> {
 					this.askChoice
 				);
 			}
-			if (this.state.phase === "FINISHED" || this.pendingChoices.size > 0 || this.activeChoiceSessionId) return;
+			return true;
 		}
+		return false;
 	}
 
 	private runBotTurn() {
@@ -1662,14 +1646,19 @@ export class SoloMatchRoom extends Room<MatchState> {
 		if (this.state.game.phase === "INITIAL") {
 			nextPhase(this.state, (name, payload) => this.broadcastMatchEvent(name, payload));
 			this.refreshInactivityTimer();
-			this.queueBotTurn();
+			this.queueBotTurn(BOT_PHASE_DELAY_MS);
 			return;
 		}
 
 		if (this.state.game.phase === "PREP") {
-			this.performBotPrep();
+			const madeAction = this.performBotPrep();
 			if (this.state.game.phase === "PREP" && this.pendingChoices.size === 0 && !this.activeChoiceSessionId) {
-				nextPhase(this.state, (name, payload) => this.broadcastMatchEvent(name, payload));
+				if (!madeAction) {
+					nextPhase(this.state, (name, payload) => this.broadcastMatchEvent(name, payload));
+					this.refreshInactivityTimer();
+					this.queueBotTurn(BOT_PHASE_DELAY_MS);
+					return;
+				}
 			}
 			this.refreshInactivityTimer();
 			this.queueBotTurn();
@@ -1677,9 +1666,14 @@ export class SoloMatchRoom extends Room<MatchState> {
 		}
 
 		if (this.state.game.phase === "COMBAT") {
-			this.performBotCombat();
+			const madeAction = this.performBotCombat();
 			if (this.state.game.phase === "COMBAT" && this.pendingChoices.size === 0 && !this.activeChoiceSessionId) {
-				nextPhase(this.state, (name, payload) => this.broadcastMatchEvent(name, payload));
+				if (!madeAction) {
+					nextPhase(this.state, (name, payload) => this.broadcastMatchEvent(name, payload));
+					this.refreshInactivityTimer();
+					this.queueBotTurn(BOT_PHASE_DELAY_MS);
+					return;
+				}
 			}
 			this.refreshInactivityTimer();
 			this.queueBotTurn();
@@ -1689,7 +1683,7 @@ export class SoloMatchRoom extends Room<MatchState> {
 		if (this.state.game.phase === "END") {
 			endTurn(this.state, (name, payload) => this.broadcastMatchEvent(name, payload), this.attackedThisTurn, this.summonedThisTurn, this.triggeredLeaderThisTurn, this.askChoice);
 			this.refreshInactivityTimer();
-			this.queueBotTurn();
+			this.queueBotTurn(BOT_PHASE_DELAY_MS);
 		}
 	}
 
