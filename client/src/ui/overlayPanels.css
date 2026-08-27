@@ -111,6 +111,18 @@
 .previewDrawer .bigMetaText {
 	font-size: 15.6px !important;
 	line-height: 1.32 !important;
+	white-space: pre-wrap;
+}
+
+.cardRulesChoiceHeader {
+	display: block;
+	margin-bottom: 5px;
+	color: #ffd54f;
+}
+
+.cardRulesChoiceOption {
+	display: block;
+	padding-left: 4px;
 }
 
 @media (min-width: 981px), (hover: hover) and (pointer: fine) {

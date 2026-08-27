@@ -2888,10 +2888,10 @@ export function playCard(state: MatchState, slot: Slot, cardId: string, targetPo
 		const effectA = (cardDef as any)?.effectA || null;
 		const effectB = (cardDef as any)?.effectB || null;
 		const options: ChoiceOption[] = [];
-		if (effectA) options.push({ id: "choice-a", label: describeChoiceAction(effectA) });
-		if (effectB) options.push({ id: "choice-b", label: describeChoiceAction(effectB) });
+		if (effectA) options.push({ id: "choice-a", label: `Opção A: ${describeChoiceAction(effectA)}` });
+		if (effectB) options.push({ id: "choice-b", label: `Opção B: ${describeChoiceAction(effectB)}` });
 		if (!options.length) return;
-		askChoice(slot, { title: `${cardId}: escolha um efeito`, options, allowCancel: true }, (optionId) => {
+		askChoice(slot, { title: `${cardId}: escolha apenas 1 efeito`, options, allowCancel: true }, (optionId) => {
 			if (!optionId) return;
 			const liveIdx = pg.hand.findIndex((c) => c === cardId);
 			if (liveIdx < 0) return;

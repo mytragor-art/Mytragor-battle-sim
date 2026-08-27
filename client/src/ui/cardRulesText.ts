@@ -1,0 +1,23 @@
+export function renderCardRulesText(element: HTMLElement, text: string, formatEffects = false, isChoiceOne = false): void {
+	const rulesText = String(text || "").trim();
+	element.replaceChildren();
+	if (!formatEffects) {
+		element.textContent = rulesText || "Sem texto de efeito.";
+		return;
+	}
+
+	const parts = rulesText.split(/\s*•\s*/).filter(Boolean);
+	if (isChoiceOne) {
+		const header = document.createElement("strong");
+		header.className = "cardRulesChoiceHeader";
+		header.textContent = parts.shift() || "Escolha 1:";
+		element.appendChild(header);
+	}
+
+	for (const effect of parts) {
+		const line = document.createElement("span");
+		line.className = "cardRulesChoiceOption";
+		line.textContent = `• ${effect}`;
+		element.appendChild(line);
+	}
+}

@@ -282,8 +282,8 @@
     }
 
     .preview-card img {
-      width: 188px;
-      height: 282px;
+      width: 160px;
+      height: 240px;
         object-fit: contain;
         background: rgba(2, 6, 23, .45);
       border-radius: 6px;
@@ -299,6 +299,29 @@
       font-size: 13px;
       line-height: 1.28;
       text-align: left;
+    }
+
+    #previewText {
+      margin-top: 8px;
+      padding: 9px 10px;
+      border-left: 3px solid var(--gold-a);
+      border-radius: 0 6px 6px 0;
+      background: rgba(0, 0, 0, .25);
+      color: #f8fafc;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .cardRulesChoiceHeader {
+      display: block;
+      margin-bottom: 5px;
+      color: #ffd54f;
+    }
+
+    .cardRulesChoiceOption {
+      display: block;
+      padding-left: 4px;
+      margin-top: 7px;
     }
 
     .preview-title {
@@ -1912,6 +1935,20 @@
       return [card && card.filiacao ? `Filiação: ${card.filiacao}` : '', card && card.cost != null ? `Custo: ${card.cost}` : ''].filter(Boolean).join(' • ');
     }
 
+    function escapeCardText(value) {
+      return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function formatCardEffectText(card) {
+      const text = String(card && (card.text || card.description) || '').trim() || 'Sem descrição';
+      const formatEffects = card && (card.escolha1 === true || card.kind === 'chosen' || card.kind === 'leader');
+      if (!formatEffects) return escapeCardText(text).replace(/\n/g, '<br>');
+      const parts = text.split(/\s*•\s*/).filter(Boolean);
+      const effects = card.escolha1 ? parts.slice(1) : parts;
+      const header = card.escolha1 ? `<strong class="cardRulesChoiceHeader">${escapeCardText(parts[0] || 'Escolha 1:')}</strong>` : '';
+      return header + effects.map((effect) => `<span class="cardRulesChoiceOption">• ${escapeCardText(effect)}</span>`).join('');
+    }
+
     function setPreview(card) {
       if (!card) return;
       const name = card.name || 'Sem nome';
@@ -1944,10 +1981,9 @@
           previewStats.appendChild(item);
         });
       }
-      previewText.innerHTML = [details, String(card.text || card.description || '').trim() || 'Sem descrição']
+      previewText.innerHTML = [details, formatCardEffectText(card)]
         .filter(Boolean)
-        .join('<br><br>')
-        .replace(/\n/g, '<br>');
+        .join('<br><br>');
     }
 
     const mobileInspect = createMobileInspect();
@@ -1969,7 +2005,7 @@
         });
       }
       const details = cardDetailsLine(card);
-      const bodyText = [details, String(card.text || card.description || '').trim() || 'Sem descrição'].filter(Boolean).join('\n\n');
+      const bodyText = [details ? escapeCardText(details) : '', formatCardEffectText(card)].filter(Boolean).join('<br><br>');
       return {
         cardId: String(card.id || card.name || card.img || ''),
         title: card.name || card.label || 'Carta',
@@ -2064,7 +2100,7 @@
         viewerTitle.textContent = card.title || card.cardId;
         metaEl.innerHTML = '';
         statsEl.innerHTML = '';
-        textEl.textContent = String(card.text || '').trim() || 'Sem texto de efeito.';
+        textEl.innerHTML = String(card.text || '').trim() || 'Sem texto de efeito.';
         if (card.filiationLine) {
           const pill = document.createElement('div');
           pill.className = 'mobileInspectMetaPill';
@@ -2223,6 +2259,13 @@
     function attachPreview(el, card) {
       if (!el || !card) return;
       el.addEventListener('mouseenter', () => setPreview(card));
+      el.addEventListener('pointermove', (event) => {
+        if (event.pointerType !== 'touch') setPreview(card);
+      }, { passive: true });
+      el.addEventListener('click', () => {
+        setPreview(card);
+        if (isMobileDeckBuilderViewport() && previewDetails) previewDetails.setAttribute('open', 'open');
+      });
       mobileInspect.bind(el, () => buildMobileInspectCard(card));
     }
 
@@ -2419,7 +2462,7 @@
       const touchMobile = window.matchMedia('(max-width: 980px)').matches
         && (window.matchMedia('(pointer: coarse)').matches || window.matchMedia('(any-pointer: coarse)').matches);
       if (touchMobile || window.matchMedia('(max-width: 900px)').matches) previewDetails.removeAttribute('open');
-      else previewDetails.setAttribute('open', 'open');
+      else previewDetails.open = true;
     }
 
     function syncPreviewPlaceholderCopy() {

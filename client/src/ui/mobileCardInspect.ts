@@ -1,3 +1,5 @@
+import { renderCardRulesText } from "./cardRulesText";
+
 export type MobileInspectCard = {
 	cardId: string;
 	title: string;
@@ -5,6 +7,8 @@ export type MobileInspectCard = {
 	typeLine?: string;
 	filiationLine?: string;
 	text?: string;
+	formatEffects?: boolean;
+	isChoiceOne?: boolean;
 	stats?: string[];
 };
 
@@ -126,7 +130,7 @@ export function createMobileCardInspect(): MobileCardInspectApi {
 		viewerTitle.textContent = card.title || card.cardId;
 		metaEl.innerHTML = "";
 		statsEl.innerHTML = "";
-		textEl.textContent = String(card.text || "").trim() || "Sem texto de efeito.";
+		renderCardRulesText(textEl, String(card.text || ""), card.formatEffects, card.isChoiceOne);
 
 		if (card.filiationLine) {
 			const pill = document.createElement("div");

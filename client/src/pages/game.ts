@@ -7,6 +7,7 @@ import { setupBoardScale } from "../ui/boardScale";
 import { setupArenaSlots } from "../ui/arenaSlots";
 import { getAvatarId, getDisplayName } from "../ui/profile";
 import { createMobileCardInspect, type MobileInspectCard } from "../ui/mobileCardInspect";
+import { renderCardRulesText } from "../ui/cardRulesText";
 import { resolveHttpBase, resolveServerEndpoint } from "../config/runtime";
 import { canAttackCardQuiet, canAttackTargetQuiet, endAttackCleanup, resolveAttackOn, selectAttacker, type AttackSelection, type AttackTarget as BattleTarget, type BattleCard, type BattleRuntime, type BattleSide } from "../game/battle";
 
@@ -19,6 +20,7 @@ type CardDef = {
 	effect?: string;
 	effectA?: string;
 	effectB?: string;
+	escolha1?: boolean;
 	cost?: number;
 	tipo?: string;
 	classe?: string;
@@ -1128,6 +1130,8 @@ function buildMobileInspectCard(target: string | InspectorView | null): MobileIn
 		typeLine: cardSubclassLine(card),
 		filiationLine: previewFiliationLine(card),
 		text: previewTextLine(nextView.cardId, card),
+		formatEffects: card?.escolha1 === true || card?.kind === "leader",
+		isChoiceOne: card?.escolha1 === true,
 		stats: getInspectorStatsSafe(nextView).map((item) => `${item.label}: ${item.value}`),
 	};
 }
@@ -1482,7 +1486,7 @@ function renderInspector(target: string | InspectorView | null): void {
 	titleEl.textContent = String(card?.name || nextView.cardId || "Carta");
 	filiationEl.textContent = previewFiliationLine(card);
 	subclassEl.textContent = cardSubclassLine(card);
-	textEl.textContent = previewTextLine(nextView.cardId, card);
+	renderCardRulesText(textEl, previewTextLine(nextView.cardId, card), card?.escolha1 === true || card?.kind === "leader", card?.escolha1 === true);
 }
 
 function setInspector(target: string | InspectorView | null): void {
