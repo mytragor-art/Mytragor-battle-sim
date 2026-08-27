@@ -125,6 +125,13 @@
 	padding-left: 4px;
 }
 
+.cardRulesUniversalRule {
+	display: block;
+	margin-top: 9px;
+	color: #f8fafc;
+	font-style: italic;
+}
+
 @media (min-width: 981px), (hover: hover) and (pointer: fine) {
 	#previewCol,
 	.previewDrawer {

@@ -324,6 +324,13 @@
       margin-top: 7px;
     }
 
+    .cardRulesUniversalRule {
+      display: block;
+      margin-top: 10px;
+      color: #f8fafc;
+      font-style: italic;
+    }
+
     .preview-title {
       color: var(--gold-a);
       font-weight: 800;
@@ -1946,7 +1953,14 @@
       const parts = text.split(/\s*•\s*/).filter(Boolean);
       const effects = card.escolha1 ? parts.slice(1) : parts;
       const header = card.escolha1 ? `<strong class="cardRulesChoiceHeader">${escapeCardText(parts[0] || 'Escolha 1:')}</strong>` : '';
-      return header + effects.map((effect) => `<span class="cardRulesChoiceOption">• ${escapeCardText(effect)}</span>`).join('');
+      const universalRule = 'Desloque esta carta após resolver.';
+      const formattedEffects = effects.map((effect) => {
+        const [choiceEffect, universalEffect] = effect.split(universalRule);
+        const choice = `<span class="cardRulesChoiceOption">• ${escapeCardText(choiceEffect.trim())}</span>`;
+        const rule = universalEffect !== undefined ? `<span class="cardRulesUniversalRule">${universalRule}</span>` : '';
+        return choice + rule;
+      }).join('');
+      return header + formattedEffects;
     }
 
     function setPreview(card) {

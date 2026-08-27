@@ -17,7 +17,15 @@ export function renderCardRulesText(element: HTMLElement, text: string, formatEf
 	for (const effect of parts) {
 		const line = document.createElement("span");
 		line.className = "cardRulesChoiceOption";
-		line.textContent = `• ${effect}`;
+		const universalRule = "Desloque esta carta após resolver.";
+		const [choiceEffect, universalEffect] = effect.split(universalRule);
+		line.textContent = `• ${choiceEffect.trim()}`;
 		element.appendChild(line);
+		if (universalEffect !== undefined) {
+			const rule = document.createElement("span");
+			rule.className = "cardRulesUniversalRule";
+			rule.textContent = universalRule;
+			element.appendChild(rule);
+		}
 	}
 }
