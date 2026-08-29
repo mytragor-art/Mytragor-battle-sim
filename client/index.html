@@ -31,8 +31,9 @@
       margin:0;
       font-family: "Segoe UI Variable", "Trebuchet MS", Verdana, sans-serif;
       color:var(--text);
-      min-height:100vh;
-      overflow:hidden;
+      min-height:100dvh;
+      overflow-x:hidden;
+      overflow-y:auto;
       background:
 	        radial-gradient(circle at center, rgba(10,10,15,0.14) 0%, rgba(10,10,15,0.58) 72%),
 	        linear-gradient(rgba(10,10,15,0.28), rgba(10,10,15,0.28)),
@@ -886,6 +887,20 @@
       .modeCard p,
       .utilityCard p{ font-size:13px; }
       .startStack{ width:100%; }
+    }
+
+    @media (min-width: 981px) and (max-height: 760px){
+      .wrap{ width:min(980px, 92vw); padding:16px 0 22px; }
+      .home{ justify-content:flex-start; gap:16px; }
+      .brand{ gap:8px; }
+      .brandLogo{ height:150px; }
+      .brand h1{ font-size:36px; }
+      .heroText{ font-size:18px; line-height:1.35; }
+      .actions{ gap:12px; }
+      .startStack{ gap:10px; padding:14px 16px 12px; }
+      .modeCard.primary .gold-btn{ min-height:50px; font-size:16px; }
+      .utilityCard .gold-btn{ min-height:44px; }
+      footer{ margin-top:12px; }
     }
 
     .gold-btn.aiChallengeBtn{
