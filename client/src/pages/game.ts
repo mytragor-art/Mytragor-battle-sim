@@ -1833,7 +1833,7 @@ function syncMulliganUi(state: any, hand: string[]): void {
 	}
 	const localDone = slot === "p1" ? !!state?.game?.p1MulliganDone : !!state?.game?.p2MulliganDone;
 	const opponentDone = slot === "p1" ? !!state?.game?.p2MulliganDone : !!state?.game?.p1MulliganDone;
-	const deadlineAt = Number(state?.game?.mulliganDeadlineAt || 0) || (Date.now() + MULLIGAN_TIMEOUT_MS);
+	const deadlineAt = Number(state?.game?.mulliganDeadlineAt || 0);
 	mulliganSubmitted = localDone;
 	syncMulliganCountdown(deadlineAt);
 	updateMulliganModal(hand, localDone, opponentDone);

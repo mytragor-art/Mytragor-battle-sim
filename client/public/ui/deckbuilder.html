@@ -594,7 +594,8 @@
       z-index: 40;
     }
 
-    .filterDropdown[data-filter-group="kind"] .filterMenu {
+    .filterDropdown[data-filter-group="kind"] .filterMenu,
+    .filterDropdown[data-filter-group="cost"] .filterMenu {
       left: auto;
       right: 0;
     }
@@ -686,6 +687,10 @@
       overflow: auto; /* allow scrolling when content doesn't fit */
       padding: 2px;
       min-width: 0;
+    }
+
+    .pool-panel {
+      overflow: visible;
     }
 
     /* Responsive adjustments to avoid horizontal cutoff on narrow desktops */
@@ -1622,6 +1627,18 @@
       .pool-panel > .filtersBar #btnClearFilters {
         width: 100%;
         min-width: 0;
+      }
+
+      .pool-panel > .filtersBar .filterMenu {
+        position: static;
+        min-width: 0;
+        max-width: none;
+        margin-top: 8px;
+        box-shadow: none;
+      }
+
+      .pool-panel > .filtersBar .filterDropdown[data-filter-group="kind"] .filterMenu {
+        right: auto;
       }
     }
   </style>

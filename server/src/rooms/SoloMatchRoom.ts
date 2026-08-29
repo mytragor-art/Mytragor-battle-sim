@@ -54,8 +54,6 @@ type SoloBotConfig = {
 	};
 };
 
-const MULLIGAN_TIMEOUT_MS = 40_000;
-const INACTIVITY_TIMEOUT_MS = 10 * 60_000;
 const RECONNECTION_GRACE_SECONDS = 60;
 const BOT_ACTION_DELAY_MS = 3_500;
 const BOT_PHASE_DELAY_MS = 1_500;
@@ -120,23 +118,7 @@ export class SoloMatchRoom extends Room<MatchState> {
 	}
 
 	private startMulliganTimer() {
-		this.clearMulliganTimer();
-		this.state.game.mulliganDeadlineAt = Date.now() + MULLIGAN_TIMEOUT_MS;
-		this.mulliganTimeout = setTimeout(() => {
-			this.safeRun("mulligan_timeout", () => {
-			this.mulliganTimeout = null;
-			if (this.state.phase !== "IN_MATCH" || this.state.game.phase !== "MULLIGAN") {
-				this.state.game.mulliganDeadlineAt = 0;
-				return;
-			}
-			if (!this.state.game.p1MulliganDone) {
-				this.pendingMulligans.p1 = [];
-				this.state.game.p1MulliganDone = true;
-			}
-			this.tryResolveOpeningMulligan();
-			this.refreshInactivityTimer();
-			});
-		}, MULLIGAN_TIMEOUT_MS);
+		this.clearMulliganTimer(true);
 	}
 
 	private broadcastMatchEvent(name: string, payload: any) {
@@ -1168,16 +1150,6 @@ export class SoloMatchRoom extends Room<MatchState> {
 
 	private resetInactivityTimer(sessionId: string | null) {
 		this.clearInactivityTimer();
-		if (!sessionId || this.state.phase === "FINISHED") return;
-		this.inactivityTimeout = setTimeout(() => {
-			this.inactivityTimeout = null;
-			if (this.state.phase === "FINISHED") return;
-			const player = this.state.players.get(sessionId);
-			const loser = player?.slot === "p1" || player?.slot === "p2" ? (player.slot as Slot) : null;
-			if (!loser) return;
-			this.activeChoiceSessionId = null;
-			finishMatch(this.state, loser, "inactivity", (name, payload) => this.broadcastMatchEvent(name, payload));
-		}, INACTIVITY_TIMEOUT_MS);
 	}
 
 	private refreshInactivityTimer() {
@@ -1433,30 +1405,15 @@ export class SoloMatchRoom extends Room<MatchState> {
 			return;
 		}
 
-		const timeoutMs = 40_000;
 		const choiceId = `choice-${++this.choiceSeq}`;
 		const optionIds = (Array.isArray(payload.options) ? payload.options : [])
 			.filter((option: any) => !option?.disabled)
 			.map((option) => String(option?.id || ""))
 			.filter(Boolean);
 
-		const timeout = setTimeout(() => {
-			this.safeRun("choice_timeout", () => {
-			const pending = this.pendingChoices.get(choiceId);
-			if (!pending) return;
-			this.pendingChoices.delete(choiceId);
-			this.activeChoiceSessionId = null;
-			const fallback = pending.multiSelect ? null : (pending.optionIds[0] || null);
-			pending.resolve(fallback);
-			this.refreshInactivityTimer();
-			this.queueBotTurn();
-			});
-		}, timeoutMs);
-
-		this.pendingChoices.set(choiceId, { sessionId, resolve: onResolve, timeout, optionIds, multiSelect: payload.multiSelect === true });
+		this.pendingChoices.set(choiceId, { sessionId, resolve: onResolve, optionIds, multiSelect: payload.multiSelect === true });
 		const client = this.clients.find((entry) => entry.sessionId === sessionId);
 		if (!client) {
-			clearTimeout(timeout);
 			this.pendingChoices.delete(choiceId);
 			this.activeChoiceSessionId = null;
 			this.refreshInactivityTimer();
@@ -1485,7 +1442,7 @@ export class SoloMatchRoom extends Room<MatchState> {
 			submitLabel: payload.submitLabel,
 			minSelections: payload.minSelections,
 			maxSelections: payload.maxSelections,
-			timeoutMs
+			timeoutMs: 0
 		});
 	};
 
