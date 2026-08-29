@@ -868,7 +868,7 @@ function destroyEnv(state: MatchState, ownerSlot: Slot, broadcast: (name: string
 	const removed = String(owner.env || "");
 	if (!removed) return "";
 	if (String(findCardDef(removed)?.effect || "") === "religioso_protecao") {
-		clearCatedralBlessing(state, ownerSlot, broadcast, askChoice);
+		clearAllCatedralBlessings(state, broadcast, askChoice);
 	}
 	owner.env = "";
 	owner.grave.push(removed);
@@ -1055,10 +1055,11 @@ function hasMarcialEnvAttackBonus(state: MatchState, slot: Slot, attackerId: str
 
 function offerCatedralBlessing(state: MatchState, slot: Slot, broadcast: (name: string, payload: any) => void, askChoice?: AskChoiceFn): void {
 	if (!askChoice) return;
-	if (getPlayerEnvEffect(state, slot) !== "religioso_protecao") return;
+	const catedralSlot = (['p1', 'p2'] as Slot[]).find((envSlot) => getPlayerEnvEffect(state, envSlot) === "religioso_protecao");
+	if (!catedralSlot) return;
 	if (!leaderHasFiliation(state, slot, "Religioso")) return;
 	const player = asPlayer(state, slot) as any;
-	const envCardId = String(player.env || "");
+	const envCardId = String(asPlayer(state, catedralSlot).env || "");
 	const options: ChoiceOption[] = [];
 	for (let pos = 0; pos < player.field.length; pos += 1) {
 		const cid = String(player.field[pos] || "");
@@ -1100,6 +1101,10 @@ function clearCatedralBlessing(
 		player.fieldHp[pos] = Math.min(maxHp, remainingHp);
 		broadcast("effect_log", { slot, cardId, effect: "religioso_protecao", text: `${cardId}: perdeu o bônus de vida da Catedral Ensolarada.` });
 	}
+}
+
+function clearAllCatedralBlessings(state: MatchState, broadcast: (name: string, payload: any) => void, askChoice?: AskChoiceFn): void {
+	for (const slot of ["p1", "p2"] as Slot[]) clearCatedralBlessing(state, slot, broadcast, askChoice);
 }
 
 function getTargetHP(state: MatchState, targetSlot: Slot, targetPos: number): number {
@@ -1960,7 +1965,7 @@ function triggerAutoEffects(
 			}
 			if (pick.lane === "support" && typeof pick.pos === "number") clearSupportAt(p as any, pick.pos);
 			if (pick.lane === "env") {
-				if (String(findCardDef(pick.cardId)?.effect || "") === "religioso_protecao") clearCatedralBlessing(state, pick.side, broadcast, askChoice);
+				if (String(findCardDef(pick.cardId)?.effect || "") === "religioso_protecao") clearAllCatedralBlessings(state, broadcast, askChoice);
 				p.env = "";
 			}
 			clampAllPlayersFragmentsToEffectiveCap(state);
@@ -2913,7 +2918,7 @@ export function playCard(state: MatchState, slot: Slot, cardId: string, targetPo
 		pg.hand.splice(idx, 1);
 		const previousEnv = String(pg.env || "");
 		if (previousEnv) {
-			if (String(findCardDef(previousEnv)?.effect || "") === "religioso_protecao") clearCatedralBlessing(state, slot, broadcast, askChoice);
+			if (String(findCardDef(previousEnv)?.effect || "") === "religioso_protecao") clearAllCatedralBlessings(state, broadcast, askChoice);
 			pg.grave.push(previousEnv);
 		}
 		pg.env = cardId;
