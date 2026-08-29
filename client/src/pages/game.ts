@@ -1150,6 +1150,7 @@ function buildMobileInspectCard(target: string | InspectorView | null): MobileIn
 		text: previewTextLine(nextView.cardId, card),
 		formatEffects: card?.escolha1 === true || card?.kind === "leader",
 		isChoiceOne: card?.escolha1 === true,
+		keywords: Array.isArray(card?.keywords) ? card.keywords : [],
 		stats: getInspectorStatsSafe(nextView).map((item) => `${item.label}: ${item.value}`),
 	};
 }
@@ -1504,7 +1505,7 @@ function renderInspector(target: string | InspectorView | null): void {
 	titleEl.textContent = String(card?.name || nextView.cardId || "Carta");
 	filiationEl.textContent = previewFiliationLine(card);
 	subclassEl.textContent = cardSubclassLine(card);
-	renderCardRulesText(textEl, previewTextLine(nextView.cardId, card), card?.escolha1 === true || card?.kind === "leader", card?.escolha1 === true);
+	renderCardRulesText(textEl, previewTextLine(nextView.cardId, card), card?.escolha1 === true || card?.kind === "leader", card?.escolha1 === true, Array.isArray(card?.keywords) ? card.keywords : []);
 }
 
 function setInspector(target: string | InspectorView | null): void {

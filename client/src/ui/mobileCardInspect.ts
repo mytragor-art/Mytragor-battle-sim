@@ -9,6 +9,7 @@ export type MobileInspectCard = {
 	text?: string;
 	formatEffects?: boolean;
 	isChoiceOne?: boolean;
+	keywords?: string[];
 	stats?: string[];
 };
 
@@ -130,7 +131,7 @@ export function createMobileCardInspect(): MobileCardInspectApi {
 		viewerTitle.textContent = card.title || card.cardId;
 		metaEl.innerHTML = "";
 		statsEl.innerHTML = "";
-		renderCardRulesText(textEl, String(card.text || ""), card.formatEffects, card.isChoiceOne);
+		renderCardRulesText(textEl, String(card.text || ""), card.formatEffects, card.isChoiceOne, card.keywords);
 
 		if (card.filiationLine) {
 			const pill = document.createElement("div");

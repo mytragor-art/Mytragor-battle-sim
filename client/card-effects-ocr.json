@@ -1,0 +1,352 @@
+[
+  {
+    "name": "Valbrak, O Mago Popular",
+    "img": "/chosens/layout-valbrak.ai.png",
+    "text": "Doo\nMAGO e ANAO\ne Uma vez por turno, quando você convocar um aliado\n“Cidadão”, compre 1 carta.\ne Uma vez por turno, Você pode pagar 2 fragmentos\nativos, seus aliados “Cidadão” recebem +1 de Ataque\naté o final do turno."
+  },
+  {
+    "name": "Katsu, o Vingador",
+    "img": "/chosens/layout-katsuvingador.ai.png",
+    "text": "As AAA\nGUERREIRO e HUMANO\ne Aliados “Guerreiro” que você controla, podem atacar\ninimigos que estejam Dispostos.\ne Uma vez por turno, se um Aliado “Guerreiro” derrotar\num personagem inimigo, em combate, cause 2 de dano\nao Escolhido inimigo."
+  },
+  {
+    "name": "Leafae, Guardião da Floresta",
+    "img": "/chosens/layout-leafaefloresta.ai.png",
+    "text": "DRUIDA e ELFO\n\n* Sempre que um Aliado que você controla for curado,\ncoloque um marcador “Elo Vital” neste Escolhido.\n\ne Uma vez por turno, você pode remover 3 marcadores\n“Elo Vital” deste Escolhido, então cure 2 de vida de um\nAliado em campo."
+  },
+  {
+    "name": "Ademais, Aranhas Negras",
+    "img": "/chosens/layout-ademais.ai.png",
+    "text": "CLÉRIGO. HUMANO\ne Quando um Aliado “Aranhas Negras” for convocado,\neste Escolhido recebe um marcador “Aranhas”.\ne Uma vez por turno, você pode remover 4 marcadores\n“Aranhas” deste Escolhido, então cause 3 de dano ao\nEscolhido inimigo.\nOO RO 7 A O A O A AOS NDA ; A  MMEO—"
+  },
+  {
+    "name": "Cervo de Galhos Brancos",
+    "img": "/allies/layout-cervogalhosbrancos.ai.png",
+    "text": "Cr\nA o |||) 7 MON “o ÉP aa \"A MR\nCRIATURA e ANIMAL\nQuando este Aliado for convocado, cure 1 de vida de\noutro Aliado “Animal” no seu campo.\n> AD» —"
+  },
+  {
+    "name": "Cão de Caça Feroz",
+    "img": "/allies/layout-caocacaferoz.ai.png",
+    "text": "NR\nATE,\nCRIATURA e ANIMAL\nInvestida— Este personagem pode atacar no turno que\nfoi convocado.\no— + —r —Â——ÂÀ=ÂÂ  — s—e—["
+  },
+  {
+    "name": "Jabuti Barreira",
+    "img": "/allies/layout-jabutibarreira.ai.png",
+    "text": "AU,\nCRIATURA e ANIMAL\nInterpor — Este personagem pode bloquear um ataque\ndirecionado a outro personagem.\nA be FFF————. ——>——"
+  },
+  {
+    "name": "Aranhas Negras, Agiota",
+    "img": "/allies/layout-agiota.ai.png",
+    "text": "——.\nAE\nLADINO e HUMANO\nUma vez por turno, você pode causar 2 de dano neste\nAliado, então pode jogar uma carta custo 2 ou menos da\nsua mão, sem pagar seu custo em fragmentos.\no—————————=—” =\"=\"—\"—nn—=—= rr"
+  },
+  {
+    "name": "Aranhas Negras, Novato",
+    "img": "/allies/layout-aranhasnovato.ai.png",
+    "text": "a —\n” LADINO e HUMANO"
+  },
+  {
+    "name": "Aranhas Negras, Novato",
+    "img": "/tokens/layout-aranhastoken.ai.png",
+    "text": "Ir O II o A E nl\nCriatura e Animal\nToken.\nsê . TS AB SR"
+  },
+  {
+    "name": "Cidadãos Unidos",
+    "img": "/tokens/layout-cidadaotoken.ai.png",
+    "text": "Cidadão e Humano\nToken.\nSe : ES ATZ TO"
+  },
+  {
+    "name": "Aranhas Negras, Mascote",
+    "img": "/allies/layout-aranhasmascote.ai.png",
+    "text": "Mr\nVA,\nCRIATURA e ANIMAL\nQuando este Aliado for convocado, crie até 2 Totens\n“Aranhas Negras”, Criatura, Animal, vida 1, ataque 1 e\nResistência 1."
+  },
+  {
+    "name": "Gladiador Aposentado",
+    "img": "/allies/layout-gladiadoraposentado.ai.png",
+    "text": "A\n\nf PÉ A\nCIDADAO e HUMANO\n\nO e i ) 1 mM€< 0 caí KFKempsssseuuúlÍ 1 in"
+  },
+  {
+    "name": "Aranhas Negras, Executor",
+    "img": "/allies/layout-aranhasexecutor.ai.png",
+    "text": "Ar\nLADINO e HUMANO\nQuando este Aliado for convocado, você pode deslocar\numa carta em campo.\nAliados com “Aranhas Negras” no nome, que você\ncontrola, recebe +1 de ataque.\n> A"
+  },
+  {
+    "name": "Goblin Sabotador",
+    "img": "/allies/layout-goblinsabotador.ai.png",
+    "text": "em EEE AME EO A a É\n\" LADINO e HUMANÓIDE |\nQuando este Aliado for convocado, você pode destruir 1\n\nEquipamento no campo do oponente.\no > —Ú——————————\nCriatuva auo cahaota ne VIATANtos ANO ONtTram o EAOM Ê—---s||—-—-—=Ds—"
+  },
+  {
+    "name": "Thorn, o Martelo da Montanha",
+    "img": "/allies/layout-thornmartelomontanha.ai.png",
+    "text": "Doo———————\nVAIS  S\nGUERREIRO e ANAO\nAtropelar — O excesso de Dano em um combate,\natinge diretamente a vida do Escolhido do oponente."
+  },
+  {
+    "name": "Urso Negro",
+    "img": "/allies/layout-ursonegro.ai.png",
+    "text": "CRIATURA ANIMA SN\nCRIATURA e ANIMAL\nA fInresta não nNrecisa Px muralhas. DT g—...  .. ..r —.  ——-——-—-  &Õ"
+  },
+  {
+    "name": "Bartolomeu, o Inspirador",
+    "img": "/allies/layout-bartolomeuinspirador.ai.png",
+    "text": "E E e e\nCIDADÃO e HUMANO\nQuando este Aliado for derrotado em combate e\nenviado para o cemitério, você pode convocar um\naliado “Cidadão”, com nome diferente deste, da sua\nmão, sem pagar o custo dele.\nBA OD II Do dO o com pone AMT E——————————"
+  },
+  {
+    "name": "Batedor Kobold",
+    "img": "/allies/layout-batedorkobold.ai.png",
+    "text": "IDA\nVANTUO  ,\nCIDADAÃO e HUMANOIDE"
+  },
+  {
+    "name": "Aprendiz de Magia",
+    "img": "/allies/layout-aprendizmagia.ai.png",
+    "text": "rr AA re É\n( CIDADÃO e HUMANO\nDoo————— o ====————c——— ———D- ————"
+  },
+  {
+    "name": "Gladiador Impenetrável",
+    "img": "/allies/layout-gladiadorimpenetravel.ai.png",
+    "text": "— Rm\n— GUERREIRO e HUMANO\nInterpor — Este personagem pode bloquear um ataque\ndirecionado a outro personagem.\nDesafio — Enquanto este aliado estiver Exaurido, seus\noponentes só podem atacar aliadaos com Desafio."
+  },
+  {
+    "name": "Gladiador Ousado",
+    "img": "/allies/layout-gladiadorousado.ai.png",
+    "text": "GUERREIRO e HUMANO\nDesafio — Enquanto este aliado estiver Exaurido, seus |\noponentes só podem atacar aliados com Desafio. |"
+  },
+  {
+    "name": "Tamanduá Guardião",
+    "img": "/allies/layout-tamanduaguardiao.ai.png",
+    "text": "rh\nDI AIDA ANTENA\nCRIATURA e ANIMAL\nDesafio — Enquanto este aliado estiver Exaurido, seus\noponentes só podem atacar aliadaos com Desafio.\n2 CC —— A"
+  },
+  {
+    "name": "Leão Rei Sagrado",
+    "img": "/allies/layout-leaoreisagrado.ai.png",
+    "text": "CRIATURA e ANIMAL\nQuando este Aliado for convocado, adicione um aliado\n“Animal” do seu baralho para sua mão. Embaralhe seu\nbaralho.\nEnquanto este Aliado estiver em campo, seus Aliados\n“Animal” recebem +1 de Ataque.\n\n4 o"
+  },
+  {
+    "name": "Aerin Nieloy",
+    "img": "/allies/layout-aerynnieloy.ai.png",
+    "text": "— GUERREIRO e ELFO\nInterpor — Este personagem pode bloquear um ataque\ndirecionado a outro personagem.\nEnquanto este aliado estiver em campo, seus\npersonagens “cidadão” recebem +1 de vida."
+  },
+  {
+    "name": "Informante do Beco",
+    "img": "/allies/layout-informantebeco.ai.png",
+    "text": "Desse E E E e\nANTUNES\nCIDADAO e ELFO\nQuando este Aliado for Convocado, revele a carta do\ntopo do baralho do oponente, depois volte a carta para\no topo."
+  },
+  {
+    "name": "Gamboa, a Caçadora",
+    "img": "/allies/layout-gamboacacadora.ai.png",
+    "text": "o A\nVA\nLADINO e ELFO\nQuando este Aliado for convocado, você pode olhar as\ncartas na mão do seu oponente. Escolha 1 carta na mão\ndele e descarte.\n———— o  —\"=\"\"\"\" \"2 2\""
+  },
+  {
+    "name": "Miliciano da Vila",
+    "img": "/allies/layout-milicianovila.ai.png",
+    "text": "AA E A O o É\n” CIDADÃO e HUMANO |"
+  },
+  {
+    "name": "Charlatão da Vila",
+    "img": "/allies/layout-charlataovila.ai.png",
+    "text": "CIDADÃO e ELFO\n\nQuando este Aliado for convocado, compre uma carta,\nem seguida descarte uma carta da sua mão. O efeito de\nCharlatão da Vila só pode ser ativado uma vez por turno"
+  },
+  {
+    "name": "Estudante Arcano",
+    "img": "/allies/layout-estudantearcano.ai.png",
+    "text": "ro\nMAGO e ELFO\nQuando este Aliado for derrotado em combate e\nenviado para o cemitério, você pode convocar um\naliado “Cidadão, com nome diferente deste, da sua\nmão, sem pagar o custo dele.\nIF, \"4% ===  fjçç—.|] ."
+  },
+  {
+    "name": "Xamã Kobold",
+    "img": "/allies/layout-xamakobold.ai.png",
+    "text": "hr\n| MAGO e HUMANÓIDE\nQuando este Aliado for convocado, você pode Deslocar 1\nAliado, com “Kobold” no nome, que estiver no seu\ncemitério, depois compre 1 carta."
+  },
+  {
+    "name": "Toupeira Escavadora",
+    "img": "/allies/layout-toupeiraescavadora.ai.png",
+    "text": "NR\nVV CDIATIIDA ANTERAHAdo SN\nCRIATURA e ANIMAL\nQuando este Aliado for convocado, olhe a carta do topo\ndo seu baralho, você deve colocá-la no fundo ou voltá-la\npara o topo do seu baralho."
+  },
+  {
+    "name": "Porco-espinho Furioso",
+    "img": "/allies/layout-porcoespinhofurioso.ai.png",
+    "text": "rh\nCRIATURA e ANIMAL |\nSempre que um personagem que você controla for\ncurado, coloque 1 marcador de “Elo Vital” neste Aliado.\neste Aliado recebe +1 de Ataque e +1 de Vida para cada\nmarcador de “Elo Vital” nele.\n> O 2 — a"
+  },
+  {
+    "name": "Hiena Carniceira",
+    "img": "/allies/layout-hienacarniceira.ai.png",
+    "text": "020\n\nMN\nCRIATURA e ANIMAL\nQuando este Aliado for derrotado em combate e\nenviado para o cemitério, escolha 1 Aliado, custo 3 ou\nmenos, no seu cemitério, que não seja “Hiena\nCarniceira”, convoque-o para o campo.\n\nPO k âDILCOOOOàO»FCAA=E É"
+  },
+  {
+    "name": "Arnold, o Escudeiro",
+    "img": "/allies/layout-Arnoldescudeiro.ai.png",
+    "text": "ao———ã—\nCIDADÃO e HUMANO\nQuando este Aliado for convocado, procure no seu\nbaralho uma carta de equipamento e adicione à sua\nmão. Depois embaralhe seu baralho."
+  },
+  {
+    "name": "O Protetor",
+    "img": "/allies/layout-oprotetor.ai.png",
+    "text": "Pr\nCIDADÃO « HUMANO\nInterpor — Este personagem pode bloquear um ataque\ndirecionado a outro personagem.\nEnquanto este aliado estiver em campo, seus\npersonagens “Cidadão” recebem +1 de vida."
+  },
+  {
+    "name": "Gladiador Veloz",
+    "img": "/allies/layout-gladiadorveloz.ai.png",
+    "text": "— e—:.UUU EE—---—---=-=-=—---sssess.....................................\n\"— GUERREIRO e HUMANO\nInvestida — Este personagem pode atacar no turno\nque foi convocado.\nSEA ra Mo O pu"
+  },
+  {
+    "name": "Mãos Flamejantes",
+    "img": "/spell/layout-maosflamejantes.ai.png",
+    "text": "Escolha 1 personagem em campo, cause 2 de Dano."
+  },
+  {
+    "name": "Espionagem Sorrateira",
+    "img": "/spell/layout-espionagemsorrateira.ai.png",
+    "text": "Olhe as cartas da mão do seu oponente. Escolha uma\ncarta “Religioso”, “Marcial” e “Arcano” dentre elas e\ndescarte-a."
+  },
+  {
+    "name": "Profanação de Terreno",
+    "img": "/spell/layout-profanacaoterreno.ai.png",
+    "text": "Destrua 1 Ambiente em campo.\nPOR o E A A <"
+  },
+  {
+    "name": "Controle de Correntezas",
+    "img": "/spell/layout-controlecorrenteza.ai.png",
+    "text": "Destrua um Aliado do oponente em campo."
+  },
+  {
+    "name": "Ajuda do Povo",
+    "img": "/spell/layout-ajudapovo.ai.png",
+    "text": "Convoque 2 Totens “Cidadãos Unidos” no seu lado do\ncampo. Eles são Cidadão, Humano, vida 1, Ataque 1 e\nResistência 1."
+  },
+  {
+    "name": "Contrição",
+    "img": "/trick/layout-constricaoll.ai.png",
+    "text": "Quando um oponente declarar ataque: Negue esse\nataque. O personagem atacante permanece exaurido\naté o fim do próximo turno do controlador dele."
+  },
+  {
+    "name": "Aranhas Negras, Emboscada",
+    "img": "/trick/layout-aranhasemboscada.ai.png",
+    "text": "Quando um oponente declarar um Ataque: O\npersonagem atacante perde 3 de Ataque até o final\ndaquele embate. Se você controlar um Aliado com\n“Aranhas Negras” no nome, compre 1 carta."
+  },
+  {
+    "name": "Interrupção Perfeita",
+    "img": "/trick/layout-interrupcaoperfeita.ai.png",
+    "text": "Quando seu oponente ativar uma carta de Magia ou\nTruque: Anule o efeito da carta ativada."
+  },
+  {
+    "name": "Alerta de Fuga",
+    "img": "/trick/layout-alertafuga.ai.png",
+    "text": "Quando um aliado do seu lado do for enviado para o\ncemitério: Escolha 1 aliado “Marcial” no seu cemitério\ne convoque-o para o campo."
+  },
+  {
+    "name": "Tempestade Arcana",
+    "img": "/envs/layout-tempestadearcana.ai.png",
+    "text": "Enquanto esta carta estiver em campo, Jogadores cujo\nEscolhido seja “Arcano”, Compram 1 carta adicional na\nFase Inicial. Este efeito não é opcional."
+  },
+  {
+    "name": "Caminhos Perigosos",
+    "img": "/envs/layout-caminhosperigosos.ai.png",
+    "text": "Enquanto esta carta estiver em campo, jogadores cujo\nEscolhido não seja “Sombras”, têm 1 fragmento ativo a\nmenos.\n\nOuando a notto cat. a€ ruas tom couçc daenaç."
+  },
+  {
+    "name": "Campos Ensanguentados",
+    "img": "/envs/layout-camposensanguentados.ai.png",
+    "text": "Enquanto esta carta estiver em campo, personagens\n“Marcial” recebem +1 de ataque"
+  },
+  {
+    "name": "Catedral Ensolarada",
+    "img": "/envs/layout-catedralensolarada.ai.png",
+    "text": "Durante a Fase Inicial, jogadores com Escolhido\n“Religioso”, escolhem 1 Aliado em campo. O Aliado\nselecionado recebe +2 de vida até o início do próximo\nturno do jogador."
+  },
+  {
+    "name": "Lâmina Serralhada",
+    "img": "/equip/layout-laminaserrilhada.ai.png",
+    "text": "O Aliado equipado recebe +2 de Ataque."
+  },
+  {
+    "name": "Manto de Couro",
+    "img": "/equip/layout-mantocouro.ai.png",
+    "text": "O personagem equipado recebe +1 de Resistencia e +1 de\nVida."
+  },
+  {
+    "name": "Orbe de Absorção",
+    "img": "/equip/layout-orbeabsorcao.ai.png",
+    "text": "Quando este equipameto entrar em campo, você pode\ndeslocar qualquer quantidade de cartas de Magia no\nseu cemitério. O personagem equipado, com esta carta,\nrecebe +1 de Ataque para cada carta deslocada por este\nefeito."
+  },
+  {
+    "name": "Redoma Santa",
+    "img": "/equip/layout-redomasanta.ai.png",
+    "text": "Ceee—UU UU... \" —\nO personagem equipado recebe +1 de Resistência.\nQuando este equipamento entrar em campo, cure 3 de\nvida de um Aliado em campo."
+  },
+  {
+    "name": "Aranhas Negras, Quelíceras",
+    "img": "/equip/layout-aranhasqueliceras.ai.png",
+    "text": "O Personagem recebe +1 de Ataque.\nQuando esta carta for enviada do campo para o\ncemitério, cause 2 de Dano ao Escolhido do oponente."
+  },
+  {
+    "name": "Tônico Revigorante",
+    "img": "/spell/layout-tonicorevigorante.ai.png",
+    "text": "Escolha 1:\ne Escolha 1 personagem, cure 3 de vida dele.\ne Compre 1 carta."
+  },
+  {
+    "name": "Bem Treinado",
+    "img": "/spell/layout-bemtreinado.ai.png",
+    "text": "DEC\nEscolha 1:\ne Exaure um aliado “Marcial” que você controla, então\ndesloque 1 aliado do oponente.\ne Adicione 1 carta de magia “Marcial” do seu baralho\npara sua mão. Em seguida embaralhe seu baralho."
+  },
+  {
+    "name": "Fruto Abençoado",
+    "img": "/spell/layout-frutoabencoado.ai.png?v=20260426-1",
+    "error": "Error: Input file is missing: C:\\Users\\vandr\\OneDrive\\Área de Trabalho\\similador versão 3\\mytragor-sim\\client\\public\\spell\\layout-frutoabencoado.ai.png?v=20260426-1"
+  },
+  {
+    "name": "Invasão de Cativeiro",
+    "img": "/spell/layout-invasaocativeiro.ai.png",
+    "text": "AS  —\nEscolha 1:\ne Exaure 1 Aliado do oponente\ne Escolha 1 Aliado em campo, Ele Recebe +1 de Ataque\naté o fim do turno."
+  },
+  {
+    "name": "Quebra-Aço",
+    "img": "/spell/layout-quebraaco.ai.png",
+    "text": "Destrua 1 Equipamento em campo.\nCm o o. e"
+  },
+  {
+    "name": "Sede de Vingança",
+    "img": "/spell/layout-sedevinganca.ai.png",
+    "text": "PAS\nVocê pode ativar Sede de Vingança uma vez por turno.\nEscolha 1 personagem “Guerreiro” que você controla,\nele recebe +3 de ataque até o fim do turno. Se ele\nderrotar 1 aliado do oponente, neste turno, compre 1\ncarta."
+  },
+  {
+    "name": "Gladiador Implacável",
+    "img": "/allies/layout-gladiadorimplacavel.ai.png",
+    "text": "Do\nGUERREIRO e HUMANO\nQuando este Aliado vencer um inimigo em combate e\nenviá-lo para o cemitério, coloque 1 maracador\n“Sangue” neste aliado. Ele recebe +1 de Ataque e +1 de\nResistencia para cada marcador Sangue nele."
+  },
+  {
+    "name": "Yohan, Ronin Vigilante",
+    "img": "/allies/layout-yohanronin.ai.png",
+    "text": "DaoaeeeSSSSEEEEEEEEEEEEEEEE— S ww  s—npssccn——————c———R — It ggp—\n\" GUERREIRO e HUMANO\nEste Aliado recebe +1 de ataque para cada outra carta\n“Marcial” no campo de qualquer jogador.\nRo é <FXIãrc—— gAJfÚUTENNNNNNN———=g—"
+  },
+  {
+    "name": "Livro Arcano Instável",
+    "img": "/equip/layout-livroinstavel.ai.png",
+    "text": "O personagem equipado recebe +1 de Ataque.\nQuando este equipamento entrar em campo, olhe a\ncarta do topo do seu baralho. Volte-a para o topo ou\ncoloque-a no fundo do seu baralho."
+  },
+  {
+    "name": "Aranhas Negras, Milícia",
+    "img": "/spell/layout-aranhasmilicia.ai.png",
+    "text": "Cause 2 de dano em um Personagem que você controla.\nSe o fizer, cause 4 de dano em 1 Personagem inimigo."
+  },
+  {
+    "name": "Pica-pau Agulheiro",
+    "img": "/allies/layout-picapauagulheiro.ai.png",
+    "text": "mma\n\"— CRIATURA e ANIMAL\nQuando este Aliado for convocado, você pode causar 1\nde dano a outro Aliado que você controla. Se o fizer,\ncompre 1 carta.\na AA, AMME SNS Sil / 1 NMMvâAA hN ( (<í hKxô6 '*/—  t ii TN NM\"."
+  },
+  {
+    "name": "Bom Fruto",
+    "img": "/spell/layout-bomfruto.ai.png?v=20260426-1",
+    "error": "Error: Input file is missing: C:\\Users\\vandr\\OneDrive\\Área de Trabalho\\similador versão 3\\mytragor-sim\\client\\public\\spell\\layout-bomfruto.ai.png?v=20260426-1"
+  },
+  {
+    "name": "Aranhas Negras, Observadora",
+    "img": "/allies/layout-aranhasobservadora.ai.png",
+    "text": "— Ci. 1NqT]Íi 1 ii !couLÍ1 ooo: = sssssss——\n( CIDADÃO e ELFO |\nQuando este Aliado for convocado, procure no seu\nbaralho uma carta com “Aranhas Negras” no nome e\nadicione-a à sua mão. O efeito de “Aranhas Negras,\nObservadora” só pode ser ativada uma vez por turno.\nSS O"
+  },
+  {
+    "name": "Troca de Energia",
+    "img": "/spell/layout-trocaenergia.ai.png",
+    "text": "Escolha um aliado “Animal” que você controla. Cause 2\nde Dano no aliado escolhido, em seguida, cure 4 de vida\ndo seu Escolhido."
+  },
+  {
+    "name": "Aranhas Negras, Informante",
+    "img": "/allies/layout-aranhasinformante.ai.png",
+    "text": "A\nMMCLL IL AL A AA AA A AAA A AA A AE ———————————ANl\nGUERREIRO e HUMANO\nQuando este Aliado for convocado, cause 4 de dano no\nseu Escolhido. Então, seu oponente descarta 1 carta\naleatória da mão dele.\nRM MM"
+  }
+]

@@ -318,6 +318,12 @@
       color: #ffd54f;
     }
 
+    .cardRulesKeyword {
+      color: #c084fc;
+      font-weight: 800;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, .75);
+    }
+
     .cardRulesChoiceOption {
       display: block;
       padding-left: 4px;
@@ -1946,17 +1952,31 @@
       return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
+    const keywordLabels = { bloquear: 'Interpor', provocar: 'Desafio' };
+
+    function normalizeKeyword(text) {
+      return String(text || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+    }
+
+    function formatRuleKeywords(text, keywords = []) {
+      const labels = new Set(keywords.map((keyword) => normalizeKeyword(keywordLabels[normalizeKeyword(keyword)] || keyword)));
+      return escapeCardText(text)
+        .replace(/(^|\n)([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\s]{0,40}?)(\s*[—–-]\s*)/g, (match, lineStart, label, separator) => labels.has(normalizeKeyword(label)) ? `${lineStart}<span class="cardRulesKeyword">${label}</span>${separator}` : match)
+        .replace(/\n/g, '<br>');
+    }
+
     function formatCardEffectText(card) {
       const text = String(card && (card.text || card.description) || '').trim() || 'Sem descrição';
+	  const keywords = Array.isArray(card && card.keywords) ? card.keywords : [];
       const formatEffects = card && (card.escolha1 === true || card.kind === 'chosen' || card.kind === 'leader');
-      if (!formatEffects) return escapeCardText(text).replace(/\n/g, '<br>');
+	  if (!formatEffects) return formatRuleKeywords(text, keywords);
       const parts = text.split(/\s*•\s*/).filter(Boolean);
       const effects = card.escolha1 ? parts.slice(1) : parts;
       const header = card.escolha1 ? `<strong class="cardRulesChoiceHeader">${escapeCardText(parts[0] || 'Escolha 1:')}</strong>` : '';
       const universalRule = 'Desloque esta carta após resolver.';
       const formattedEffects = effects.map((effect) => {
         const [choiceEffect, universalEffect] = effect.split(universalRule);
-        const choice = `<span class="cardRulesChoiceOption">• ${escapeCardText(choiceEffect.trim())}</span>`;
+        const choice = `<span class="cardRulesChoiceOption">• ${formatRuleKeywords(choiceEffect.trim(), keywords)}</span>`;
         const rule = universalEffect !== undefined ? `<span class="cardRulesUniversalRule">${universalRule}</span>` : '';
         return choice + rule;
       }).join('');
