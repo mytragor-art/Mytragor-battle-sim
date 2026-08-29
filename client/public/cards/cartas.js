@@ -198,7 +198,7 @@ name: 'Tamanduá Guardião', kind: 'ally', img: '/allies/layout-tamanduaguardiao
 
   // Magias, Equipamentos, Ambientes, Truques
   {
-  name: 'Mãos Flamejantes', kind: 'spell', img: '/spell/layout-maosflamejantes.ai.png', cost: 2, classe: '', tipo: 'Magia', filiacao: 'Arcana', effect: 'dano_2_inimigo', text: 'Cause 2 de Dano a 1 personagem.'
+  name: 'Mãos Flamejantes', kind: 'spell', img: '/spell/layout-maosflamejantes.ai.png', cost: 2, classe: '', tipo: 'Magia', filiacao: 'Arcana', effect: 'dano_2_inimigo', text: 'Escolha 1 personagem em campo, cause 2 de Dano.'
   },
   {
     name: 'Espionagem Sorrateira', kind: 'spell', img: '/spell/layout-espionagemsorrateira.ai.png', cost: 4, classe: '', tipo: 'Magia', filiacao: 'Sombras', effect: 'espionagem_sorrateira',
@@ -240,7 +240,7 @@ name: 'Tamanduá Guardião', kind: 'ally', img: '/allies/layout-tamanduaguardiao
       text: 'Quando um oponente declarar um ataque: O personagem atacante perde 3 de Ataque até o final daquele embate. Se você controlar um aliado com "Aranhas Negras" no nome, compre 1 carta.'
     },
   {
-    name: 'Interrupção Perfeita', kind: 'truque', img: '/trick/layout-interrupcaoperfeita.ai.png', cost: 2, classe: '', tipo: 'Truque', filiacao: 'Arcana', effect: 'anular_magia_truque', text: 'Quando o oponente ativa uma magia ou truque, anule o efeito.'
+    name: 'Interrupção Perfeita', kind: 'truque', img: '/trick/layout-interrupcaoperfeita.ai.png', cost: 2, classe: '', tipo: 'Truque', filiacao: 'Arcana', effect: 'anular_magia_truque', text: 'Quando o Oponente ativa uma Magia ou Truque: Anule o efeito da carta ativada.'
   },
     {
       name: 'Alerta de Fuga',
@@ -254,7 +254,7 @@ name: 'Tamanduá Guardião', kind: 'ally', img: '/allies/layout-tamanduaguardiao
       text: 'Quando um aliado do seu lado do campo for enviado ao cemitério: Escolha 1 aliado "Marcial" bo seu cemitério e convoque-o para o campo.'
     },
   {
-    name: 'Tempestade Arcana', kind: 'env', img: '/envs/layout-tempestadearcana.ai.png', cost: 3, classe: '', tipo: 'Ambiente', filiacao: 'Arcana', effect: 'arcana_draw', text: 'Enquanto esta carta estiver em campo, jogadores com Escolhido "Arcano" compram 1 carta adicional na Fase Inicial.'
+    name: 'Tempestade Arcana', kind: 'env', img: '/envs/layout-tempestadearcana.ai.png', cost: 3, classe: '', tipo: 'Ambiente', filiacao: 'Arcana', effect: 'arcana_draw', text: 'Enquanto esta carta estiver em campo, jogadores cujo Escolhido seja "Arcano", compram 1 carta adicional na Fase Inicial. Este Efeito não é opcional.'
   },
   {
     name: 'Caminhos Perigosos', kind: 'env', img: '/envs/layout-caminhosperigosos.ai.png', cost: 3, classe: '', tipo: 'Ambiente', filiacao: 'Sombras', effect: 'sombra_penalty', text: 'Enquanto esta carta estiver em campo, Jogadores cujo Escolhido não seja "Sombras", têm 1 fragmento ativo a menos.'
