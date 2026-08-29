@@ -269,6 +269,7 @@ export class MatchRoom extends Room<MatchState> {
 			title: payload.title,
 			options: payload.options,
 			sourceCardId: this.inferChoiceSourceCardId(payload),
+			activatedCardId: payload.activatedCardId,
 			attackerId: payload.attackerId,
 			attackerName: payload.attackerName,
 			attackerAttack: payload.attackerAttack,

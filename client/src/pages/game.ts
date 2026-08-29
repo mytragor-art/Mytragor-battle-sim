@@ -825,6 +825,22 @@ function getAttachedSupportNumericBonusForSide(side: BattleSide, targetPos: numb
 	return total;
 }
 
+function getAttachedSupportCounterForSide(side: BattleSide, targetPos: number | null, effect: string): number {
+	const supports = getSupportArrayForSide(side);
+	const attach = getSupportAttachArrayForSide(side);
+	const counters = side === "you" ? currentMySupportCounters : currentEnemySupportCounters;
+	const expectedTarget = targetPos == null ? -1 : targetPos;
+	let total = 0;
+	for (let index = 0; index < supports.length; index += 1) {
+		const supportCardId = String(supports[index] || "").trim();
+		if (!supportCardId || Number(attach[index] ?? -2) !== expectedTarget) continue;
+		if (String(resolveCard(supportCardId)?.effect || "") !== effect) continue;
+		const value = Number(counters[index] || 0);
+		if (Number.isFinite(value) && value > 0) total += value;
+	}
+	return total;
+}
+
 function cardMatchesAuraTarget(cardId: string, auraTarget: any): boolean {
 	if (!auraTarget) return false;
 	const def = resolveCard(cardId) as any;
@@ -921,6 +937,7 @@ function getLeaderAttackValue(side: BattleSide, cardId: string): number {
 	let total = Number(resolveCard(cardId)?.atkBonus || 0);
 	total += getAttachedSupportNumericBonusForSide(side, null, "atkBonus");
 	total += getAttachedSupportNumericBonusForSide(side, null, "dmgBonus");
+	total += getAttachedSupportCounterForSide(side, null, "draw_bonus");
 	if (hasMarcialEnvAttackBonusForSide(side, cardId)) total += 1;
 	return Math.max(0, total);
 }
@@ -964,6 +981,7 @@ function getFieldAttackValue(side: BattleSide, index: number, cardId: string): n
 	total += getFieldAtkPermForSide(side, index);
 	total += getAttachedSupportNumericBonusForSide(side, index, "atkBonus");
 	total += getAttachedSupportNumericBonusForSide(side, index, "dmgBonus");
+	total += getAttachedSupportCounterForSide(side, index, "draw_bonus");
 	total += getFieldVitalMarksForSide(side, index);
 	total += getAuraAttackBonusForSide(side, cardId);
 	total += getMarcialBattleBonus(cardId, side, index);
@@ -1057,7 +1075,7 @@ function getInspectorStats(view: InspectorView | null): Array<{ label: string; v
 		const hpValue = maxHp === baseHp ? `${currentHp}/${maxHp}` : `${currentHp}/${maxHp} (${maxHp > baseHp ? "+" : ""}${maxHp - baseHp})`;
 		const out: Array<{ label: string; value: string; tone?: "good" | "bad" | "neutral" | "gold" }> = [
 			{ label: "Vida", value: hpValue, tone: currentHp < maxHp ? (currentHp / Math.max(1, maxHp) <= 0.5 ? "bad" : "neutral") : (maxHp > baseHp ? "good" : "neutral") },
-			{ label: "Ataque", value: formatStatWithDelta(attack, baseAttack), tone: attack > baseAttack ? "good" : (attack < baseAttack ? "bad" : "neutral") },
+			{ label: "Ataque", value: String(attack), tone: attack > baseAttack ? "good" : (attack < baseAttack ? "bad" : "neutral") },
 			{ label: "Resistência", value: formatStatWithDelta(resistance, baseResistance), tone: resistance > baseResistance ? "good" : (resistance < baseResistance ? "bad" : "neutral") }
 		];
 		if (marcialBonus > 0) out.push({ label: "Bônus Marcial", value: `+${marcialBonus}`, tone: "gold" });
@@ -2283,7 +2301,6 @@ function appendChosenStatsBar(cardEl: HTMLElement, values: { hp: number; maxHp: 
 	bar.appendChild(hpTag);
 
 	if (Number.isFinite(values.resistance) && values.resistance > 0) {
-		bar.classList.add("chosenStatsRow--dual");
 		const resistanceTag = document.createElement("div");
 		resistanceTag.className = "allyStatTag allyStatTag--resistance";
 		const resistanceIcon = document.createElement("span");
@@ -2295,8 +2312,6 @@ function appendChosenStatsBar(cardEl: HTMLElement, values: { hp: number; maxHp: 
 		resistanceTag.appendChild(resistanceIcon);
 		resistanceTag.appendChild(resistanceValue);
 		bar.appendChild(resistanceTag);
-	} else {
-		bar.classList.add("chosenStatsRow--single");
 	}
 
 	cardEl.appendChild(bar);
@@ -2700,6 +2715,53 @@ function createChoiceDuelPanel(payload: any): HTMLElement | null {
 	return panel;
 }
 
+function createCounteredCardPanel(payload: any): HTMLElement | null {
+	const cardId = String(payload?.activatedCardId || "").trim();
+	if (!cardId) return null;
+	const card = resolveCard(cardId);
+	const panel = document.createElement("div");
+	panel.style.display = "grid";
+	panel.style.gridTemplateColumns = "64px minmax(0, 1fr)";
+	panel.style.gap = "10px";
+	panel.style.alignItems = "center";
+	panel.style.padding = "10px";
+	panel.style.border = "1px solid rgba(248,113,113,.55)";
+	panel.style.borderRadius = "8px";
+	panel.style.background = "rgba(127,29,29,.22)";
+
+	const image = document.createElement("img");
+	setThumbnailSource(image, card?.img || CARD_BACK_ASSET);
+	image.alt = card?.name || cardId;
+	image.style.width = "64px";
+	image.style.height = "88px";
+	image.style.objectFit = "cover";
+	image.style.borderRadius = "6px";
+	image.style.border = "1px solid rgba(255,255,255,.22)";
+	panel.appendChild(image);
+
+	const copy = document.createElement("div");
+	copy.style.display = "grid";
+	copy.style.gap = "3px";
+	const label = document.createElement("div");
+	label.textContent = "Carta a responder";
+	label.style.fontSize = "11px";
+	label.style.fontWeight = "700";
+	label.style.textTransform = "uppercase";
+	label.style.opacity = "0.85";
+	const name = document.createElement("div");
+	name.textContent = card?.name || cardId;
+	name.style.fontSize = "14px";
+	name.style.fontWeight = "700";
+	const description = document.createElement("div");
+	description.textContent = String(card?.text || card?.descricao || "Anule esta magia ou truque antes que o efeito seja resolvido.");
+	description.style.fontSize = "12px";
+	description.style.lineHeight = "1.25";
+	description.style.opacity = "0.92";
+	copy.append(label, name, description);
+	panel.appendChild(copy);
+	return panel;
+}
+
 function hideChoiceWaitingModal() {
 	const modal = document.getElementById("choiceWaitingModal") as HTMLElement | null;
 	if (modal) modal.style.display = "none";
@@ -2777,6 +2839,7 @@ function showEffectChoiceModal(payload: any) {
 		previewWrap.appendChild(infoBox);
 	}
 	const duelPanel = createChoiceDuelPanel(payload);
+	const counteredCardPanel = createCounteredCardPanel(payload);
 	const timeoutMs = Number(payload?.timeoutMs || 0);
 	if (timeoutMs > 0) {
 		const seconds = Math.max(1, Math.floor(timeoutMs / 1000));
@@ -2922,6 +2985,7 @@ function showEffectChoiceModal(payload: any) {
 		duelPanel.style.marginTop = "10px";
 		choicesWrap.appendChild(duelPanel);
 	}
+	if (counteredCardPanel) choicesWrap.appendChild(counteredCardPanel);
 
 	if (isMobileChoiceLayout) {
 		layout.style.gridTemplateColumns = "1fr";
@@ -3227,7 +3291,9 @@ function renderLane(zoneId: "you-field" | "ai-field" | "you-support" | "ai-suppo
 			appendEquipAttachTag(cardEl, zoneId === "you-field" ? "you" : "ai", index);
 		}
 		if (zoneId === "you-support" || zoneId === "ai-support") {
-			appendSupportCounterTag(cardEl, getSupportCounterForSide(renderSide, index));
+			if (String(resolveCard(cardId)?.effect || "") !== "draw_bonus") {
+				appendSupportCounterTag(cardEl, getSupportCounterForSide(renderSide, index));
+			}
 		}
 		slotEl.onmousemove = () => setHoveredInspector({ cardId, side, lane, index });
 		slotEl.onmouseleave = () => setHoveredInspector(null);

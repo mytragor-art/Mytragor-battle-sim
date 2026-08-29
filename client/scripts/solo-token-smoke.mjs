@@ -144,6 +144,8 @@ async function main() {
 
 	await waitFor(() => events.assigned && events.state, "solo match join and initial state");
 	assert(events.assigned?.slot === "p1", `expected human slot p1, got ${events.assigned?.slot}`);
+	await waitFor(() => String(events.state?.game?.phase || "") === "MULLIGAN", "opening mulligan");
+	room.send("submit_mulligan", { indices: [] });
 
 	const advanceHumanTurn = async () => {
 		await waitFor(() => currentTurnSlot === "p1", "wait for human turn");

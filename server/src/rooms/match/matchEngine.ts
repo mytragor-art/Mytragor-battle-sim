@@ -17,6 +17,7 @@ export type ChoicePayload = {
 	minSelections?: number;
 	maxSelections?: number;
 	sourceCardId?: string;
+	activatedCardId?: string;
 	attackerId?: string;
 	attackerName?: string;
 	attackerAttack?: number;
@@ -915,6 +916,7 @@ function maybeOfferCounterToActivation(
 		defenderSlot,
 		{
 			title: `Interrupção Perfeita: deseja anular ${activatedCardId}?`,
+			activatedCardId,
 			options: [...counterOptions, { id: "counter-no", label: "Não ativar", description: `Deixar ${activatedCardId} resolver normalmente.` }],
 			allowCancel: true
 		},
@@ -2348,15 +2350,15 @@ function startTurn(
 	const pg = slot === "p1" ? game.p1 : game.p2;
 	const isOpeningTurnForStarter = slot === game.starterSlot && game.turn === 1 && (pg.fragmentMax || 0) <= 0;
 	const add = isOpeningTurnForStarter ? 1 : 2;
-	const envEffect = getPlayerEnvEffect(state, slot);
 	pg.fragmentMax = Math.min(10, (pg.fragmentMax || 0) + add);
 	pg.fragments = getEffectiveFragmentCap(state, slot);
 	drawCard(state, slot, 1, broadcast);
 	if (state.phase === "FINISHED") return;
-	if (envEffect === "arcana_draw" && leaderHasFiliation(state, slot, "Arcana")) {
+	const arcanaEnvSlot = (["p1", "p2"] as Slot[]).find((envSlot) => getPlayerEnvEffect(state, envSlot) === "arcana_draw");
+	if (arcanaEnvSlot && leaderHasFiliation(state, slot, "Arcana")) {
 		drawCard(state, slot, 1, broadcast);
 		if (state.phase === "FINISHED") return;
-		broadcast("effect_log", { slot, cardId: String(asPlayer(state, slot).env || ""), effect: "arcana_draw", text: `Tempestade Arcana: compra extra no início do turno.` });
+		broadcast("effect_log", { slot, cardId: String(asPlayer(state, arcanaEnvSlot).env || ""), effect: "arcana_draw", text: `Tempestade Arcana: compra extra no início do turno.` });
 	}
 
 	broadcast("turn_start", {
