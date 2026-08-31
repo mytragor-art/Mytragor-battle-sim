@@ -189,6 +189,81 @@ export class SoloMatchRoom extends Room<MatchState> {
 		return Math.max(0, Number(def?.ac ?? 0));
 	}
 
+	private cardMatchesAuraTarget(cardId: string, auraTarget: any): boolean {
+		const def = findCardDef(cardId);
+		if (!def || !auraTarget) return false;
+		if (auraTarget.classe) return this.normalizeText(def.classe) === this.normalizeText(auraTarget.classe);
+		if (auraTarget.tipo) return this.normalizeText(def.tipo) === this.normalizeText(auraTarget.tipo);
+		if (auraTarget.nameIncludes) return this.normalizeText(def.name || cardId).includes(this.normalizeText(auraTarget.nameIncludes));
+		return false;
+	}
+
+	private getAuraContribution(cardId: string, slot: Slot): number {
+		const def = findCardDef(cardId) as any;
+		if (!def?.auraTarget) return 0;
+		const player = this.state.game[slot] as any;
+		const value = Math.max(1, Number(def.effectValue || 1));
+		const weight = this.normalizeText(def.auraProp) === "atk" ? 12 : 9;
+		let affectedAllies = 0;
+		for (const allyId of player.field as string[]) {
+			if (allyId && this.cardMatchesAuraTarget(String(allyId), def.auraTarget)) affectedAllies += 1;
+		}
+		return affectedAllies * value * weight;
+	}
+
+	private scoreUnitBoardValue(cardId: string, slot: Slot, pos?: number): number {
+		const player = this.state.game[slot] as any;
+		const def = findCardDef(cardId);
+		const permanentAttack = typeof pos === "number"
+			? Number(player.fieldAtkPerm?.[pos] || 0) + Number(player.fieldVitalMarks?.[pos] || 0)
+			: 0;
+		const permanentResistance = typeof pos === "number" ? Number(player.fieldAcPerm?.[pos] || 0) : 0;
+		const hp = typeof pos === "number"
+			? Math.max(0, Number(player.fieldHp?.[pos] || 0))
+			: this.getUnitMaxHp(cardId);
+		let score = (this.getUnitAttack(cardId) + permanentAttack) * 6 + hp * 3 + (this.getUnitResistance(cardId) + permanentResistance) * 3;
+		if (this.cardHasKeyword(def, "bloquear")) score += 18;
+		if (this.cardHasKeyword(def, "provocar")) score += 20;
+		if (this.cardHasKeyword(def, "investida")) score += 10;
+		if (this.cardHasKeyword(def, "atropelar")) score += 8;
+		if (slot === "p2" && typeof pos === "number" && this.canConvertAttackThisTurn(cardId, pos)) score += 16;
+		if (typeof pos === "number" && player.fieldTapped?.[pos]) score -= 4;
+		score += this.getAuraContribution(cardId, slot);
+
+		const effect = this.normalizeText(def?.effect || "");
+		if (effect === "kornex_buff_per_marcial_in_play") {
+			const marcialCards = ([...this.state.game.p1.field, ...this.state.game.p2.field] as string[])
+				.filter((entry) => !!entry && this.isMarcialCard(findCardDef(entry))).length;
+			score += Math.max(0, marcialCards - 1) * 12;
+		}
+		if (effect === "ally_heal_buff") score += Math.max(0, Number(player.fieldVitalMarks?.[pos ?? -1] || 0)) * 14 + 18;
+		if (effect === "buff_on_kill") score += Math.max(0, Number(player.fieldBloodMarks?.[pos ?? -1] || 0)) * 16 + 14;
+		if (effect === "chamar_cidadao") {
+			const citizensInHand = [...player.hand].filter((entry: string) => this.cardMatches(findCardDef(entry), "cidadao")).length;
+			score += citizensInHand > 0 ? 32 : 10;
+		}
+		if (effect === "agiota") score += this.countLowCostPlayable(2) >= 2 ? 24 : 10;
+		if (effect === "on_grave_damage_leader") score += 14;
+		return score;
+	}
+
+	private scoreBotUnitValue(cardId: string, pos?: number): number {
+		return this.scoreUnitBoardValue(cardId, "p2", pos);
+	}
+
+	private pickBotReplacement(cardId: string): { id: string; gain: number } | null {
+		const player = this.state.game.p2 as any;
+		const incomingValue = this.scoreBotUnitValue(cardId) + Math.max(0, this.scoreBotCard(cardId, findCardDef(cardId)) / 5);
+		let best: { id: string; gain: number } | null = null;
+		for (let pos = 0; pos < player.field.length; pos += 1) {
+			const occupantId = String(player.field[pos] || "");
+			if (!occupantId || this.summonedThisTurn.p2.has(pos)) continue;
+			const gain = incomingValue - this.scoreBotUnitValue(occupantId, pos);
+			if (!best || gain > best.gain) best = { id: `replace-${pos}`, gain };
+		}
+		return best && best.gain >= 30 ? best : null;
+	}
+
 	private getEnemyThreatStats() {
 		const enemy = this.state.game.p1 as any;
 		let untappedThreat = 0;
@@ -567,10 +642,11 @@ export class SoloMatchRoom extends Room<MatchState> {
 		const cardId = String(option.cardId || option.label || "");
 		const def = findCardDef(cardId);
 		const side = String(option.side || "");
+		const pos = Number(option.pos ?? -1);
 		let score = side === "p1" ? 40 : -30;
 		if (id.startsWith("env-p1")) score += 18;
 		if (id.startsWith("support-p1")) score += 16;
-		if (id.startsWith("field-p1")) score += this.getUnitAttack(cardId) * 7;
+		if (id.startsWith("field-p1")) score += this.scoreUnitBoardValue(cardId, "p1", pos);
 		if (this.cardHasKeyword(def, "provocar")) score += 28;
 		if (this.cardHasKeyword(def, "bloquear")) score += 22;
 		if (this.cardMatches(def, "sombras") && id.startsWith("env-p1")) score -= 8;
@@ -956,7 +1032,7 @@ export class SoloMatchRoom extends Room<MatchState> {
 		const attack = this.getUnitAttack(attackerId);
 		if (target.type === "leader") {
 			const lethal = Number(enemy.hp || 0) <= Math.max(1, attack);
-			let score = lethal ? 1000 : 20 + Math.max(0, 30 - Number(enemy.hp || 0));
+			let score = lethal ? 1_000_000 : 20 + Math.max(0, 30 - Number(enemy.hp || 0));
 			if (attackerName.includes("thorn") && Number(enemy.hp || 0) <= attack + 6) score += 50;
 			if (this.isKatsuArchetype() && Number(enemy.hp || 0) <= attack + 4) score += 20;
 			return score;
@@ -1050,7 +1126,7 @@ export class SoloMatchRoom extends Room<MatchState> {
 	private scoreEnemyDisplaceTarget(cardId: string, pos: number): number {
 		const enemy = this.state.game.p1 as any;
 		const def = findCardDef(cardId);
-		let score = this.getUnitAttack(cardId) * 7;
+		let score = this.scoreUnitBoardValue(cardId, "p1", pos);
 		if (!enemy.fieldTapped?.[pos]) score += 18;
 		if (this.cardHasKeyword(def, "provocar")) score += 26;
 		if (this.cardHasKeyword(def, "bloquear")) score += 18;
@@ -1112,7 +1188,7 @@ export class SoloMatchRoom extends Room<MatchState> {
 		const enemy = this.state.game.p1 as any;
 		const pos = Number(option.pos ?? -1);
 		const hp = pos >= 0 ? Math.max(0, Number(enemy.fieldHp?.[pos] || 0)) : Number(def?.hp || 0);
-		let score = this.getUnitAttack(cardId) * 8;
+		let score = this.scoreUnitBoardValue(cardId, "p1", pos);
 		if (hp > 0 && hp <= damage) score += 120;
 		if (hp > damage) score += Math.max(0, 20 - hp * 2);
 		if (this.cardHasKeyword(def, "provocar")) score += 28;
@@ -1212,7 +1288,11 @@ export class SoloMatchRoom extends Room<MatchState> {
 		if (!options.length) return null;
 		const title = this.normalizeText(payload?.title || "");
 		const sourceDef = findCardDef(this.inferChoiceSourceCardId(payload) || "");
-		if (title.includes("substituir")) return options[0]?.id || null;
+		if (title.includes("substituir")) {
+			const sourceCardId = this.inferChoiceSourceCardId(payload) || "";
+			const replacement = this.pickBotReplacement(sourceCardId);
+			return replacement && options.some((option) => option.id === replacement.id) ? replacement.id : null;
+		}
 		if (title.includes("escolha um efeito")) {
 			const neutralChoice = this.chooseNeutralModalOption(sourceDef, options);
 			if (neutralChoice) return neutralChoice;
@@ -1477,8 +1557,11 @@ export class SoloMatchRoom extends Room<MatchState> {
 	}
 
 	private canBotPlayCardNow(cardId: string, def: ReturnType<typeof findCardDef>): boolean {
+		const player = this.state.game.p2 as any;
 		const enemy = this.state.game.p1 as any;
+		const kind = this.normalizeText(def?.kind || def?.tipo);
 		const effect = this.normalizeText(def?.effect || "");
+		if ((kind === "ally" || kind === "aliado") && !player.field.some((fieldCardId: string) => !fieldCardId) && !this.pickBotReplacement(cardId)) return false;
 		if (effect === "destroy_env") return !!String(enemy.env || "");
 		if (effect === "destroy_enemy_ally") return enemy.field.some((cid: string) => !!cid);
 		if (effect === "destroy_equip") {
@@ -1501,13 +1584,13 @@ export class SoloMatchRoom extends Room<MatchState> {
 				const cost = Number(def?.cost || 0);
 				return { cardId, def, cost, score: this.scoreBotCard(cardId, def) } satisfies BotPlayCandidate;
 			})
-			.filter(({ def }) => {
+			.filter(({ cardId, def }) => {
 				const cost = Number(def?.cost || 0);
 				const kind = String(def?.kind || def?.tipo || "").toLowerCase();
 				const effect = String(def?.effect || "");
 				if (effect === "bem_treinado" || effect === "freeser") return false;
 				if (kind === "trick" || kind === "truque") return false;
-				if (!this.canBotPlayCardNow("", def)) return false;
+				if (!this.canBotPlayCardNow(cardId, def)) return false;
 				return Number(player.fragments || 0) >= cost;
 			})
 			.sort((left, right) => {

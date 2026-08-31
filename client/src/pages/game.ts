@@ -513,7 +513,8 @@ function ensureRevealModal(): { modal: HTMLElement; title: HTMLElement; text: HT
 		modal.style.background = "rgba(0,0,0,0.58)";
 		modal.style.zIndex = "1200";
 		const box = document.createElement("div");
-		box.style.width = "min(90vw, 340px)";
+		box.style.width = "min(90vw, 440px)";
+		box.style.maxHeight = "88dvh";
 		box.style.background = "#141821";
 		box.style.border = "1px solid rgba(255,255,255,.12)";
 		box.style.borderRadius = "12px";
@@ -521,6 +522,7 @@ function ensureRevealModal(): { modal: HTMLElement; title: HTMLElement; text: HT
 		box.style.boxShadow = "0 16px 48px rgba(0,0,0,.45)";
 		box.style.display = "grid";
 		box.style.gap = "10px";
+		box.style.overflowY = "auto";
 		const title = document.createElement("div");
 		title.id = "topRevealTitle";
 		title.style.fontSize = "16px";
@@ -528,6 +530,8 @@ function ensureRevealModal(): { modal: HTMLElement; title: HTMLElement; text: HT
 		const text = document.createElement("div");
 		text.id = "topRevealText";
 		text.style.fontSize = "13px";
+		text.style.lineHeight = "1.4";
+		text.style.whiteSpace = "pre-wrap";
 		text.style.opacity = "0.92";
 		const img = document.createElement("img");
 		img.id = "topRevealImg";
@@ -571,13 +575,19 @@ function showRevealTopCardModal(payload: any): void {
 	const card = resolveCard(cardId);
 	const owner = ownerLabel(String(payload?.ownerSlot || ""));
 	const source = String(payload?.sourceCardId || "Carta");
+	const details = [
+		String(card?.tipo || "").trim(),
+		typeof card?.cost === "number" ? `Custo ${card.cost}` : "",
+		card?.filiacao ? `Filiação ${card.filiacao}` : ""
+	].filter(Boolean).join(" • ");
+	const description = String(card?.text || card?.description || "Sem descrição.").trim();
 	ui.title.textContent = `Topo revelado de ${owner}`;
-	ui.text.textContent = `${source} revelou ${card?.name || cardId}.`;
+	ui.text.textContent = [source, card?.name || cardId, details, description].filter(Boolean).join("\n");
 	setThumbnailSource(ui.img, card?.img || CARD_BACK_ASSET);
 	ui.img.alt = card?.name || cardId;
 	ui.modal.style.display = "flex";
 	if (revealHideTimer) window.clearTimeout(revealHideTimer);
-	revealHideTimer = window.setTimeout(() => hideRevealModal(), 5000);
+	revealHideTimer = window.setTimeout(() => hideRevealModal(), 15_000);
 }
 
 function diaryCardPlayed(msg: any): void {
