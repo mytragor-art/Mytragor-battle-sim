@@ -1,3 +1,4 @@
+import { randomInt } from "crypto";
 import { Room, Client } from "colyseus";
 import { findCardDef } from "../game/cardCatalog";
 import { describeClientDiagnostic } from "../utils/clientDiagnostics";
@@ -57,6 +58,9 @@ type SoloBotConfig = {
 const RECONNECTION_GRACE_SECONDS = 60;
 const BOT_ACTION_DELAY_MS = 3_500;
 const BOT_PHASE_DELAY_MS = 1_500;
+const INITIATIVE_TIMEOUT_MS = 40_000;
+const BOT_INITIATIVE_ROLL_DELAY_MS = 700;
+const INITIATIVE_TIE_DELAY_MS = 1_300;
 
 export class SoloMatchRoom extends Room<MatchState> {
 	maxClients = 1;
@@ -69,9 +73,13 @@ export class SoloMatchRoom extends Room<MatchState> {
 	private inactivityTimeout: NodeJS.Timeout | null = null;
 	private botTurnTimer: NodeJS.Timeout | null = null;
 	private mulliganTimeout: NodeJS.Timeout | null = null;
+	private initiativeTimeout: NodeJS.Timeout | null = null;
+	private initiativeTieTimeout: NodeJS.Timeout | null = null;
+	private botInitiativeTimer: NodeJS.Timeout | null = null;
 	private reservedSeat: ReservedSeat | null = null;
 	private consumedJoinToken = false;
 	private pendingMulligans: Record<Slot, number[] | null> = { p1: null, p2: null };
+	private matchOptions: { p1: any; p2: any } = { p1: null, p2: null };
 	private bot: SoloBotConfig = {
 		displayName: "IA",
 		leaderId: "Valbrak, O Mago Popular",
@@ -119,6 +127,89 @@ export class SoloMatchRoom extends Room<MatchState> {
 
 	private startMulliganTimer() {
 		this.clearMulliganTimer(true);
+	}
+
+	private clearInitiativeTimers(resetDeadline = false) {
+		if (this.initiativeTimeout) clearTimeout(this.initiativeTimeout);
+		if (this.initiativeTieTimeout) clearTimeout(this.initiativeTieTimeout);
+		if (this.botInitiativeTimer) clearTimeout(this.botInitiativeTimer);
+		this.initiativeTimeout = null;
+		this.initiativeTieTimeout = null;
+		this.botInitiativeTimer = null;
+		if (resetDeadline) this.state.initiativeDeadlineAt = 0;
+	}
+
+	private resetInitiativeRound() {
+		this.state.initiativeStatus = "ROLLING";
+		this.state.p1InitiativeRoll = 0;
+		this.state.p2InitiativeRoll = 0;
+		this.state.initiativeWinnerSlot = "";
+	}
+
+	private startInitiative() {
+		if (this.state.phase !== "INITIATIVE" || this.clients.length !== 1) return;
+		this.clearInitiativeTimers();
+		this.resetInitiativeRound();
+		this.state.initiativeDeadlineAt = Date.now() + INITIATIVE_TIMEOUT_MS;
+		this.botInitiativeTimer = setTimeout(() => {
+			this.botInitiativeTimer = null;
+			if (this.state.phase !== "INITIATIVE" || this.state.initiativeStatus !== "ROLLING" || this.state.p2InitiativeRoll) return;
+			this.state.p2InitiativeRoll = randomInt(1, 21);
+			this.resolveInitiativeRoll();
+		}, BOT_INITIATIVE_ROLL_DELAY_MS);
+		this.initiativeTimeout = setTimeout(() => {
+			this.initiativeTimeout = null;
+			if (this.state.phase !== "INITIATIVE" || this.state.initiativeStatus !== "ROLLING") return;
+			if (!this.state.p1InitiativeRoll) this.state.p1InitiativeRoll = randomInt(1, 21);
+			if (!this.state.p2InitiativeRoll) this.state.p2InitiativeRoll = randomInt(1, 21);
+			this.resolveInitiativeRoll();
+		}, INITIATIVE_TIMEOUT_MS);
+	}
+
+	private resolveInitiativeRoll() {
+		const p1Roll = this.state.p1InitiativeRoll;
+		const p2Roll = this.state.p2InitiativeRoll;
+		if (!p1Roll || !p2Roll) return;
+		this.clearInitiativeTimers(true);
+		if (p1Roll === p2Roll) {
+			this.state.initiativeStatus = "TIE";
+			this.broadcastMatchEvent("initiative_tie", { roll: p1Roll });
+			this.initiativeTieTimeout = setTimeout(() => {
+				this.initiativeTieTimeout = null;
+				this.startInitiative();
+			}, INITIATIVE_TIE_DELAY_MS);
+			return;
+		}
+		const winnerSlot: Slot = p1Roll > p2Roll ? "p1" : "p2";
+		this.state.initiativeWinnerSlot = winnerSlot;
+		this.broadcastMatchEvent("initiative_result", { p1Roll, p2Roll, winnerSlot });
+		if (winnerSlot === "p2") {
+			this.state.initiativeStatus = "RESOLVED";
+			this.initiativeTieTimeout = setTimeout(() => {
+				this.initiativeTieTimeout = null;
+				this.startOpeningHand("p2");
+			}, INITIATIVE_TIE_DELAY_MS);
+			return;
+		}
+		this.state.initiativeStatus = "CHOOSING";
+		this.state.initiativeDeadlineAt = Date.now() + INITIATIVE_TIMEOUT_MS;
+		this.initiativeTimeout = setTimeout(() => {
+			this.initiativeTimeout = null;
+			if (this.state.phase === "INITIATIVE" && this.state.initiativeStatus === "CHOOSING") this.startOpeningHand("p1");
+		}, INITIATIVE_TIMEOUT_MS);
+	}
+
+	private startOpeningHand(starterSlot: Slot) {
+		if (this.state.phase !== "INITIATIVE") return;
+		this.clearInitiativeTimers(true);
+		this.state.initiativeStatus = "RESOLVED";
+		this.state.phase = "IN_MATCH";
+		initGame(this.state, this.matchOptions.p1, this.matchOptions.p2, (name, payload) => this.broadcastMatchEvent(name, payload), this.attackedThisTurn, this.summonedThisTurn, this.triggeredLeaderThisTurn, starterSlot, this.askChoice);
+		this.pendingMulligans = { p1: null, p2: this.chooseBotOpeningMulligan() };
+		this.state.game.p2MulliganDone = true;
+		this.startMulliganTimer();
+		this.publishSpectatorState();
+		this.refreshInactivityTimer();
 	}
 
 	private broadcastMatchEvent(name: string, payload: any) {
@@ -1737,6 +1828,17 @@ export class SoloMatchRoom extends Room<MatchState> {
 
 	onCreate(options: any) {
 		this.setState(new MatchState());
+		this.matchOptions = {
+			p1: options?.p1,
+			p2: {
+				deckId: String(options?.p2?.deckId || options?.bot?.deckId || "solo-bot-default"),
+				leaderId: String(options?.p2?.leaderId || options?.bot?.leaderId || "Valbrak, O Mago Popular"),
+				cards: Array.isArray(options?.p2?.cards) ? options.p2.cards.map((card: unknown) => String(card)).filter(Boolean) : [],
+				accessories: options?.p2?.accessories || {}
+			}
+		};
+		this.state.phase = "INITIATIVE";
+		this.state.game.phase = "INITIATIVE";
 		this.reservedSeat = options?.seatReservation ? {
 			joinToken: String(options.seatReservation.joinToken || ""),
 			lobbySessionId: String(options.seatReservation.lobbySessionId || ""),
@@ -1769,28 +1871,25 @@ export class SoloMatchRoom extends Room<MatchState> {
 		botPlayer.displayName = this.bot.displayName;
 		this.state.players.set(botPlayer.sessionId, botPlayer);
 
-		const starterSlot: Slot = options?.starterSlot === "p2" ? "p2" : "p1";
-		initGame(
-			this.state,
-			options?.p1,
-			{
-				deckId: this.bot.deckId,
-				leaderId: this.bot.leaderId,
-				cards: this.bot.cards || [],
-				accessories: this.bot.accessories || {}
-			},
-			(name, payload) => this.broadcastMatchEvent(name, payload),
-			this.attackedThisTurn,
-			this.summonedThisTurn,
-			this.triggeredLeaderThisTurn,
-			starterSlot,
-			this.askChoice
-		);
-		this.pendingMulligans = { p1: null, p2: this.chooseBotOpeningMulligan() };
-		this.state.game.p2MulliganDone = true;
-		this.startMulliganTimer();
 		this.publishSpectatorState();
 		this.refreshInactivityTimer();
+
+		this.onMessage("roll_initiative", (client) => {
+			this.safeRun("roll_initiative", () => {
+				if (this.state.phase !== "INITIATIVE" || this.state.initiativeStatus !== "ROLLING" || this.state.p1InitiativeRoll) return;
+				if (getSlotBySession(this.state, client.sessionId) !== "p1") return;
+				this.state.p1InitiativeRoll = randomInt(1, 21);
+				this.resolveInitiativeRoll();
+			}, client);
+		});
+
+		this.onMessage("choose_starter", (client, msg: { starterSlot?: string }) => {
+			this.safeRun("choose_starter", () => {
+				if (this.state.phase !== "INITIATIVE" || this.state.initiativeStatus !== "CHOOSING") return;
+				if (this.state.initiativeWinnerSlot !== "p1" || getSlotBySession(this.state, client.sessionId) !== "p1") return;
+				this.startOpeningHand(msg?.starterSlot === "p2" ? "p2" : "p1");
+			}, client);
+		});
 
 		this.onMessage("submit_mulligan", (client, msg: { indices?: number[] }) => {
 			this.safeRun("submit_mulligan", () => {
@@ -1920,6 +2019,7 @@ export class SoloMatchRoom extends Room<MatchState> {
 		if (!this.state.hostSessionId) this.state.hostSessionId = client.sessionId;
 		client.send("assign_slot", { slot: player.slot, sessionId: client.sessionId });
 		console.log(`[SOLO] joined room=${this.roomId} client=${client.sessionId} slot=${player.slot} phase=${this.state.phase} gamePhase=${this.state.game.phase} turn=${this.state.game.turn} turnSlot=${this.state.game.turnSlot} clients=${this.clients.length}`);
+		if (this.state.phase === "INITIATIVE" && this.state.initiativeStatus === "WAITING") this.startInitiative();
 		this.refreshInactivityTimer();
 		this.queueBotTurn();
 	}
@@ -1954,12 +2054,14 @@ export class SoloMatchRoom extends Room<MatchState> {
 		this.state.players.delete(client.sessionId);
 		this.clearBotTimer();
 		this.clearMulliganTimer(true);
+		this.clearInitiativeTimers(true);
 		this.clearInactivityTimer();
 	}
 
 	onDispose() {
 		this.clearBotTimer();
 		this.clearMulliganTimer(true);
+		this.clearInitiativeTimers(true);
 		this.clearInactivityTimer();
 		disposeSpectatorChannel(this.roomId);
 	}

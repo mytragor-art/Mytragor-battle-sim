@@ -15,6 +15,11 @@ export class MatchState extends Schema {
 	@type({ map: MatchPlayerState }) players = new MapSchema<MatchPlayerState>();
 	@type("string") hostSessionId: string = "";
 	@type("number") serverSeq: number = 0;
+	@type("string") initiativeStatus: string = "WAITING";
+	@type("number") p1InitiativeRoll: number = 0;
+	@type("number") p2InitiativeRoll: number = 0;
+	@type("string") initiativeWinnerSlot: string = "";
+	@type("number") initiativeDeadlineAt: number = 0;
 
 	@type(GameState) game: GameState = new GameState();
 }

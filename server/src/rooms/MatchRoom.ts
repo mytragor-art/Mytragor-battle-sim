@@ -1,6 +1,7 @@
 /* Responsibility: in-match room only (turn/phase/actions); no lobby setup logic here. */
 
 import { Room, Client } from "colyseus";
+import { randomInt } from "crypto";
 import { findCardDef } from "../game/cardCatalog";
 import { describeClientDiagnostic } from "../utils/clientDiagnostics";
 import { MatchState, MatchPlayerState } from "./schema/MatchState";
@@ -29,6 +30,8 @@ type ReservedSeat = {
 };
 
 const MULLIGAN_TIMEOUT_MS = 40_000;
+const INITIATIVE_TIMEOUT_MS = 40_000;
+const INITIATIVE_TIE_DELAY_MS = 1_300;
 const INACTIVITY_TIMEOUT_MS = 10 * 60_000;
 const RECONNECTION_GRACE_SECONDS = 60;
 
@@ -42,6 +45,9 @@ export class MatchRoom extends Room<MatchState> {
 	private activeChoiceSessionId: string | null = null;
 	private inactivityTimeout: NodeJS.Timeout | null = null;
 	private mulliganTimeout: NodeJS.Timeout | null = null;
+	private initiativeTimeout: NodeJS.Timeout | null = null;
+	private initiativeTieTimeout: NodeJS.Timeout | null = null;
+	private matchOptions: { p1: any; p2: any } = { p1: null, p2: null };
 	private reservedSeatByToken = new Map<string, ReservedSeat>();
 	private consumedJoinTokens = new Set<string>();
 	private pendingMulligans: Record<Slot, number[] | null> = { p1: null, p2: null };
@@ -95,6 +101,72 @@ export class MatchRoom extends Room<MatchState> {
 		if (this.mulliganTimeout) clearTimeout(this.mulliganTimeout);
 		this.mulliganTimeout = null;
 		if (resetDeadline) this.state.game.mulliganDeadlineAt = 0;
+	}
+
+	private clearInitiativeTimers(resetDeadline = false) {
+		if (this.initiativeTimeout) clearTimeout(this.initiativeTimeout);
+		if (this.initiativeTieTimeout) clearTimeout(this.initiativeTieTimeout);
+		this.initiativeTimeout = null;
+		this.initiativeTieTimeout = null;
+		if (resetDeadline) this.state.initiativeDeadlineAt = 0;
+	}
+
+	private resetInitiativeRound() {
+		this.state.initiativeStatus = "ROLLING";
+		this.state.p1InitiativeRoll = 0;
+		this.state.p2InitiativeRoll = 0;
+		this.state.initiativeWinnerSlot = "";
+	}
+
+	private startInitiative() {
+		if (this.state.phase !== "INITIATIVE" || this.clients.length < 2) return;
+		this.clearInitiativeTimers();
+		this.resetInitiativeRound();
+		this.state.initiativeDeadlineAt = Date.now() + INITIATIVE_TIMEOUT_MS;
+		this.initiativeTimeout = setTimeout(() => {
+			this.initiativeTimeout = null;
+			if (this.state.phase !== "INITIATIVE" || this.state.initiativeStatus !== "ROLLING") return;
+			if (!this.state.p1InitiativeRoll) this.state.p1InitiativeRoll = randomInt(1, 21);
+			if (!this.state.p2InitiativeRoll) this.state.p2InitiativeRoll = randomInt(1, 21);
+			this.resolveInitiativeRoll();
+		}, INITIATIVE_TIMEOUT_MS);
+	}
+
+	private resolveInitiativeRoll() {
+		const p1Roll = this.state.p1InitiativeRoll;
+		const p2Roll = this.state.p2InitiativeRoll;
+		if (!p1Roll || !p2Roll) return;
+		this.clearInitiativeTimers(true);
+		if (p1Roll === p2Roll) {
+			this.state.initiativeStatus = "TIE";
+			this.broadcastMatchEvent("initiative_tie", { roll: p1Roll });
+			this.initiativeTieTimeout = setTimeout(() => {
+				this.initiativeTieTimeout = null;
+				this.startInitiative();
+			}, INITIATIVE_TIE_DELAY_MS);
+			return;
+		}
+		const winnerSlot: Slot = p1Roll > p2Roll ? "p1" : "p2";
+		this.state.initiativeWinnerSlot = winnerSlot;
+		this.state.initiativeStatus = "CHOOSING";
+		this.state.initiativeDeadlineAt = Date.now() + INITIATIVE_TIMEOUT_MS;
+		this.broadcastMatchEvent("initiative_result", { p1Roll, p2Roll, winnerSlot });
+		this.initiativeTimeout = setTimeout(() => {
+			this.initiativeTimeout = null;
+			if (this.state.phase === "INITIATIVE" && this.state.initiativeStatus === "CHOOSING") this.startOpeningHand(winnerSlot);
+		}, INITIATIVE_TIMEOUT_MS);
+	}
+
+	private startOpeningHand(starterSlot: Slot) {
+		if (this.state.phase !== "INITIATIVE") return;
+		this.clearInitiativeTimers(true);
+		this.state.initiativeStatus = "RESOLVED";
+		this.state.phase = "IN_MATCH";
+		initGame(this.state, this.matchOptions.p1, this.matchOptions.p2, (name, payload) => this.broadcastMatchEvent(name, payload), this.attackedThisTurn, this.summonedThisTurn, this.triggeredLeaderThisTurn, starterSlot, this.askChoice);
+		this.pendingMulligans = { p1: null, p2: null };
+		this.startMulliganTimer();
+		this.publishSpectatorState();
+		this.refreshInactivityTimer();
 	}
 
 	private scheduleDisconnect(delayMs = 1200) {
@@ -304,6 +376,9 @@ export class MatchRoom extends Room<MatchState> {
 	onCreate(options: any) {
 		try {
 			this.setState(new MatchState());
+			this.matchOptions = { p1: options?.p1, p2: options?.p2 };
+			this.state.phase = "INITIATIVE";
+			this.state.game.phase = "INITIATIVE";
 		const reservations = Array.isArray(options?.seatReservations) ? options.seatReservations : [];
 		const p1Reservation = reservations.find((reservation: any) => reservation?.slot === "p1");
 		const p2Reservation = reservations.find((reservation: any) => reservation?.slot === "p2");
@@ -326,15 +401,6 @@ export class MatchRoom extends Room<MatchState> {
 				avatarId: this.sanitizeAvatarId(reservation?.avatarId)
 			});
 		}
-		const starterSlot: Slot = options?.starterSlot === "p2" ? "p2" : "p1";
-
-		initGame(this.state, options?.p1, options?.p2, (name, payload) => this.broadcastMatchEvent(name, payload), this.attackedThisTurn, this.summonedThisTurn, this.triggeredLeaderThisTurn, starterSlot, this.askChoice);
-		this.pendingMulligans = { p1: null, p2: null };
-		this.startMulliganTimer();
-		this.autoAdvanceFromInitial();
-		this.publishSpectatorState();
-		this.refreshInactivityTimer();
-
 		this.onMessage("submit_mulligan", (client, msg: { indices?: number[] }) => this.safeRun("submit_mulligan", () => {
 			if (this.state.phase !== "IN_MATCH" || this.state.game.phase !== "MULLIGAN") return;
 			const slot = getSlotBySession(this.state, client.sessionId);
@@ -360,10 +426,30 @@ export class MatchRoom extends Room<MatchState> {
 			this.refreshInactivityTimer();
 		}, client));
 
+		this.onMessage("roll_initiative", (client) => this.safeRun("roll_initiative", () => {
+			if (this.state.phase !== "INITIATIVE" || this.state.initiativeStatus !== "ROLLING") return;
+			const playerSlot = getSlotBySession(this.state, client.sessionId);
+			if (!playerSlot) return;
+			if (playerSlot === "p1" && this.state.p1InitiativeRoll) return;
+			if (playerSlot === "p2" && this.state.p2InitiativeRoll) return;
+			if (playerSlot === "p1") this.state.p1InitiativeRoll = randomInt(1, 21);
+			else this.state.p2InitiativeRoll = randomInt(1, 21);
+			this.resolveInitiativeRoll();
+		}, client));
+
+		this.onMessage("choose_starter", (client, msg: { starterSlot?: string }) => this.safeRun("choose_starter", () => {
+			if (this.state.phase !== "INITIATIVE" || this.state.initiativeStatus !== "CHOOSING") return;
+			const winnerSlot = this.state.initiativeWinnerSlot === "p2" ? "p2" : "p1";
+			if (getSlotBySession(this.state, client.sessionId) !== winnerSlot) return;
+			const starterSlot: Slot = msg?.starterSlot === "p2" ? "p2" : "p1";
+			this.startOpeningHand(starterSlot);
+		}, client));
+
 		this.onMessage("next_phase", (client) => this.safeRun("next_phase", () => {
 			if (!this.isValidTurnAction(client, ["INITIAL", "PREP", "COMBAT"])) return;
 			nextPhase(this.state, (name, payload) => this.broadcastMatchEvent(name, payload));
 			this.publishSpectatorState();
+			if (this.state.phase === "INITIATIVE" && this.clients.length === 2 && this.state.initiativeStatus === "WAITING") this.startInitiative();
 			this.refreshInactivityTimer();
 		}, client));
 
@@ -539,6 +625,7 @@ export class MatchRoom extends Room<MatchState> {
 	onDispose() {
 		try {
 			this.clearMulliganTimer(true);
+			this.clearInitiativeTimers(true);
 			this.clearInactivityTimer();
 			this.reconnectingSlots.clear();
 			if (this.disconnectTimer) clearTimeout(this.disconnectTimer);

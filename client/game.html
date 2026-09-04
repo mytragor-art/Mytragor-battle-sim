@@ -236,6 +236,54 @@
   </div>
 </div>
 
+<div id="initiativeModal" class="modal choiceSheetModal" style="display:none;z-index:10003;">
+  <div class="modalBox choiceSheetBox initiativeBox" role="dialog" aria-modal="true" aria-labelledby="initiativeTitle">
+    <div class="initiativeEyebrow">INICIATIVA</div>
+    <h2 id="initiativeTitle" class="initiativeTitle">Disputa de iniciativa</h2>
+    <p id="initiativeIntro" class="initiativeIntro">Role um D20. O maior resultado escolhe quem começa.</p>
+    <div class="initiativeRolls" aria-live="polite">
+      <div class="initiativeRoll" id="initiativeYouRoll">
+        <div class="initiativeDie" id="initiativeYouDie" aria-label="Seu dado: aguardando resultado">
+          <svg viewBox="0 0 120 120" aria-hidden="true">
+            <polygon class="initiativeDieFace faceTop" points="60,4 102,28 60,48 18,28" />
+            <polygon class="initiativeDieFace faceUpperLeft" points="18,28 60,48 38,86 5,66" />
+            <polygon class="initiativeDieFace faceUpperRight" points="102,28 115,66 82,86 60,48" />
+            <polygon class="initiativeDieFace faceLowerLeft" points="5,66 38,86 60,116 60,48" />
+            <polygon class="initiativeDieFace faceLowerRight" points="115,66 60,116 82,86 60,48" />
+            <path class="initiativeDieEdge" d="M60 4 102 28 115 66 60 116 5 66 18 28 60 4Zm0 44v68M5 66l55-18 55 18M18 28l20 58m64-58-20 58" />
+          </svg>
+          <span class="initiativeDieValue">D20</span>
+        </div>
+        <strong>Você</strong>
+        <span id="initiativeYouValue">—</span>
+      </div>
+      <div class="initiativeVersus">VS</div>
+      <div class="initiativeRoll" id="initiativeOpponentRoll">
+        <div class="initiativeDie" id="initiativeOpponentDie" aria-label="Dado do oponente: aguardando resultado">
+          <svg viewBox="0 0 120 120" aria-hidden="true">
+            <polygon class="initiativeDieFace faceTop" points="60,4 102,28 60,48 18,28" />
+            <polygon class="initiativeDieFace faceUpperLeft" points="18,28 60,48 38,86 5,66" />
+            <polygon class="initiativeDieFace faceUpperRight" points="102,28 115,66 82,86 60,48" />
+            <polygon class="initiativeDieFace faceLowerLeft" points="5,66 38,86 60,116 60,48" />
+            <polygon class="initiativeDieFace faceLowerRight" points="115,66 60,116 82,86 60,48" />
+            <path class="initiativeDieEdge" d="M60 4 102 28 115 66 60 116 5 66 18 28 60 4Zm0 44v68M5 66l55-18 55 18M18 28l20 58m64-58-20 58" />
+          </svg>
+          <span class="initiativeDieValue">D20</span>
+        </div>
+        <strong id="initiativeOpponentName">Oponente</strong>
+        <span id="initiativeOpponentValue">—</span>
+      </div>
+    </div>
+    <div class="initiativeActions">
+      <button id="initiativeRollButton" class="btn primary" type="button">Rolar D20</button>
+      <div id="initiativeChoiceActions" class="initiativeChoiceActions" style="display:none;">
+        <button id="initiativeStartFirstButton" class="btn primary" type="button">Começar primeiro</button>
+        <button id="initiativeStartSecondButton" class="btn" type="button">Começar em segundo</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="cardChoiceModal" class="modal choiceSheetModal" style="display:none;z-index:10000;">
   <div class="modalBox choiceSheetBox">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">

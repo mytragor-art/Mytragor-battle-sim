@@ -1759,6 +1759,62 @@ function hideMulliganModal(): void {
 	if (modal) modal.style.display = "none";
 }
 
+function syncInitiativeUi(state: any): void {
+	const modal = document.getElementById("initiativeModal") as HTMLElement | null;
+	const intro = document.getElementById("initiativeIntro") as HTMLElement | null;
+	const rollButton = document.getElementById("initiativeRollButton") as HTMLButtonElement | null;
+	const choiceActions = document.getElementById("initiativeChoiceActions") as HTMLElement | null;
+	const youDie = document.getElementById("initiativeYouDie") as HTMLElement | null;
+	const opponentDie = document.getElementById("initiativeOpponentDie") as HTMLElement | null;
+	const youValue = document.getElementById("initiativeYouValue") as HTMLElement | null;
+	const opponentValue = document.getElementById("initiativeOpponentValue") as HTMLElement | null;
+	const opponentName = document.getElementById("initiativeOpponentName") as HTMLElement | null;
+	const youDieValue = youDie?.querySelector(".initiativeDieValue") as HTMLElement | null;
+	const opponentDieValue = opponentDie?.querySelector(".initiativeDieValue") as HTMLElement | null;
+	if (!modal || !intro || !rollButton || !choiceActions || !youDie || !opponentDie || !youValue || !opponentValue || !opponentName || !youDieValue || !opponentDieValue) return;
+	const active = !isSpectator && !!slot && String(state?.phase || "") === "INITIATIVE";
+	if (!active) {
+		modal.style.display = "none";
+		return;
+	}
+	const status = String(state?.initiativeStatus || "WAITING");
+	const p1Roll = Number(state?.p1InitiativeRoll || 0);
+	const p2Roll = Number(state?.p2InitiativeRoll || 0);
+	const myRoll = slot === "p1" ? p1Roll : p2Roll;
+	const opponentRoll = slot === "p1" ? p2Roll : p1Roll;
+	const opponentSlot = slot === "p1" ? "p2" : "p1";
+	opponentName.textContent = getPublicPlayerName(state, opponentSlot);
+	const winnerSlot = String(state?.initiativeWinnerSlot || "");
+	const iWon = winnerSlot === slot;
+	const resultVisible = !!winnerSlot && !!myRoll && !!opponentRoll;
+	const rolling = status === "ROLLING" && (!myRoll || !opponentRoll);
+	youDie.classList.toggle("is-rolling", rolling && !myRoll);
+	opponentDie.classList.toggle("is-rolling", rolling && !opponentRoll);
+	youDie.classList.toggle("is-winner", resultVisible && iWon);
+	youDie.classList.toggle("is-loser", resultVisible && !iWon);
+	opponentDie.classList.toggle("is-winner", resultVisible && !iWon);
+	opponentDie.classList.toggle("is-loser", resultVisible && iWon);
+	youValue.classList.toggle("is-winner", resultVisible && iWon);
+	youValue.classList.toggle("is-loser", resultVisible && !iWon);
+	opponentValue.classList.toggle("is-winner", resultVisible && !iWon);
+	opponentValue.classList.toggle("is-loser", resultVisible && iWon);
+	youDieValue.textContent = myRoll ? String(myRoll) : "D20";
+	opponentDieValue.textContent = opponentRoll ? String(opponentRoll) : "D20";
+	youDie.setAttribute("aria-label", myRoll ? `Seu dado: ${myRoll}` : "Seu dado: aguardando resultado");
+	opponentDie.setAttribute("aria-label", opponentRoll ? `Dado de ${opponentName.textContent}: ${opponentRoll}` : `Dado de ${opponentName.textContent}: aguardando resultado`);
+	youValue.textContent = myRoll ? String(myRoll) : "—";
+	opponentValue.textContent = opponentRoll ? String(opponentRoll) : "—";
+	choiceActions.style.display = status === "CHOOSING" && iWon ? "flex" : "none";
+	rollButton.style.display = status === "ROLLING" ? "" : "none";
+	rollButton.disabled = !!myRoll;
+	if (status === "WAITING") intro.textContent = "Aguardando os dois jogadores para iniciar a disputa.";
+	else if (status === "ROLLING") intro.textContent = myRoll ? "Você rolou. Aguardando a rolagem do oponente." : "Role um D20. O maior resultado escolhe quem começa.";
+	else if (status === "TIE") intro.textContent = "Empate na iniciativa. Rolando novamente...";
+	else if (status === "CHOOSING") intro.textContent = iWon ? "Você venceu a iniciativa. Escolha a ordem de jogo." : "Seu oponente venceu a iniciativa e está escolhendo a ordem.";
+	else if (status === "RESOLVED") intro.textContent = iWon ? "Você venceu a iniciativa e começa a partida." : "Seu oponente venceu a iniciativa e começa a partida.";
+	modal.style.display = "flex";
+}
+
 function clearMulliganCountdown(resetDeadline = true): void {
 	if (activeMulliganTimer) {
 		window.clearInterval(activeMulliganTimer);
@@ -4070,6 +4126,7 @@ function bindActiveMatchRoom() {
 			}
 			isMyTurn = myTurn;
 			currentPhase = phase;
+			syncInitiativeUi(state);
 			syncMulliganUi(state, hand);
 			applyArenaPlaymats();
 			updateArenaTurnPriority(myTurn);
@@ -4515,6 +4572,7 @@ async function joinMatch() {
 				}
 				isMyTurn = myTurn;
 				currentPhase = phase;
+				syncInitiativeUi(state);
 				syncMulliganUi(state, hand);
 				applyArenaPlaymats();
 				updateArenaTurnPriority(myTurn);
@@ -4649,6 +4707,12 @@ async function joinMatch() {
 }
 
 if (view.btnJoin) view.btnJoin.onclick = () => void joinMatch();
+const initiativeRollButton = document.getElementById("initiativeRollButton") as HTMLButtonElement | null;
+const initiativeStartFirstButton = document.getElementById("initiativeStartFirstButton") as HTMLButtonElement | null;
+const initiativeStartSecondButton = document.getElementById("initiativeStartSecondButton") as HTMLButtonElement | null;
+if (initiativeRollButton) initiativeRollButton.onclick = () => !isSpectator && room?.send("roll_initiative");
+if (initiativeStartFirstButton) initiativeStartFirstButton.onclick = () => !isSpectator && room?.send("choose_starter", { starterSlot: slot });
+if (initiativeStartSecondButton) initiativeStartSecondButton.onclick = () => !isSpectator && room?.send("choose_starter", { starterSlot: slot === "p1" ? "p2" : "p1" });
 if (view.btnPlay) view.btnPlay.onclick = () => !isSpectator && selectedHandCardId && tryPlayCard(selectedHandCardId);
 if (view.btnLeaderPower) view.btnLeaderPower.onclick = () => {
 	if (isSpectator) return;

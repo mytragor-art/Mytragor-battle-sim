@@ -1,6 +1,6 @@
 import { Schema, type, ArraySchema } from "@colyseus/schema";
 
-export type TurnPhase = "MULLIGAN" | "INITIAL" | "PREP" | "COMBAT" | "END";
+export type TurnPhase = "INITIATIVE" | "MULLIGAN" | "INITIAL" | "PREP" | "COMBAT" | "END";
 
 export class PlayerGameState extends Schema {
 	@type("string") slot: string = "";
