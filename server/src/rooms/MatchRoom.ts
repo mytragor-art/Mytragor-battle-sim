@@ -560,6 +560,9 @@ export class MatchRoom extends Room<MatchState> {
 			if (!this.state.hostSessionId) this.state.hostSessionId = client.sessionId;
 			client.send("assign_slot", { slot: player.slot, sessionId: client.sessionId });
 			console.log(`[MATCH] joined room=${this.roomId} client=${client.sessionId} slot=${player.slot} phase=${this.state.phase} gamePhase=${this.state.game.phase} turn=${this.state.game.turn} turnSlot=${this.state.game.turnSlot} clients=${this.clients.length}`);
+			if (this.state.phase === "INITIATIVE" && this.clients.length === 2 && this.state.initiativeStatus === "WAITING") {
+				this.startInitiative();
+			}
 			this.publishSpectatorState();
 			this.refreshInactivityTimer();
 		} catch (err: any) {
