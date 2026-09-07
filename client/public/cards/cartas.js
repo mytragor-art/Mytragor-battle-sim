@@ -77,7 +77,7 @@ const CARD_DEFS = [
   },
   // Carta de teste: Aranhas Negras (aliado de teste)
   {
-    name: 'Aranhas Negras, Agiota', kind: 'ally', img: '/allies/layout-agiota.ai.png', cost: 3, classe: 'Ladino', tipo: 'Humano', filiacao: 'Neutra', ac: 0, hp: 3, maxHp: 3, damage: 1, atkBonus: 1, keywords: [], effect: 'agiota', text: 'Uma vez por turno, você pode causar 2 de dano neste\nAliado, então pode jogar uma carta custo 2 ou menos da\nsua mão, sem pagar seu custo em fragmentos.'
+    name: 'Aranhas Negras, Agiota', kind: 'ally', img: '/allies/layout-agiota.ai.png', cost: 3, classe: 'Ladino', tipo: 'Humano', filiacao: 'Neutra', ac: 0, hp: 4, maxHp: 4, damage: 1, atkBonus: 1, keywords: [], effect: 'agiota', text: 'Uma vez por turno, você pode causar 2 de dano neste\nAliado, então pode jogar uma carta custo 2 ou menos da\nsua mão, sem pagar seu custo em fragmentos.'
   },
   {
     name: 'Aranhas Negras, Novato', kind: 'ally', img: '/allies/layout-aranhasnovato.ai.png', cost: 1, classe: 'Ladino', tipo: 'Humano', filiacao: 'Neutra', ac: 0, hp: 2, maxHp: 2, damage: 1, atkBonus: 1, keywords: [], text: ''
