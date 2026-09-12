@@ -249,7 +249,7 @@
 
     .manualReaderLayout {
       display: grid;
-      grid-template-columns: 230px minmax(0, 1fr);
+      grid-template-columns: 180px minmax(0, 1fr);
       gap: 16px;
       align-items: start;
     }
@@ -282,7 +282,7 @@
 
     .manualReaderHeader, .manualReaderControls { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
     .manualReaderHeader h2 { margin: 0; color: #f3ead7; font: 700 19px "Cinzel", Georgia, serif; }
-    .manualReaderImage { width: min(100%, 760px); max-height: 72vh; object-fit: contain; justify-self: center; cursor: zoom-in; border: 1px solid rgba(255,255,255,.14); border-radius: 9px; background: #fff; }
+    .manualReaderImage { width: min(100%, 720px); height: auto; object-fit: contain; justify-self: center; cursor: zoom-in; border: 1px solid rgba(255,255,255,.14); border-radius: 9px; background: #fff; }
     .manualReaderControls { justify-content: center; }
     .manualReaderControls button, .quickGuideCard button { min-height: 40px; padding: 0 12px; border: 1px solid rgba(255,224,160,.28); border-radius: 8px; background: rgba(255,255,255,.06); color: #f3ead7; font: 700 12px "Cinzel", Georgia, serif; cursor: pointer; }
     .manualReaderControls button:disabled { opacity: .45; cursor: not-allowed; }
@@ -407,10 +407,6 @@
       .manualPageSelect {
         max-width: none;
         width: 100%;
-      }
-
-      .manualReaderImage {
-        max-height: 62dvh;
       }
 
       .manualReaderControls {
