@@ -404,8 +404,13 @@ type VictoryView = {
 	mode: "win" | "lose" | "neutral";
 };
 
-function victoryBannerForLeader(mode: "win" | "lose" | "neutral"): string | null {
-	if (mode === "neutral") return null;
+type VictoryArtwork = {
+	src: string;
+	credit: string;
+};
+
+function victoryBannerForLeader(mode: "win" | "lose" | "neutral"): VictoryArtwork | null {
+	if (mode !== "win") return null;
 	const leader = resolveCard(currentMyLeader);
 	const probes = [
 		currentMyLeader,
@@ -416,16 +421,16 @@ function victoryBannerForLeader(mode: "win" | "lose" | "neutral"): string | null
 		.map((value) => normalizeCardId(value))
 		.filter(Boolean);
 	if (probes.some((value) => value.includes("valbrak"))) {
-		return mode === "win" ? "win_lose/valbrakvitoria.png" : "win_lose/valbrakderrota.png";
+		return { src: "win_lose/valbrakvitoria.png", credit: "Ilustração de IlustreVick" };
 	}
 	if (probes.some((value) => value.includes("katsu"))) {
-		return mode === "win" ? "win_lose/katsuvitoria (1).png" : "win_lose/katsuvitoria (2).png";
+		return { src: "win_lose/katsuvitoria.png", credit: "Ilustração de Artur Broher" };
 	}
 	if (probes.some((value) => value.includes("leafae"))) {
-		return mode === "win" ? "win_lose/leafaevitoria.png" : "win_lose/leafaederrota.png";
+		return { src: "win_lose/leafaevitoria.png", credit: "Ilustração de Katarina Banffy" };
 	}
 	if (probes.some((value) => value.includes("ademais"))) {
-		return mode === "win" ? "win_lose/Ademaisvitoria.png" : "win_lose/ademaisderrota.png";
+		return { src: "win_lose/Ademaisvitoria.jpg", credit: "Ilustração de Jeferson Cordeiro" };
 	}
 	return null;
 }
@@ -476,18 +481,24 @@ function showVictory(viewState: VictoryView): void {
 	const textEl = document.getElementById("victoryText");
 	const imageWrapEl = document.getElementById("victoryMedia") as HTMLElement | null;
 	const imageEl = document.getElementById("victoryImage") as HTMLImageElement | null;
-	if (!modal || !titleEl || !textEl || !imageWrapEl || !imageEl) return;
-	const bannerSrc = victoryBannerForLeader(viewState.mode);
+	const creditEl = document.getElementById("victoryIllustrationCredit") as HTMLElement | null;
+	if (!modal || !titleEl || !textEl || !imageWrapEl || !imageEl || !creditEl) return;
+	const artwork = victoryBannerForLeader(viewState.mode);
 	titleEl.textContent = viewState.title;
 	textEl.textContent = viewState.text;
-	if (bannerSrc) {
-		setThumbnailSource(imageEl, bannerSrc);
+	if (artwork) {
+		imageEl.onerror = null;
+		imageEl.src = asAssetPath(artwork.src);
 		imageEl.alt = `${viewState.title} - arte do Escolhido`;
+		creditEl.textContent = artwork.credit;
+		creditEl.hidden = false;
 		imageWrapEl.style.display = "block";
 	}
 	else {
 		imageEl.removeAttribute("src");
 		imageEl.alt = "";
+		creditEl.textContent = "";
+		creditEl.hidden = true;
 		imageWrapEl.style.display = "none";
 	}
 	modal.style.display = "flex";

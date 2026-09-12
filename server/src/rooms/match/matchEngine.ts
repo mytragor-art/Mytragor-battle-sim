@@ -2692,13 +2692,15 @@ export function playCard(state: MatchState, slot: Slot, cardId: string, targetPo
 		finishSpellToGrave();
 	};
 	const maybeTriggerValbrakFromCitizenSummon = (summonedCardId: string) => {
-		const ownerLeaderId = asPlayer(state, slot).leaderId;
-		if (!ownerLeaderId || triggeredLeaderThisTurn[slot].has(ownerLeaderId)) return;
+		const owner = asPlayer(state, slot) as any;
+		const ownerLeaderId = String(owner.leaderId || "");
+		const valbrakTurnKey = leaderEffectTurnKey(owner, "valbrak");
+		if (!ownerLeaderId || triggeredLeaderThisTurn[slot].has(valbrakTurnKey)) return;
 		const leaderDef = findCardDef(ownerLeaderId);
 		if (!cardHasEffectId(leaderDef, "valbrak")) return;
 		drawCard(state, slot, 1, broadcast);
 		if (state.phase === "FINISHED") return;
-		triggeredLeaderThisTurn[slot].add(ownerLeaderId);
+		triggeredLeaderThisTurn[slot].add(valbrakTurnKey);
 		broadcast("effect_log", { slot, cardId: ownerLeaderId, effect: "valbrak", text: `${ownerLeaderId}: Valbrak ativou e comprou 1 carta ao convocar ${summonedCardId}.` });
 	};
 	const maybeCounterSpellOrTrick = (onContinue: () => void, onCancelled: () => void) => {

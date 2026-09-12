@@ -50,7 +50,7 @@ body{
   background:
     radial-gradient(circle at center, rgba(10,10,15,0.14) 0%, rgba(10,10,15,0.58) 72%),
     linear-gradient(rgba(10,10,15,0.28), rgba(10,10,15,0.28)),
-	  url("/bgambientes/fundostartdeck.png") center center / contain no-repeat;
+	  url("/bgambientes/pagina desktop.png") center center / contain no-repeat;
   background-color:#0a0a0f;
 }
 
@@ -1730,7 +1730,15 @@ body.lobbyBody{
   min-height:100vh;
   position:relative;
   font-family:"Cormorant Garamond", Georgia, serif;
-  background:#07070b url("/bgambientes/fundostartdeck.png") center 12% / cover no-repeat fixed;
+  background:#07070b url("/bgambientes/pagina desktop.png") center top / cover no-repeat fixed;
+}
+
+@media (max-width: 880px){
+  body.lobbyBody{
+    background-image:url("/bgambientes/pagina mobile.png");
+    background-position:center top;
+    background-attachment:scroll;
+  }
 }
 
 html:has(body.lobbyBody){

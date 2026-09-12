@@ -4,6 +4,10 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Mytragor — Como Jogar</title>
+  <script>
+    window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+  </script>
+  <script defer src="/_vercel/insights/script.js"></script>
   <link rel="stylesheet" href="/mobile.css" media="(max-width:880px)" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -443,11 +447,11 @@
         <div class="manualSearchResults" id="manualSearchResults" aria-live="polite"></div>
       </div>
       <article class="quickGuideCard"><h2>Capa</h2><p>Abra a capa oficial do manual.</p><button type="button" data-page="0">Abrir capa</button></article>
-      <article class="quickGuideCard"><h2>Introdução</h2><p>Páginas 1 a 6: conceitos e apresentação do universo de jogo.</p><button type="button" data-page="1">Abrir introdução</button></article>
-      <article class="quickGuideCard"><h2>Estrutura de jogo</h2><p>Páginas 7 a 13: estrutura e elementos que organizam a partida.</p><button type="button" data-page="7">Abrir estrutura</button></article>
-      <article class="quickGuideCard"><h2>Combate</h2><p>Páginas 14 a 16: regras e resolução de combate.</p><button type="button" data-page="14">Abrir combate</button></article>
-      <article class="quickGuideCard"><h2>Agradecimento</h2><p>Página 16: agradecimento da equipe.</p><button type="button" data-page="16">Abrir agradecimento</button></article>
-      <article class="quickGuideCard"><h2>Glossário</h2><p>Página 17: termos de referência do Mytragor.</p><button type="button" data-page="17">Abrir glossário</button></article>
+      <article class="quickGuideCard"><h2>Fundamentos</h2><p>Páginas 1 a 6: universo de Mytragor, filiações e tipos de carta.</p><button type="button" data-page="1">Abrir fundamentos</button></article>
+      <article class="quickGuideCard"><h2>Preparação</h2><p>Páginas 7 a 10: mulligan, construção do baralho e fases do turno.</p><button type="button" data-page="7">Abrir preparação</button></article>
+      <article class="quickGuideCard"><h2>Regras de jogo</h2><p>Páginas 11 a 16: vitória, Escolhido, Aliados e cartas de suporte.</p><button type="button" data-page="11">Abrir regras</button></article>
+      <article class="quickGuideCard"><h2>Combate</h2><p>Páginas 17 e 18: declaração, cálculo e dano em combate.</p><button type="button" data-page="17">Abrir combate</button></article>
+      <article class="quickGuideCard"><h2>Glossário</h2><p>Páginas 20 e 21: termos de referência do Mytragor.</p><button type="button" data-page="20">Abrir glossário</button></article>
     </section>
 
     <section class="manualView manualReaderLayout" id="bookView" role="tabpanel" hidden>
@@ -477,8 +481,11 @@
   </div>
 
   <script>
-    const MANUAL_CACHE_VERSION = "2026-06-25-1";
-    const MANUAL_PAGE_COUNT = 17;
+    const MANUAL_CACHE_VERSION = "2026-09-11-1";
+    const MANUAL_PAGE_COUNT = 21;
+    const MANUAL_SEARCH_INDEX_PATH = "/manual/search-index.json";
+    let searchIndex = [];
+    let isSearchIndexReady = false;
 
     function manualAssetPath(path) {
       const separator = path.includes("?") ? "&" : "?";
@@ -490,7 +497,7 @@
       for (let page = 1; page <= MANUAL_PAGE_COUNT; page += 1) {
         entries.push({
           title: `Página ${page}`,
-          src: `/manual/manual_pg${page}.png`,
+          src: `/manual/manual_pg${page}${page === 11 ? ".jpg" : ".png"}`,
           alt: `Página ${page} do manual`
         });
       }
@@ -499,27 +506,11 @@
 
     const chapters = [
       { label: "Capa", page: 0 },
-      { label: "Introdução", page: 1 },
-      { label: "Estrutura de jogo", page: 7 },
-      { label: "Combate", page: 14 },
-      { label: "Agradecimento", page: 16 },
-      { label: "Glossário", page: 17 }
-    ];
-
-    const keywordIndex = [
-      { keyword: "Escolhido", aliases: ["escolhido", "escolhidos"], pages: [8, 9, 10, 12, 13, 14, 16] },
-      { keyword: "Deslocados", aliases: ["deslocado", "deslocados", "deslocar"], pages: [10] },
-      { keyword: "Combate", aliases: ["combate", "atacar", "ataque"], pages: [8, 14, 15] },
-      { keyword: "Dano", aliases: ["dano", "danos"], pages: [12, 15] },
-      { keyword: "Fragmentos", aliases: ["fragmento", "fragmentos"], pages: [7, 10, 11, 12, 13] },
-      { keyword: "Exaurido", aliases: ["exaurido", "exauridos", "exausto", "exaustos"], pages: [7, 8, 14] },
-      { keyword: "Disposto", aliases: ["disposto", "dispostos"], pages: [7, 8, 14] },
-      { keyword: "Aliados", aliases: ["aliado", "aliados"], pages: [7, 8, 9, 10, 11, 12, 13, 14] },
-      { keyword: "Cemitério", aliases: ["cemiterio", "cemitério"], pages: [10, 11, 12, 13, 15] },
-      { keyword: "Magia", aliases: ["magia", "magias"], pages: [12] },
-      { keyword: "Truque", aliases: ["truque", "truques"], pages: [12] },
-      { keyword: "Equipamento", aliases: ["equipamento", "equipamentos"], pages: [13] },
-      { keyword: "Vida", aliases: ["vida", "vidas", "vitoria", "vitória"], pages: [9, 15, 16] }
+      { label: "Fundamentos", page: 1 },
+      { label: "Preparação", page: 7 },
+      { label: "Regras de jogo", page: 11 },
+      { label: "Combate", page: 17 },
+      { label: "Glossário", page: 20 }
     ];
 
     let currentPage = 0;
@@ -569,6 +560,7 @@
       document.getElementById("bookTab").onclick = () => setView("book");
       document.getElementById("manualKeywordInput").oninput = (event) => renderKeywordResults(event.target.value);
       goToPage(0);
+      loadSearchIndex();
     }
 
     function normalizeKeyword(value) {
@@ -581,23 +573,40 @@
       results.innerHTML = "";
       if (!normalizedQuery) return;
 
-      const matches = keywordIndex.filter((entry) => [entry.keyword, ...(entry.aliases || [])]
-        .some((term) => normalizeKeyword(term).includes(normalizedQuery)));
+      if (!isSearchIndexReady) {
+        results.innerHTML = '<p class="manualSearchEmpty">Preparando a busca no manual...</p>';
+        return;
+      }
+
+      const matches = searchIndex.filter((entry) => normalizeKeyword(entry.text).includes(normalizedQuery));
       if (!matches.length) {
-        results.innerHTML = '<p class="manualSearchEmpty">Nenhuma ocorrência mapeada para essa palavra-chave.</p>';
+        results.innerHTML = '<p class="manualSearchEmpty">Nenhuma ocorrência encontrada no manual.</p>';
         return;
       }
 
       matches.forEach((entry) => {
-        entry.pages.forEach((page) => {
-          const button = document.createElement("button");
-          button.type = "button";
-          button.className = "manualSearchResult";
-          button.innerHTML = `<strong>${entry.keyword}</strong><span>Página ${page}</span>`;
-          button.onclick = () => openBookAt(page);
-          results.appendChild(button);
-        });
+        const page = Number(entry.page) - 1;
+        const pageLabel = page === 0 ? "Capa" : `Página ${page}`;
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "manualSearchResult";
+        button.innerHTML = `<strong>${pageLabel}</strong><span>Abrir ${pageLabel.toLowerCase()}</span>`;
+        button.onclick = () => openBookAt(page);
+        results.appendChild(button);
       });
+    }
+
+    async function loadSearchIndex() {
+      try {
+        const response = await fetch(manualAssetPath(MANUAL_SEARCH_INDEX_PATH));
+        const index = await response.json();
+        if (!response.ok || Number(index.pageCount) !== MANUAL_PAGE_COUNT + 1 || !Array.isArray(index.pages)) throw new Error("Índice inválido");
+        searchIndex = index.pages;
+        isSearchIndexReady = true;
+        renderKeywordResults(document.getElementById("manualKeywordInput").value);
+      } catch (error) {
+        console.error("Não foi possível carregar a busca do manual", error);
+      }
     }
 
     function goToPage(page) {

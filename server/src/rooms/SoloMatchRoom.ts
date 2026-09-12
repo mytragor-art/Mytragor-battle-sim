@@ -106,7 +106,18 @@ export class SoloMatchRoom extends Room<MatchState> {
 			} catch (_) {
 				// ignore send failures while recovering from a room error
 			}
+			if (context.startsWith("bot_")) this.recoverBotTurn();
 		}
+	}
+
+	private recoverBotTurn() {
+		this.activeChoiceSessionId = null;
+		if (this.state.phase === "FINISHED") return;
+		if (this.state.game.turnSlot === "p2" && this.state.game.phase !== "END") {
+			nextPhase(this.state, (name, payload) => this.broadcastMatchEvent(name, payload));
+		}
+		this.refreshInactivityTimer();
+		this.queueBotTurn(BOT_PHASE_DELAY_MS);
 	}
 
 	private clearBotTimer() {

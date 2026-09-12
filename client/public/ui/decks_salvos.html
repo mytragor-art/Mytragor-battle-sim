@@ -4,6 +4,10 @@
 	<meta charset="utf-8"/>
 	<meta name="viewport" content="width=device-width, initial-scale=1"/>
 	<title>Baralhos Salvos — Mytragor</title>
+	<script>
+		window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+	</script>
+	<script defer src="/_vercel/insights/script.js"></script>
 	<style>
 	:root {
 		color-scheme: dark;
@@ -28,8 +32,15 @@
 		background:
 			radial-gradient(circle at center, rgba(10,10,15,0.14) 0%, rgba(10,10,15,0.58) 72%),
 			linear-gradient(rgba(10,10,15,0.28), rgba(10,10,15,0.28)),
-			url("../bgambientes/fundostartdeck.png") center 12% / cover no-repeat fixed;
+			url("../bgambientes/pagina desktop.png") center top / cover no-repeat fixed;
 		background-color: #0a0a0f;
+	}
+	@media (max-width: 880px) {
+		body {
+			background-image: url("../bgambientes/pagina mobile.png");
+			background-position: center top;
+			background-attachment: scroll;
+		}
 	}
 	body::before {
 		content: "";

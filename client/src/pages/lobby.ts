@@ -5,6 +5,7 @@ import { resolveHttpBase, resolveServerEndpoint } from "../config/runtime";
 import { hydrateSavedDecks, readSavedDecks, resolveDeckAssetPath, resolveLeaderArtwork, type SavedDeck } from "../ui/deckStore";
 import { getLobbyInputs, log, renderMatches, renderPlayers, renderRooms, setReadyUI, setSlotPhase } from "../ui/lobbyView";
 import { getAvatarId, getDisplayName } from "../ui/profile";
+import { trackMatchStarted } from "../analytics";
 
 const view = getLobbyInputs();
 
@@ -302,6 +303,7 @@ async function joinLobby(forceCreate = false): Promise<boolean> {
 				const matchRoomId = String(msg?.matchRoomId || "").trim();
 				const joinToken = String(msg?.joinToken || "").trim();
 				if (matchRoomId) {
+					trackMatchStarted("pvp");
 					window.location.href = `./game.html?roomId=${encodeURIComponent(matchRoomId)}&endpoint=${encodeURIComponent(endpoint)}&joinToken=${encodeURIComponent(joinToken)}`;
 				}
 			},
@@ -390,7 +392,10 @@ async function enterPrivateLobby(mode: "create" | "join") {
 				const endpoint = view.endpointEl?.value.trim() || resolveServerEndpoint(window.location.search);
 				const matchRoomId = String(msg?.matchRoomId || "").trim();
 				const joinToken = String(msg?.joinToken || "").trim();
-				if (matchRoomId) window.location.href = `./game.html?roomId=${encodeURIComponent(matchRoomId)}&endpoint=${encodeURIComponent(endpoint)}&joinToken=${encodeURIComponent(joinToken)}`;
+				if (matchRoomId) {
+					trackMatchStarted("pvp");
+					window.location.href = `./game.html?roomId=${encodeURIComponent(matchRoomId)}&endpoint=${encodeURIComponent(endpoint)}&joinToken=${encodeURIComponent(joinToken)}`;
+				}
 			},
 			onError: (msg) => log("ERROR", msg),
 			onLeave: (code) => {

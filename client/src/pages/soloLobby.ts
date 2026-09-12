@@ -3,6 +3,7 @@ import { resolveHttpBase, resolveServerEndpoint } from "../config/runtime";
 import { hydrateSavedDecks, readSavedDecks, resolveDeckAssetPath, resolveLeaderArtwork, type SavedDeck } from "../ui/deckStore";
 import { getLobbyInputs, log, renderPlayers, renderRooms, setReadyUI, setSlotPhase } from "../ui/lobbyView";
 import { getAvatarId, getDisplayName } from "../ui/profile";
+import { trackMatchStarted } from "../analytics";
 
 const view = getLobbyInputs();
 
@@ -319,6 +320,7 @@ async function joinLobby(forceCreate = false): Promise<boolean> {
 				const matchRoomId = String(msg?.matchRoomId || "").trim();
 				const joinToken = String(msg?.joinToken || "").trim();
 				if (matchRoomId) {
+					trackMatchStarted("solo");
 					window.location.href = `./game.html?roomId=${encodeURIComponent(matchRoomId)}&endpoint=${encodeURIComponent(endpoint)}&joinToken=${encodeURIComponent(joinToken)}&solo=1`;
 				}
 			},
