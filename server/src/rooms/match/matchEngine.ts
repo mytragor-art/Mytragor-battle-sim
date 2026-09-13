@@ -151,7 +151,6 @@ function cardHasKeyword(card: CardDef | undefined, keyword: string): boolean {
 	}
 	const text = normalizeKind(String(card.text || ""));
 	if (!text) return false;
-	if (expected === "precisao" || expected === "precisao") return text.includes("precisao") || text.includes("precis");
 	return text.includes(expected);
 }
 

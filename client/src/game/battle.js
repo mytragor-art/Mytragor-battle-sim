@@ -270,18 +270,11 @@ export function resolveAttackOn(runtime, target) {
         return;
     }
     const bonusTempAtk = Number(attackerCard.atkBonusTemp || 0);
-    let d20 = 1 + runtime.rnd(20);
-    let d20b = null;
-    if (hasKeyword(runtime, attackerCard, "precisão") || hasKeyword(runtime, attackerCard, "precisao")) {
-        d20b = 1 + runtime.rnd(20);
-        d20 = Math.max(d20, d20b);
-    }
+    const d20 = 1 + runtime.rnd(20);
     const total = d20 + Number(attackerCard.atkBonus || 0) + bonusTempAtk;
     const ac = runtime.getAC(finalTarget);
     const hit = total >= ac;
-    const rollText = d20b !== null
-        ? `Precisão: ${d20} (maior) + ${Number(attackerCard.atkBonus || 0)}${bonusTempAtk ? `+${bonusTempAtk} temp` : ""} vs AC ${ac} → ${hit ? "ACERTOU" : "ERROU"}.`
-        : `Rolagem: ${d20}+${Number(attackerCard.atkBonus || 0)}${bonusTempAtk ? `+${bonusTempAtk} temp` : ""} vs AC ${ac} → ${hit ? "ACERTOU" : "ERROU"}.`;
+    const rollText = `Rolagem: ${d20}+${Number(attackerCard.atkBonus || 0)}${bonusTempAtk ? `+${bonusTempAtk} temp` : ""} vs AC ${ac} → ${hit ? "ACERTOU" : "ERROU"}.`;
     runtime.logAttackResult?.(hit, rollText);
     if (!hit) {
         endAttackCleanup(runtime);

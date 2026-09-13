@@ -1193,8 +1193,6 @@ function cardKeywords(cardId) {
         keywords.push("provocar");
     if (rawKeywords.includes("bloquear") || text.includes("bloquear") || text.includes("interpor"))
         keywords.push("bloquear");
-    if (text.includes("precis") || text.includes("precisão"))
-        keywords.push("precisao");
     if (rawKeywords.includes("atropelar") || text.includes("atropelar"))
         keywords.push("atropelar");
     return keywords;

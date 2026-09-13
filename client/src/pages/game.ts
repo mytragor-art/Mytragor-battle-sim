@@ -1231,7 +1231,6 @@ function cardKeywords(cardId: string): string[] {
 	if (rawKeywords.includes("investida") || text.includes("investida")) keywords.push("investida");
 	if (rawKeywords.includes("provocar") || text.includes("provocar") || text.includes("desafio")) keywords.push("provocar");
 	if (rawKeywords.includes("bloquear") || text.includes("bloquear") || text.includes("interpor")) keywords.push("bloquear");
-	if (text.includes("precis") || text.includes("precisão")) keywords.push("precisao");
 	if (rawKeywords.includes("atropelar") || text.includes("atropelar")) keywords.push("atropelar");
 	return keywords;
 }
