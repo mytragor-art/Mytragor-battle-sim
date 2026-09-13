@@ -27,6 +27,12 @@ export type CardDef = {
 	effectValue?: any;
 	query?: any;
 	max?: number;
+	transform?: {
+		classe?: string;
+		tipo?: string;
+		filiacao?: string;
+		maxCost?: number;
+	};
 };
 
 let cache: CardDef[] | null = null;

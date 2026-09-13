@@ -3909,7 +3909,8 @@ function bindActiveMatchRoom() {
 			if (String(msg?.lane || "") !== "field") return;
 			const targetPos = Number(msg?.targetPos);
 			if (!Number.isInteger(targetPos) || targetPos < 0) return;
-			summonedBySide[side].add(targetPos);
+			if (msg?.canAttackThisTurn === true) summonedBySide[side].delete(targetPos);
+			else summonedBySide[side].add(targetPos);
 		},
 		onEffectChoice: (msg) => {
 			if (!isSpectator) showEffectChoiceModal(msg);
@@ -4337,7 +4338,8 @@ async function joinMatch() {
 				if (String(msg?.lane || "") !== "field") return;
 				const targetPos = Number(msg?.targetPos);
 				if (!Number.isInteger(targetPos) || targetPos < 0) return;
-				summonedBySide[side].add(targetPos);
+				if (msg?.canAttackThisTurn === true) summonedBySide[side].delete(targetPos);
+				else summonedBySide[side].add(targetPos);
 			},
 			onEffectChoice: (msg) => {
 				if (!isSpectator) showEffectChoiceModal(msg);

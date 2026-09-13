@@ -1053,11 +1053,16 @@ function hasMarcialEnvAttackBonus(state: MatchState, slot: Slot, attackerId: str
 		&& isMarcialCharacter(attackerId);
 }
 
-function offerCatedralBlessing(state: MatchState, slot: Slot, broadcast: (name: string, payload: any) => void, askChoice?: AskChoiceFn): void {
-	if (!askChoice) return;
+function offerCatedralBlessing(state: MatchState, slot: Slot, broadcast: (name: string, payload: any) => void, askChoice?: AskChoiceFn, onComplete?: () => void): void {
+	if (!askChoice) {
+		onComplete?.();
+		return;
+	}
 	const catedralSlot = (['p1', 'p2'] as Slot[]).find((envSlot) => getPlayerEnvEffect(state, envSlot) === "religioso_protecao");
-	if (!catedralSlot) return;
-	if (!leaderHasFiliation(state, slot, "Religioso")) return;
+	if (!catedralSlot || !leaderHasFiliation(state, slot, "Religioso")) {
+		onComplete?.();
+		return;
+	}
 	const player = asPlayer(state, slot) as any;
 	const envCardId = String(asPlayer(state, catedralSlot).env || "");
 	const options: ChoiceOption[] = [];
@@ -1066,11 +1071,20 @@ function offerCatedralBlessing(state: MatchState, slot: Slot, broadcast: (name: 
 		if (!cid) continue;
 		options.push({ id: `catedral-${pos}`, label: cid, side: slot, lane: "field", pos, cardId: cid, description: "Recebe +2 de vida até o início do seu próximo turno." });
 	}
-	if (!options.length) return;
+	if (!options.length) {
+		onComplete?.();
+		return;
+	}
 	askChoice(slot, { title: `${envCardId || "Catedral Ensolarada"}: escolha um aliado para receber +2 de vida`, options, allowCancel: true }, (optionId) => {
-		if (!optionId) return;
+		if (!optionId) {
+			onComplete?.();
+			return;
+		}
 		const pick = options.find((option) => option.id === optionId);
-		if (!pick || typeof pick.pos !== "number") return;
+		if (!pick || typeof pick.pos !== "number") {
+			onComplete?.();
+			return;
+		}
 		player.leaderBlessing = 0;
 		for (let index = 0; index < player.fieldBlessing.length; index += 1) player.fieldBlessing[index] = 0;
 		const currentHp = Number(player.fieldHp[pick.pos] || 0);
@@ -1079,6 +1093,141 @@ function offerCatedralBlessing(state: MatchState, slot: Slot, broadcast: (name: 
 		const boostedMaxHp = getFieldMaxHp(state, slot, pick.pos);
 		player.fieldHp[pick.pos] = Math.min(boostedMaxHp, currentHp + bonusHp);
 		broadcast("effect_log", { slot, cardId: envCardId, effect: "religioso_protecao", text: `${envCardId || "Catedral Ensolarada"}: ${pick.cardId} recebeu +2 de vida até o próximo turno.` });
+		onComplete?.();
+	});
+}
+
+type TransformRule = {
+	classe?: string;
+	tipo?: string;
+	filiacao?: string;
+	category?: string;
+	maxCost: number;
+};
+
+function getTransformRule(card: CardDef | undefined): TransformRule | null {
+	if (!card || !cardHasKeyword(card, "transformar")) return null;
+	const explicit = card.transform;
+	const explicitMaxCost = Number(explicit?.maxCost);
+	if (Number.isFinite(explicitMaxCost) && explicitMaxCost >= 0) {
+		return {
+			classe: String(explicit?.classe || "").trim() || undefined,
+			tipo: String(explicit?.tipo || "").trim() || undefined,
+			filiacao: String(explicit?.filiacao || "").trim() || undefined,
+			maxCost: explicitMaxCost
+		};
+	}
+	const text = normalizeKind(String(card.text || "")).replace(/\s+/g, " ");
+	const targetMatch = text.match(/convoque\s+um\s+aliado\s+(?:["“‘']([^"”’']+)["”’']|([a-z0-9][a-z0-9\s-]*?))\s*,?\s*com\s+/i);
+	const costMatch = text.match(/(?:["“‘'])?(\d+)(?:["”’'])?\s+ou\s+menos\s+de\s+custo/i);
+	const category = String(targetMatch?.[1] || targetMatch?.[2] || "").trim();
+	const maxCost = Number(costMatch?.[1]);
+	if (!category || !Number.isFinite(maxCost) || maxCost < 0) return null;
+	return { category, maxCost };
+}
+
+function cardMatchesTransformRule(cardId: string, rule: TransformRule): boolean {
+	const card = findCardDef(cardId);
+	if (!card || !isAllyKind(card.kind || card.tipo) || getCardCost(cardId) > rule.maxCost) return false;
+	if (rule.classe && normalizeKind(card.classe) !== normalizeKind(rule.classe)) return false;
+	if (rule.tipo && normalizeKind(card.tipo) !== normalizeKind(rule.tipo)) return false;
+	if (rule.filiacao && normalizeKind(card.filiacao) !== normalizeKind(rule.filiacao)) return false;
+	if (!rule.category) return true;
+	const category = normalizeKind(rule.category);
+	return [card.classe, card.tipo, card.filiacao].some((value) => normalizeKind(value) === category);
+}
+
+function offerTransformar(
+	state: MatchState,
+	slot: Slot,
+	broadcast: (name: string, payload: any) => void,
+	summoned: Record<Slot, Set<number>>,
+	triggeredLeaderThisTurn: Record<Slot, Set<string>>,
+	askChoice: AskChoiceFn | undefined,
+	onComplete: () => void
+): void {
+	if (!askChoice) {
+		onComplete();
+		return;
+	}
+	const player = asPlayer(state, slot) as any;
+	const sources: Array<{ pos: number; cardId: string; rule: TransformRule }> = [];
+	for (let pos = 0; pos < player.field.length; pos += 1) {
+		const cardId = String(player.field[pos] || "");
+		const rule = getTransformRule(findCardDef(cardId));
+		if (!cardId || !rule || !player.hand.some((handCardId: string) => cardMatchesTransformRule(handCardId, rule))) continue;
+		sources.push({ pos, cardId, rule });
+	}
+	if (!sources.length) {
+		onComplete();
+		return;
+	}
+	const sourceOptions = sources.map((source) => ({
+		id: `transform-source-${source.pos}`,
+		label: source.cardId,
+		side: slot,
+		lane: "field" as const,
+		pos: source.pos,
+		cardId: source.cardId,
+		description: `Enviar ${source.cardId} ao cemitério para convocar um aliado da sua mão.`
+	}));
+	askChoice(slot, { title: "Transformar: escolha um aliado para transformar", options: sourceOptions, allowCancel: true }, (sourceOptionId) => {
+		const source = sources.find((entry) => `transform-source-${entry.pos}` === sourceOptionId);
+		if (!source || String(player.field[source.pos] || "") !== source.cardId) {
+			onComplete();
+			return;
+		}
+		const targetOptions: Array<ChoiceOption & { pos: number; cardId: string }> = player.hand
+			.map((cardId: string, index: number): { cardId: string; index: number } => ({ cardId, index }))
+			.filter((entry: { cardId: string; index: number }) => cardMatchesTransformRule(entry.cardId, source.rule))
+			.map((entry: { cardId: string; index: number }) => ({
+				id: `transform-target-${entry.index}`,
+				label: entry.cardId,
+				side: slot,
+				lane: "deck" as const,
+				pos: entry.index,
+				cardId: entry.cardId,
+				description: `Convocar sem pagar custo (custo ${getCardCost(entry.cardId)}).`
+			}));
+		if (!targetOptions.length) {
+			onComplete();
+			return;
+		}
+		askChoice(slot, { title: `${source.cardId}: escolha o aliado para convocar`, options: targetOptions, allowCancel: true, sourceCardId: source.cardId }, (targetOptionId) => {
+			const target = targetOptions.find((entry) => entry.id === targetOptionId);
+			if (!target || String(player.field[source.pos] || "") !== source.cardId || String(player.hand[target.pos] || "") !== target.cardId) {
+				onComplete();
+				return;
+			}
+			player.hand.splice(target.pos, 1);
+			moveFieldCardToGraveWithoutDestroyedTriggers(state, slot, source.pos, broadcast);
+			placeAllyOnField(state, slot, player, target.cardId, source.pos, broadcast, askChoice, summoned);
+			const targetDef = findCardDef(target.cardId);
+			if (normalizeKind(targetDef?.classe) === "cidadao") {
+				const leaderId = String(player.leaderId || "");
+				const valbrakTurnKey = leaderEffectTurnKey(player, "valbrak");
+				if (leaderId && !triggeredLeaderThisTurn[slot].has(valbrakTurnKey) && cardHasEffectId(findCardDef(leaderId), "valbrak")) {
+					drawCard(state, slot, 1, broadcast);
+					triggeredLeaderThisTurn[slot].add(valbrakTurnKey);
+					broadcast("effect_log", { slot, cardId: leaderId, effect: "valbrak", text: `${leaderId}: comprou 1 carta ao convocar ${target.cardId}.` });
+				}
+			}
+			awardAdemaisSpiderMarkOnSummon(state, slot, target.cardId, broadcast);
+			state.game.seq += 1;
+			broadcast("card_played", {
+				slot,
+				lane: "field",
+				cardId: target.cardId,
+				targetPos: source.pos,
+				cost: 0,
+				canAttackThisTurn: true,
+				p1Fragments: state.game.p1.fragments,
+				p2Fragments: state.game.p2.fragments,
+				seq: state.game.seq
+			});
+			broadcast("effect_log", { slot, cardId: source.cardId, effect: "transformar", text: `${source.cardId}: foi enviado ao cemitério para convocar ${target.cardId} sem custo. ${target.cardId} pode atacar neste turno.` });
+			onComplete();
+		});
 	});
 }
 
@@ -2380,7 +2529,9 @@ function startTurn(
 		p2Deck: game.p2.deck.length,
 		seq: game.seq
 	});
-	offerCatedralBlessing(state, slot, broadcast, askChoice);
+	offerCatedralBlessing(state, slot, broadcast, askChoice, () => {
+		offerTransformar(state, slot, broadcast, summonedThisTurn, triggeredLeaderThisTurn, askChoice, () => {});
+	});
 }
 
 export function resolveOpeningMulligans(
