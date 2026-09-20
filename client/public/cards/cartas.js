@@ -127,7 +127,7 @@ const CARD_DEFS = [
 name: 'Tamanduá Guardião', kind: 'ally', img: '/allies/layout-tamanduaguardiao.ai.png', cost: 2, classe: 'Criatura', tipo: 'Animal', filiacao: 'Religioso', ac: 0, hp: 7, maxHp: 7, damage: 2, atkBonus: 2, keywords: ['provocar'], effect: '', text: 'Desafio — Enquanto este aliado estiver Exaurido, seus\noponentes só podem atacar aliados com Desafio.'
   },
     {
-    name: 'Leão Rei Sagrado', kind: 'ally', img: '/allies/layout-leaoreisagrado.ai.png', cost: 6, classe: 'Criatura', tipo: 'Animal', filiacao: 'Religioso', ac: 1, hp: 5, maxHp: 5, damage: 4, atkBonus: 4, keywords: [], effect: 'search_deck_animal_aura_atk', effectValue: 1, auraTarget: { tipo: 'Animal' }, auraProp: 'atk', text: 'Quando este Aliado for convocado, adicione um aliado\n"Animal" do seu baralho para sua mão. Embaralhe seu\nbaralho.\n\nEnquanto este Aliado estiver em campo, seus Aliados\n"Animal" recebem +1 de Ataque.'
+    name: 'Leão Rei Sagrado', kind: 'ally', img: '/allies/layout-leaoreisagrado.ai.png', cost: 6, classe: 'Criatura', tipo: 'Animal', filiacao: 'Religioso', ac: 1, hp: 5, maxHp: 5, damage: 4, atkBonus: 4, keywords: [], effect: 'search_deck_animal_aura_atk', effectValue: 1, query: { maxCost: 4 }, auraTarget: { tipo: 'Animal' }, auraProp: 'atk', text: 'Quando este Aliado for convocado, adicione um aliado\n"Animal", custo 4 ou menos, do seu baralho para sua\nmão. Embaralhe seu baralho.\n\nEnquanto este Aliado estiver em campo, seus Aliados\n"Animal" recebem +1 de Ataque.'
     },
   {
   name: 'Aerin Nieloy', kind: 'ally', img: '/allies/layout-aerynnieloy.ai.png', cost: 3, classe: 'Guerreiro', tipo: 'Elfo', filiacao: 'Marcial', ac: 1, hp: 6, maxHp: 6, damage: 2, atkBonus: 2, keywords: ['bloquear'],
@@ -193,7 +193,7 @@ name: 'Tamanduá Guardião', kind: 'ally', img: '/allies/layout-tamanduaguardiao
     name: 'O Protetor', kind: 'ally', img: '/allies/layout-oprotetor.ai.png', cost: 3, classe: 'Cidadão', tipo: 'Humano', filiacao: 'Arcana', ac: 0, hp: 4, maxHp: 4, damage: 1, atkBonus: 1, keywords: ['bloquear'], effect: 'aura_hp', effectValue: 1, auraTarget: { classe: 'Cidadão' }, auraScope: 'allies', text: 'Interpor — Este personagem pode bloquear um ataque\ndirecionado a outro personagem.\nEnquanto este aliado estiver em campo, seus\npersonagens "Cidadão" recebem +1 de vida.'
   },
   {
-    name: 'Gladiador Veloz', kind: 'ally', img: '/allies/layout-gladiadorveloz.ai.png', cost: 3, classe: 'Guerreiro', tipo: 'Humano', filiacao: 'Marcial', ac: 0, hp: 3, maxHp: 3, damage: 4, atkBonus: 4, keywords: ['investida'], text: 'Investida — Este personagem pode atacar no turno\nque foi convocado.'
+    name: 'Gladiador Veloz', kind: 'ally', img: '/allies/layout-gladiadorveloz.ai.png', cost: 4, classe: 'Guerreiro', tipo: 'Humano', filiacao: 'Marcial', ac: 0, hp: 3, maxHp: 3, damage: 4, atkBonus: 4, keywords: ['investida'], text: 'Investida — Este personagem pode atacar no turno\nque foi convocado.'
   },
 
   // Magias, Equipamentos, Ambientes, Truques
@@ -240,7 +240,7 @@ name: 'Tamanduá Guardião', kind: 'ally', img: '/allies/layout-tamanduaguardiao
       text: 'Quando um oponente declarar um Ataque: O\npersonagem atacante perde 3 de Ataque até o final\ndaquele embate. Se você controlar um Aliado com\n"Aranhas Negras" no nome, compre 1 carta.'
     },
   {
-    name: 'Interrupção Perfeita', kind: 'truque', img: '/trick/layout-interrupcaoperfeita.ai.png', cost: 2, classe: '', tipo: 'Truque', filiacao: 'Arcana', effect: 'anular_magia_truque', text: 'Quando seu oponente ativar uma carta de Magia ou\nTruque: Anule o efeito da carta ativada.'
+    name: 'Interrupção Perfeita', kind: 'truque', img: '/trick/layout-interrupcaoperfeita.ai.png', cost: 2, classe: '', tipo: 'Truque', filiacao: 'Arcana', effect: 'anular_magia_truque', text: 'Quando seu oponente ativar uma carta de Magia: Anule\no efeito da carta ativada.'
   },
     {
       name: 'Alerta de Fuga',
@@ -329,17 +329,17 @@ name: 'Tamanduá Guardião', kind: 'ally', img: '/allies/layout-tamanduaguardiao
     name: 'Sede de Vingança', kind: 'spell', img: '/spell/layout-sedevinganca.ai.png', cost: 5, classe: '', tipo: 'Magia', filiacao: 'Marcial', effect: 'sede_vinganca', effectValue: 3, text: 'Você pode ativar Sede de Vingança uma vez por turno.\nEscolha 1 personagem "Guerreiro" que você controla,\nele recebe +3 de ataque até o fim do turno. Se ele\nderrotar 1 aliado do oponente, neste turno, compre 1\ncarta.'
   },
   {
-    name: 'Gladiador Implacável', kind: 'ally', img: '/allies/layout-gladiadorimplacavel.ai.png', cost: 4, classe: 'Guerreiro', tipo: 'Humano', filiacao: 'Marcial', ac: 0, hp: 5, maxHp: 5, damage: 3, atkBonus: 3, keywords: [], effect: 'buff_on_kill', effectValue: { atk: 1, ac: 1 }, text: 'Quando este Aliado vencer um inimigo em combate e\nenviá-lo para o cemitério, coloque 1 marcador\n"Sangue" neste aliado. Ele recebe +1 de Ataque e +1 de\nResistência para cada marcador Sangue nele.'
+    name: 'Gladiador Implacável', kind: 'ally', img: '/allies/layout-gladiadorimplacavel.ai.png', cost: 5, classe: 'Guerreiro', tipo: 'Humano', filiacao: 'Marcial', ac: 0, hp: 4, maxHp: 4, damage: 3, atkBonus: 3, keywords: [], effect: 'buff_on_kill', effectValue: { atk: 1, ac: 1 }, text: 'Quando este Aliado vencer um inimigo em combate e\nenviá-lo para o cemitério, coloque 1 marcador\n"Sangue" neste aliado. Ele recebe +1 de Ataque e +1 de\nResistência para cada marcador Sangue nele.'
   },
   {
-  name: 'Yohan, Ronin Vigilante', aliases: ['Yoran, Ronin Vigilante'], kind: 'ally', img: '/allies/layout-yohanronin.ai.png', cost: 2, classe: 'Guerreiro', tipo: 'Humano', filiacao: 'Marcial', ac: 0, hp: 3, maxHp: 3, damage: 1, atkBonus: 1, keywords: [], effect: 'kornex_buff_per_marcial_in_play', effectValue: 1, text: 'Este Aliado recebe +1 de ataque para cada outra carta\n"Marcial" no campo de qualquer jogador.'
+  name: 'Yohan, Ronin Vigilante', aliases: ['Yoran, Ronin Vigilante'], kind: 'ally', img: '/allies/layout-yohanronin.ai.png', cost: 2, classe: 'Guerreiro', tipo: 'Humano', filiacao: 'Marcial', ac: 0, hp: 2, maxHp: 2, damage: 1, atkBonus: 1, keywords: [], effect: 'kornex_buff_per_marcial_in_play', effectValue: 1, text: 'Este Aliado recebe +1 de ataque para cada outra carta\n"Marcial" no campo de qualquer jogador.'
   },
   {
     name: 'Livro Arcano Instável', kind: 'equip', img: '/equip/layout-livroinstavel.ai.png', cost: 2, classe: '', tipo: 'Equipamento', filiacao: 'Arcana', effect: 'olhar_topo', atkBonus: 1, text: 'O personagem equipado recebe +1 de Ataque.\nQuando este equipamento entrar em campo, olhe a\ncarta do topo do seu baralho. Volte-a para o topo ou\ncoloque-a no fundo do seu baralho.'
   },
   // Exemplo: carta que exige pagar vida de um aliado em vez de fragmentos
   {
-    name: 'Aranhas Negras, Milícia', kind: 'spell', img: '/spell/layout-aranhasmilicia.ai.png', cost: 1, classe: '', tipo: 'Magia', filiacao: 'Sombras', effect: 'blood_sacrifice', costHp: 2, text: 'Cause 2 de dano em um Personagem que você controla.\nSe o fizer, cause 4 de dano em 1 Personagem inimigo.'
+    name: 'Aranhas Negras, Milícia', kind: 'spell', img: '/spell/layout-aranhasmilicia.ai.png', cost: 3, classe: '', tipo: 'Magia', filiacao: 'Sombras', effect: 'blood_sacrifice', effectValue: { selfDamage: 3, enemyDamage: 4 }, text: 'Cause 3 de dano em um Personagem que você controla.\nSe o fizer, cause 4 de dano em 1 Personagem inimigo.'
   },
    // Adicione todas as cartas reais aqui!
   {

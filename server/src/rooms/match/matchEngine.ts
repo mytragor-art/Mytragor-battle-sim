@@ -112,6 +112,11 @@ function isSpellOrTrickKind(kind: string | undefined): boolean {
 	return normalized === "spell" || normalized === "magia" || normalized === "truque" || normalized === "trick";
 }
 
+function isSpellKind(kind: string | undefined): boolean {
+	const normalized = normalizeKind(kind);
+	return normalized === "spell" || normalized === "magia";
+}
+
 function isTrickKind(kind: string | undefined): boolean {
 	const normalized = normalizeKind(kind);
 	return normalized === "truque" || normalized === "trick";
@@ -884,7 +889,7 @@ function maybeOfferCounterToActivation(
 	onCancelled: () => void
 ): void {
 	const activatedDef = findCardDef(activatedCardId);
-	if (!isSpellOrTrickKind(activatedDef?.kind || activatedDef?.tipo)) {
+	if (!isSpellKind(activatedDef?.kind || activatedDef?.tipo)) {
 		onContinue();
 		return;
 	}
@@ -1379,6 +1384,7 @@ function findDeckMatchIndices(deck: string[], query: any, maxResults: number): n
 	const expectedClasse = normalizeKind(String(query?.classe || ""));
 	const expectedTipo = normalizeKind(String(query?.tipo || ""));
 	const expectedFiliacao = normalizeKind(String(query?.filiacao || ""));
+	const maxCost = Number(query?.maxCost);
 	for (let index = deck.length - 1; index >= 0; index -= 1) {
 		const cardId = deck[index];
 		const card = findCardDef(cardId);
@@ -1391,6 +1397,8 @@ function findDeckMatchIndices(deck: string[], query: any, maxResults: number): n
 		if (expectedClasse && normalizeKind(card.classe) !== expectedClasse) continue;
 		if (expectedTipo && normalizeKind(card.tipo) !== expectedTipo) continue;
 		if (expectedFiliacao && normalizeKind(card.filiacao) !== expectedFiliacao) continue;
+		const cardCost = Number(card.cost);
+		if (Number.isFinite(maxCost) && (!Number.isFinite(cardCost) || cardCost > maxCost)) continue;
 		out.push(index);
 		if (out.length >= maxResults) break;
 	}
@@ -1551,14 +1559,14 @@ function triggerAutoEffects(
 			const cid = String(foe.hand[i] || "");
 			if (!cid) continue;
 			const def = findCardDef(cid);
-			if (!isSpellOrTrickKind(def?.kind || def?.tipo)) continue;
+			if (!isSpellKind(def?.kind || def?.tipo)) continue;
 			options.push({ id: `anular-${i}`, label: cid, side: enemySlot(slot), lane: "support", pos: i, cardId: cid });
 		}
 		if (!options.length) {
-			broadcast("effect_log", { slot, cardId, effect, text: `${cardId}: nenhuma magia/truque na mão inimiga para anular.` });
+			broadcast("effect_log", { slot, cardId, effect, text: `${cardId}: nenhuma magia na mão inimiga para anular.` });
 			return;
 		}
-		askChoice(slot, { title: `${cardId}: escolha magia/truque para anular`, options, allowCancel: true }, (optionId) => {
+		askChoice(slot, { title: `${cardId}: escolha magia para anular`, options, allowCancel: true }, (optionId) => {
 			if (!optionId) return;
 			const pick = options.find((o) => o.id === optionId);
 			if (!pick || typeof pick.pos !== "number") return;
@@ -1744,27 +1752,28 @@ function triggerAutoEffects(
 	}
 
 	if (effect === "blood_sacrifice") {
+		const effectValue = (cardDef as any)?.effectValue || {};
+		const selfDamage = Math.max(1, Number(effectValue.selfDamage || 2));
+		const enemyDamage = Math.max(1, Number(effectValue.enemyDamage || 4));
 		const ownCharacters: ChoiceOption[] = [];
-		if (String(me.leaderId || "") && Number(me.hp || 0) >= 2) ownCharacters.push({ id: "blood-own-leader", label: `Líder (${me.leaderId})`, side: slot, lane: "env", cardId: String(me.leaderId || "") });
+		if (String(me.leaderId || "")) ownCharacters.push({ id: "blood-own-leader", label: `Líder (${me.leaderId})`, side: slot, lane: "env", cardId: String(me.leaderId || "") });
 		for (let pos = 0; pos < me.field.length; pos += 1) {
 			const cid = String(me.field[pos] || "");
 			if (!cid) continue;
-			const hp = getTargetHP(state, slot, pos);
-			if (hp < 2) continue;
 			ownCharacters.push({ id: `blood-own-${pos}`, label: cid, side: slot, lane: "field", pos, cardId: cid });
 		}
 		if (!ownCharacters.length) {
-			broadcast("effect_log", { slot, cardId, effect, text: `${cardId}: sem personagem seu com vida suficiente para receber 2 de dano.` });
+			broadcast("effect_log", { slot, cardId, effect, text: `${cardId}: sem personagem seu para receber ${selfDamage} de dano.` });
 			return;
 		}
-		askChoice(slot, { title: `${cardId}: escolha personagem seu para receber 2 de dano`, options: ownCharacters, allowCancel: true }, (costOptionId) => {
+		askChoice(slot, { title: `${cardId}: escolha personagem seu para receber ${selfDamage} de dano`, options: ownCharacters, allowCancel: true }, (costOptionId) => {
 			if (!costOptionId) return;
 			const costPick = ownCharacters.find((o) => o.id === costOptionId);
 			if (!costPick) return;
 			let payerId = "";
 			if (costPick.id === "blood-own-leader") {
 				payerId = String(me.leaderId || "");
-				applyDamageToLeader(me, 2);
+				applyDamageToLeader(me, selfDamage);
 				if (me.hp <= 0) {
 					state.phase = "FINISHED";
 					broadcast("match_ended", { winner: enemySlot(slot), loser: slot, p1Hp: state.game.p1.hp, p2Hp: state.game.p2.hp, seq: state.game.seq });
@@ -1774,7 +1783,7 @@ function triggerAutoEffects(
 				if (typeof costPick.pos !== "number") return;
 				payerId = String(me.field[costPick.pos] || "");
 				if (!payerId) return;
-				const payerRemaining = applyDamageToField(state, slot, costPick.pos, 2);
+				const payerRemaining = applyDamageToField(state, slot, costPick.pos, selfDamage);
 				if (payerRemaining <= 0) {
 					destroyAttachedSupports(state, slot, costPick.pos, broadcast);
 					const removed = clearFieldSlotWithAuras(state, slot, costPick.pos);
@@ -1794,13 +1803,13 @@ function triggerAutoEffects(
 				enemies.push({ id: `blood-target-ally-${pos}`, label: cid, side: enemySlot(slot), lane: "field", pos, cardId: cid });
 			}
 			if (!enemies.length) return;
-			askChoice(slot, { title: `${cardId}: escolha personagem inimigo para 4 de dano`, options: enemies, allowCancel: true }, (targetOptionId) => {
+			askChoice(slot, { title: `${cardId}: escolha personagem inimigo para ${enemyDamage} de dano`, options: enemies, allowCancel: true }, (targetOptionId) => {
 				if (!targetOptionId) return;
 				const targetPick = enemies.find((o) => o.id === targetOptionId);
 				if (!targetPick) return;
 				if (targetPick.id === "blood-target-leader") {
-					applyDamageToLeader(foe, 4);
-					broadcast("effect_log", { slot, cardId, effect, text: `${cardId}: causou 2 de dano em ${payerId} e 4 no líder inimigo.` });
+					applyDamageToLeader(foe, enemyDamage);
+					broadcast("effect_log", { slot, cardId, effect, text: `${cardId}: causou ${selfDamage} de dano em ${payerId} e ${enemyDamage} no líder inimigo.` });
 					if (foe.hp <= 0) {
 						state.phase = "FINISHED";
 						broadcast("match_ended", { winner: slot, loser: enemySlot(slot), p1Hp: state.game.p1.hp, p2Hp: state.game.p2.hp, seq: state.game.seq });
@@ -1810,7 +1819,7 @@ function triggerAutoEffects(
 				if (typeof targetPick.pos !== "number") return;
 				const targetId = String(foe.field[targetPick.pos] || "");
 				if (!targetId) return;
-				const remaining = applyDamageToField(state, enemySlot(slot), targetPick.pos, 4);
+				const remaining = applyDamageToField(state, enemySlot(slot), targetPick.pos, enemyDamage);
 				if (remaining <= 0) {
 					destroyAttachedSupports(state, enemySlot(slot), targetPick.pos, broadcast);
 					const removed = clearFieldSlotWithAuras(state, enemySlot(slot), targetPick.pos);
@@ -1820,7 +1829,7 @@ function triggerAutoEffects(
 						}
 					}
 				}
-				broadcast("effect_log", { slot, cardId, effect, text: `${cardId}: causou 2 de dano em ${payerId} e 4 em ${targetId}.` });
+				broadcast("effect_log", { slot, cardId, effect, text: `${cardId}: causou ${selfDamage} de dano em ${payerId} e ${enemyDamage} em ${targetId}.` });
 			});
 		});
 		return;
@@ -2219,7 +2228,7 @@ function triggerAutoEffects(
 		const searchDef = {
 			...(cardDef as any),
 			effect: "search_deck",
-			query: { kind: "ally", tipo: "Animal" },
+			query: { kind: "ally", tipo: "Animal", ...((cardDef as any)?.query || {}) },
 			max: 12,
 			shuffleAfter: true,
 			title: `${cardId}: escolha um aliado Animal do deck`
@@ -3227,7 +3236,6 @@ export function playCard(state: MatchState, slot: Slot, cardId: string, targetPo
 	if (!payCardCost()) return;
 	pg.hand.splice(idx, 1);
 	finalizeLanePlay(finalPos);
-	broadcast("card_played", { slot, lane, cardId, targetPos: finalPos, cost, p1Fragments: game.p1.fragments, p2Fragments: game.p2.fragments, seq: game.seq });
 }
 
 export function activateLeaderPower(
