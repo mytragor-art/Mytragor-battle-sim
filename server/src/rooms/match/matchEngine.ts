@@ -3178,7 +3178,7 @@ export function playCard(state: MatchState, slot: Slot, cardId: string, targetPo
 			});
 		}
 		if (!replaceOptions.length) return void broadcast("error", { text: "Campo cheio. Só é possível substituir aliados que já estavam em campo desde turnos anteriores." });
-		askChoice(slot, { title: `${cardId}: escolha um aliado do turno anterior para substituir`, options: replaceOptions, allowCancel: true }, (optionId) => {
+		askChoice(slot, { title: `${cardId}: escolha um aliado do turno anterior para substituir`, options: replaceOptions, allowCancel: true, sourceCardId: cardId }, (optionId) => {
 			if (!optionId) return;
 			const pick = replaceOptions.find((option) => option.id === optionId);
 			if (!pick || typeof pick.pos !== "number" || !pick.cardId) return;

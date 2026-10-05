@@ -78,6 +78,8 @@ export class SoloMatchRoom extends Room<MatchState> {
 	private botInitiativeTimer: NodeJS.Timeout | null = null;
 	private reservedSeat: ReservedSeat | null = null;
 	private consumedJoinToken = false;
+	private failedBotReplacementTurn = -1;
+	private failedBotReplacementCardIds = new Set<string>();
 	private pendingMulligans: Record<Slot, number[] | null> = { p1: null, p2: null };
 	private matchOptions: { p1: any; p2: any } = { p1: null, p2: null };
 	private bot: SoloBotConfig = {
@@ -351,6 +353,18 @@ export class SoloMatchRoom extends Room<MatchState> {
 
 	private scoreBotUnitValue(cardId: string, pos?: number): number {
 		return this.scoreUnitBoardValue(cardId, "p2", pos);
+	}
+
+	private resetFailedBotReplacements(): void {
+		const turn = Number(this.state.game.turn || 0);
+		if (this.failedBotReplacementTurn === turn) return;
+		this.failedBotReplacementTurn = turn;
+		this.failedBotReplacementCardIds.clear();
+	}
+
+	private markFailedBotReplacement(cardId: string): void {
+		this.resetFailedBotReplacements();
+		if (cardId) this.failedBotReplacementCardIds.add(cardId);
 	}
 
 	private pickBotReplacement(cardId: string): { id: string; gain: number } | null {
@@ -1393,7 +1407,9 @@ export class SoloMatchRoom extends Room<MatchState> {
 		if (title.includes("substituir")) {
 			const sourceCardId = this.inferChoiceSourceCardId(payload) || "";
 			const replacement = this.pickBotReplacement(sourceCardId);
-			return replacement && options.some((option) => option.id === replacement.id) ? replacement.id : null;
+			if (replacement && options.some((option) => option.id === replacement.id)) return replacement.id;
+			this.markFailedBotReplacement(sourceCardId);
+			return null;
 		}
 		if (title.includes("escolha um efeito")) {
 			const neutralChoice = this.chooseNeutralModalOption(sourceDef, options);
@@ -1663,7 +1679,11 @@ export class SoloMatchRoom extends Room<MatchState> {
 		const enemy = this.state.game.p1 as any;
 		const kind = this.normalizeText(def?.kind || def?.tipo);
 		const effect = this.normalizeText(def?.effect || "");
-		if ((kind === "ally" || kind === "aliado") && !player.field.some((fieldCardId: string) => !fieldCardId) && !this.pickBotReplacement(cardId)) return false;
+		if (kind === "ally" || kind === "aliado") {
+			this.resetFailedBotReplacements();
+			if (this.failedBotReplacementCardIds.has(cardId)) return false;
+			if (!player.field.some((fieldCardId: string) => !fieldCardId) && !this.pickBotReplacement(cardId)) return false;
+		}
 		if (effect === "destroy_env") return !!String(enemy.env || "");
 		if (effect === "destroy_enemy_ally") return enemy.field.some((cid: string) => !!cid);
 		if (effect === "destroy_equip") {
