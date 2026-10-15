@@ -96,13 +96,13 @@
       position:fixed;
       top:max(18px, calc(var(--bg-top-gutter, 0px) + 18px));
       bottom:max(18px, calc(var(--bg-top-gutter, 0px) + 18px));
-      width:min(240px, max(0px, calc(var(--bg-side-gutter, 0px) - 24px)));
-      pointer-events:none;
+      width:min(300px, max(0px, calc((100vw - min(920px, 92vw)) / 2 - 28px)));
+      pointer-events:auto;
       z-index:1;
       display:flex;
       align-items:stretch;
       justify-content:center;
-      opacity:0;
+      opacity:1;
     }
 
     .adReserveRail.left{ left:12px; }
@@ -120,16 +120,88 @@
       padding:14px 10px;
     }
 
-    .adReserveLabel{
+    .campaignRail{
+      width:100%;
+      display:grid;
+      align-content:center;
+      gap:10px;
+    }
+
+    .campaignRailBanner{
+      display:block;
+      overflow:hidden;
+      border:1px solid rgba(245, 201, 106, 0.42);
+      border-radius:8px;
+      box-shadow:0 12px 28px rgba(0,0,0,0.42), 0 0 18px rgba(245, 201, 106, 0.16);
+    }
+
+    .campaignRailBanner img{
+      display:block;
+      width:100%;
+      height:auto;
+    }
+
+    .campaignRailButton,
+    .campaignInlineButton{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-height:42px;
+      padding:10px 12px;
+      border:1px solid rgba(255, 226, 164, 0.52);
+      border-radius:8px;
+      background:linear-gradient(180deg, #f3d37a 0%, #d7a93d 52%, #8a5b1f 100%);
+      color:#2c1d08;
+      font-family:"Cinzel", Georgia, serif;
+      font-size:12px;
+      font-weight:700;
+      letter-spacing:.6px;
+      text-align:center;
+      text-decoration:none;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.36), 0 8px 20px rgba(0,0,0,.3);
+    }
+
+    .campaignInlineButton{
+      width:min(100%, 360px);
+      margin-top:2px;
+      font-size:14px;
+    }
+
+    .campaignShelf{
       display:none;
-      writing-mode:vertical-rl;
-      transform:rotate(180deg);
-      letter-spacing:2px;
-      text-transform:uppercase;
-      font-size:11px;
-      color:rgba(255, 235, 190, 0.56);
-      text-shadow:0 0 14px rgba(255, 200, 80, 0.12);
-      user-select:none;
+      width:100%;
+      grid-template-columns:repeat(2, minmax(0, 1fr));
+      gap:12px;
+    }
+
+    .campaignShelfBanner{
+      display:block;
+      overflow:hidden;
+      border:1px solid rgba(245, 201, 106, 0.42);
+      border-radius:8px;
+      box-shadow:0 12px 28px rgba(0,0,0,0.38), 0 0 18px rgba(245, 201, 106, 0.14);
+    }
+
+    .campaignShelfBanner img{
+      display:block;
+      width:100%;
+      height:auto;
+    }
+
+    .campaignRailBanner:hover,
+    .campaignRailButton:hover,
+    .campaignInlineButton:hover{
+      filter:brightness(1.08);
+      transform:translateY(-1px);
+    }
+
+    @media (max-width: 1450px){
+      .adReserveRail{ display:none; }
+      .campaignShelf{ display:grid; }
+    }
+
+    @media (max-width: 640px){
+      .campaignShelf{ grid-template-columns:1fr; }
     }
 
     .ambientParticle{
@@ -961,8 +1033,25 @@
 </head>
 
 <body>
-  <aside class="adReserveRail left" aria-hidden="true"><div class="adReserveInner"><div class="adReserveLabel">Reserva lateral</div></div></aside>
-  <aside class="adReserveRail right" aria-hidden="true"><div class="adReserveInner"><div class="adReserveLabel">Reserva lateral</div></div></aside>
+  <aside class="adReserveRail left">
+    <div class="adReserveInner">
+      <div class="campaignRail">
+        <a class="campaignRailBanner" href="https://meeplestarter.com.br/mytragor" target="_blank" rel="noopener noreferrer" aria-label="Abrir a pré-campanha de Mytragor na MeepleStarter">
+          <img src="/meeplestarter-pre-campanha.png" alt="Mytragor em pré-campanha na MeepleStarter" />
+        </a>
+        <a class="campaignRailButton" href="https://meeplestarter.com.br/mytragor" target="_blank" rel="noopener noreferrer">Siga a pré-campanha</a>
+      </div>
+    </div>
+  </aside>
+  <aside class="adReserveRail right">
+    <div class="adReserveInner">
+      <div class="campaignRail">
+        <a class="campaignRailBanner" href="https://meeplestarter.com.br/mytragor" target="_blank" rel="noopener noreferrer" aria-label="Abrir as metas sociais de Mytragor na MeepleStarter">
+          <img src="/meeplestarter-metas-sociais.png" alt="Metas sociais da pré-campanha de Mytragor" />
+        </a>
+      </div>
+    </div>
+  </aside>
   <div class="ambientParticles" aria-hidden="true">
     <span class="ambientParticle" style="--x:8%; --size:4px; --duration:14s; --delay:-2s; --drift:18px;"></span>
     <span class="ambientParticle" style="--x:16%; --size:6px; --duration:18s; --delay:-7s; --drift:-14px;"></span>
@@ -1002,6 +1091,15 @@
           <button class="gold-btn secondary aiChallengeBtn" onclick="location.href='solo-lobby.html'">DESAFIAR A IA</button>
           <button class="gold-btn secondary deckBuilderBtn" onclick="location.href='ui/deckbuilder.html'">Montar baralho</button>
           <button class="gold-btn secondary manualBtn" onclick="location.href='manual.html'">MANUAL DE JOGO</button>
+        </div>
+        <a class="campaignInlineButton" href="https://meeplestarter.com.br/mytragor" target="_blank" rel="noopener noreferrer">Siga a pré-campanha</a>
+        <div class="campaignShelf" aria-label="Pré-campanha Mytragor">
+          <a class="campaignShelfBanner" href="https://meeplestarter.com.br/mytragor" target="_blank" rel="noopener noreferrer">
+            <img src="/meeplestarter-pre-campanha.png" alt="Mytragor em pré-campanha na MeepleStarter" />
+          </a>
+          <a class="campaignShelfBanner" href="https://meeplestarter.com.br/mytragor" target="_blank" rel="noopener noreferrer">
+            <img src="/meeplestarter-metas-sociais.png" alt="Metas sociais da pré-campanha de Mytragor" />
+          </a>
         </div>
       </div>
 
