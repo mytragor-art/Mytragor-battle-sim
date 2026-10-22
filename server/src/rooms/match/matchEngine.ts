@@ -3389,6 +3389,22 @@ export function attack(
 	const hasTauntTapped = enemyTauntTapped.some(Boolean);
 
 	let finalTarget: AttackTarget = target;
+	const validDeclaredTarget = () => {
+		if (target.type === "leader") return !hasTauntTapped;
+		if (!Number.isInteger(target.targetPos) || target.targetPos < 0 || target.targetPos >= enemy.field.length) return false;
+		if (!String(enemy.field[target.targetPos] || "")) return false;
+		if (hasTauntTapped) return enemyTauntTapped[target.targetPos];
+		return katsuWarrior || ranzaLowCostAlly || isFieldTapped(enemy, target.targetPos);
+	};
+	const rejectTarget = () => broadcast("effect_log", {
+		slot, cardId: attackerId, effect: "attack_rejected",
+		text: "Ataque não realizado: alvo inválido. O aliado não gastou seu ataque."
+	});
+	// Reject before offering reactions: an invalid declaration must not consume cards.
+	if (!validDeclaredTarget()) {
+		rejectTarget();
+		return;
+	}
 
 	function resolveAfterBlock(finalTargetLocal: AttackTarget) {
 		attacked[slot].add(attackerPos);
@@ -3460,9 +3476,9 @@ export function attack(
 				broadcast("effect_log", { slot, cardId: String(me.leaderId || ""), effect: "katsu_warrior_burn", text: `${String(me.leaderId || "Katsu")}: um aliado Guerreiro destruiu um inimigo em combate e causou 2 de dano no Escolhido inimigo.` });
 			}
 			const ranzaDrawKey = leaderEffectTurnKey(me, "ranza_shadow_archer_draw");
-			if (!triggeredLeaderThisTurn[slot].has(ranzaDrawKey) && sentTargetAllyToGrave && leaderHasEffect(me, "ranza_shadow_archer_draw") && hasRanzaLowCostAllyException(state, slot, attackerId)) {
-				drawCard(state, slot, 1, broadcast);
+			if (!triggeredLeaderThisTurn[slot].has(ranzaDrawKey) && sentTargetAllyToGrave && ranzaLowCostAlly) {
 				triggeredLeaderThisTurn[slot].add(ranzaDrawKey);
+				drawCard(state, slot, 1, broadcast);
 				broadcast("effect_log", { slot, cardId: String(me.leaderId || ""), effect: "ranza_shadow_archer_draw", text: `${String(me.leaderId || "Ranza")}: um aliado de custo 4 ou menos derrotou um inimigo em combate e você comprou 1 carta.` });
 			}
 		}
@@ -3485,13 +3501,8 @@ export function attack(
 	}
 	let reactiveAttackPenalty = 0;
 	const continueDeclaredAttack = () => {
-		if (target.type === "ally") {
-			if (!Number.isInteger(target.targetPos) || target.targetPos < 0 || target.targetPos >= enemy.field.length) return;
-			const targetCard = String(enemy.field[target.targetPos] || "");
-			if (!targetCard) return;
-			if (hasTauntTapped && !enemyTauntTapped[target.targetPos]) return;
-			if (!katsuWarrior && !ranzaLowCostAlly && !isFieldTapped(enemy as any, target.targetPos)) return;
-		} else if (hasTauntTapped) {
+		if (!validDeclaredTarget()) {
+			rejectTarget();
 			return;
 		}
 
@@ -3560,113 +3571,7 @@ export function attack(
 			}
 		}
 
-		attacked[slot].add(attackerPos);
-		if (isLeaderAttacker) {
-			(me as any).leaderTapped = true;
-		} else {
-			(me as any).fieldTapped[attackerPos] = true;
-		}
-		let attackValue = getAttackBonus(attackerId) + reactiveAttackPenalty + getAuraAttackBonus(state, slot, attackerId);
-		if (isLeaderAttacker) {
-			attackValue += getLeaderAttackBonus(me as any);
-			attackValue += getAttachedSupportNumericBonus(me as any, null, "atkBonus");
-			attackValue += getLeaderDamageBonus(me as any);
-		} else {
-			attackValue += Number((me as any).fieldAtkTemp[attackerPos] || 0);
-			attackValue += getFieldAttackPermBonus(me as any, attackerPos);
-			attackValue += getAttachedSupportNumericBonus(me as any, attackerPos, "atkBonus");
-			attackValue += getFieldDamageBonusFromVital(me as any, attackerPos);
-		}
-		if (!isLeaderAttacker && String(attackerDef?.effect || "") === "kornex_buff_per_marcial_in_play") {
-			attackValue += countOtherMarcialCardsInPlay(state, slot, attackerPos);
-		}
-		if (hasMarcialEnvAttackBonus(state, slot, attackerId)) attackValue += 1;
-		attackValue += getAttachedSupportCounter(me as any, "draw_bonus", isLeaderAttacker ? null : attackerPos);
-		attackValue += getAttachedSupportNumericBonus(me as any, isLeaderAttacker ? null : attackerPos, "dmgBonus");
-		const targetResistance = getTargetResistance(state, enemySlot, finalTarget);
-		const diffToResistance = attackValue - targetResistance;
-		const tieDealsMinimumDamage = diffToResistance === 0;
-		const hit = diffToResistance >= 0;
-
-		let damage = hit ? Math.max(1, diffToResistance) : 0;
-		let targetCardId: string | null = null;
-		let killedTargetAlly = false;
-		let sentTargetAllyToGrave = false;
-		if (finalTarget.type === "ally") {
-			ensureFieldSlots(enemy.field as any);
-			const enemyCard = enemy.field[finalTarget.targetPos];
-			if (typeof enemyCard !== "string" || !enemyCard) return;
-			const enemyCardHp = getTargetHP(state, enemySlot, finalTarget.targetPos);
-			targetCardId = enemyCard;
-			let reduction = getDamageReduction(enemyCard);
-			if (reduction > 0) damage = Math.max(0, damage - reduction);
-			else if (hasProtected(enemyCard)) damage = Math.max(0, damage - 1);
-			if (tieDealsMinimumDamage) damage = Math.max(1, damage);
-			const remainingHp = applyDamageToField(state, enemySlot, finalTarget.targetPos, damage);
-			if (remainingHp <= 0) {
-				destroyAttachedSupports(state, enemySlot, finalTarget.targetPos, broadcast);
-				const removed = clearFieldSlotWithAuras(state, enemySlot, finalTarget.targetPos);
-				if (removed) {
-					if (moveRemovedFieldCardOutOfPlay(enemy, removed) === "grave") {
-						sentTargetAllyToGrave = true;
-						handleDestroyedAllyTriggers(state, enemySlot, removed, broadcast, askChoice, { fromCombat: true });
-					}
-					killedTargetAlly = true;
-				}
-			}
-			const attackerHasTrample = cardHasKeyword(attackerDef, "atropelar");
-			const overflow = attackerHasTrample && remainingHp <= 0 ? Math.max(0, damage - enemyCardHp) : 0;
-			if (overflow > 0) {
-				applyDamageToLeader(enemy, overflow, true);
-				broadcast("effect_log", { slot, cardId: attackerId, effect: "atropelar", text: `${attackerId}: causou ${overflow} de excesso no líder.` });
-			}
-		} else {
-			damage = applyDamageToLeader(enemy, damage, true);
-		}
-
-		if (!isLeaderAttacker && killedTargetAlly) {
-			if (String(attackerDef?.effect || "") === "buff_on_kill") {
-				(me as any).fieldAtkPerm[attackerPos] = Number((me as any).fieldAtkPerm[attackerPos] || 0) + 1;
-				(me as any).fieldAcPerm[attackerPos] = Number((me as any).fieldAcPerm[attackerPos] || 0) + 1;
-				(me as any).fieldBloodMarks[attackerPos] = Number((me as any).fieldBloodMarks[attackerPos] || 0) + 1;
-				broadcast("effect_log", { slot, cardId: attackerId, effect: "buff_on_kill", text: `${attackerId}: ganhou 1 marcador de sangue, +1 ATK e +1 AC por derrotar um inimigo.` });
-			}
-			if (Number((me as any).fieldSedeMark[attackerPos] || 0) > 0) {
-				drawCard(state, slot, 1, broadcast);
-				if (state.phase !== "FINISHED") {
-					(me as any).fieldSedeMark[attackerPos] = 0;
-					broadcast("effect_log", { slot, cardId: attackerId, effect: "sede_vinganca", text: `${attackerId}: derrotou inimigo e comprou 1 carta.` });
-				}
-			}
-			const katsuBurnKey = leaderEffectTurnKey(me, "katsu_warrior_burn");
-			if (!triggeredLeaderThisTurn[slot].has(katsuBurnKey) && leaderHasEffect(me, "katsu_warrior_burn") && cardHasClasse(attackerId, "Guerreiro")) {
-				applyDamageToLeader(enemy, 2);
-				triggeredLeaderThisTurn[slot].add(katsuBurnKey);
-				broadcast("effect_log", { slot, cardId: String(me.leaderId || ""), effect: "katsu_warrior_burn", text: `${String(me.leaderId || "Katsu")}: um aliado Guerreiro destruiu um inimigo em combate e causou 2 de dano no Escolhido inimigo.` });
-			}
-			const ranzaDrawKey = leaderEffectTurnKey(me, "ranza_shadow_archer_draw");
-			if (!triggeredLeaderThisTurn[slot].has(ranzaDrawKey) && sentTargetAllyToGrave && leaderHasEffect(me, "ranza_shadow_archer_draw") && hasRanzaLowCostAllyException(state, slot, attackerId)) {
-				drawCard(state, slot, 1, broadcast);
-				triggeredLeaderThisTurn[slot].add(ranzaDrawKey);
-				broadcast("effect_log", { slot, cardId: String(me.leaderId || ""), effect: "ranza_shadow_archer_draw", text: `${String(me.leaderId || "Ranza")}: um aliado de custo 4 ou menos derrotou um inimigo em combate e você comprou 1 carta.` });
-			}
-		}
-		const targetName = finalTarget.type === "leader" ? asPlayer(state, enemySlot).leaderId : (targetCardId || String(asPlayer(state, enemySlot).field[finalTarget.targetPos] || "Aliado"));
-
-		game.seq += 1;
-		broadcast("attack_resolved", {
-			attackerSlot: slot, attackerPos, attackerLeader: isLeaderAttacker, attackerId, target: finalTarget.type,
-			targetPos: finalTarget.type === "ally" ? finalTarget.targetPos : undefined,
-			targetCardId, damage, hit, attackValue, targetResistance, diffToResistance,
-			totalRoll: attackValue, targetAC: targetResistance, diffToCA: diffToResistance,
-			attackerName: attackerDef?.name || attackerId,
-			targetName,
-			p1Hp: game.p1.hp, p2Hp: game.p2.hp, seq: game.seq
-		});
-		if (enemy.hp <= 0) {
-			state.phase = "FINISHED";
-			broadcast("match_ended", { winner: slot, loser: enemySlot, p1Hp: game.p1.hp, p2Hp: game.p2.hp, seq: game.seq });
-		}
+		resolveAfterBlock(finalTarget);
 	};
 
 	const offerEmboscadaReaction = () => {

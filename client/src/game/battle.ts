@@ -318,12 +318,12 @@ export function resolveAttackOn(runtime: BattleRuntime, target: AttackTarget): v
 		}
 	}
 
-	attackerCard.tapped = true;
 	if (runtime.serverAuthoritative) {
 		runtime.onAttackResolved?.(attackSelection, finalTarget);
 		endAttackCleanup(runtime);
 		return;
 	}
+	attackerCard.tapped = true;
 
 	const bonusTempAtk = Number(attackerCard.atkBonusTemp || 0);
 	const d20 = 1 + runtime.rnd(20);

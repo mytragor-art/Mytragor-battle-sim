@@ -96,6 +96,27 @@ for (const interpose of [false, true]) {
   assert.equal(test.foe.field[interpose ? 1 : 0], '');
 }
 
+// Both Ranza abilities must use the same leader identification, including saved
+// decks serialized with image paths rather than the displayed leader name.
+for (const leaderId of ['ranza', RANZA, findCardDef(RANZA).img]) {
+  for (const tapped of [false, true]) {
+    const test = fixture();
+    test.own.leaderId = leaderId;
+    test.foe.fieldTapped[0] = tapped;
+    test.run();
+    assert.equal(test.events.filter(event => event.name === 'attack_resolved').length, 1, `${leaderId}: attack must resolve`);
+    assert.equal(test.own.hand.length, 1, `${leaderId}: graveyard kill must draw`);
+  }
+}
+const rejected = fixture('p1', HIGH);
+rejected.run();
+assert.ok(rejected.events.some(event => event.effect === 'attack_rejected'));
+assert.equal(rejected.own.fieldTapped[0], false, 'Rejected ready attack must not exhaust attacker');
+assert.equal(rejected.attacked.p1.size, 0);
+rejected.foe.fieldTapped[0] = true;
+rejected.run();
+assert.equal(rejected.events.filter(event => event.name === 'attack_resolved').length, 1, 'Attack after rejection must still resolve');
+
 const image = new URL(`../public${findCardDef(RANZA).img}`, import.meta.url);
 const thumb = new URL(image.href.replace('/public/', '/public/publicadas/').replace(/\.png$/, '.thumb.webp'));
 const [originalStat, thumbStat, metadata] = await Promise.all([stat(image), stat(thumb), sharp(await readFile(thumb)).metadata()]);

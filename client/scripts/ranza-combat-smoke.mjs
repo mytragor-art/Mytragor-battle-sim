@@ -27,6 +27,7 @@ function check({ cost, leader = 'ranza', tapped = false, taunt = false, summoned
   battle.selectAttacker(runtime, 'you', 0);
   battle.resolveAttackOn(runtime, chosen);
   assert.equal(sent.length, expected ? 1 : 0, 'Selection and dispatch must agree');
+  assert.equal(!!attacker.tapped, false, 'Only server confirmation may exhaust an online attacker');
   if (expected) assert.deepEqual(sent[0].chosen, chosen);
   battle.endAttackCleanup(runtime);
 }

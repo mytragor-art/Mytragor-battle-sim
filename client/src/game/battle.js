@@ -259,12 +259,12 @@ export function resolveAttackOn(runtime, target) {
             }
         }
     }
-    attackerCard.tapped = true;
     if (runtime.serverAuthoritative) {
         runtime.onAttackResolved?.(attackSelection, finalTarget);
         endAttackCleanup(runtime);
         return;
     }
+    attackerCard.tapped = true;
     const bonusTempAtk = Number(attackerCard.atkBonusTemp || 0);
     const d20 = 1 + runtime.rnd(20);
     const total = d20 + Number(attackerCard.atkBonus || 0) + bonusTempAtk;
