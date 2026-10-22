@@ -62,6 +62,9 @@ function hasKeyword(runtime, card, keyword) {
 function isWarriorCard(card) {
     return normalizeKeyword(String(card?.classe || "")) === "guerreiro";
 }
+function isRanzaAlly(card) {
+    return !!card && Number(card.cost ?? 0) <= 4;
+}
 export function canAttackCard(runtime, side, card) {
     if (!isBattlePhase(runtime.state))
         return false;
@@ -107,6 +110,7 @@ export function canAttackTargetQuiet(runtime, selection, target) {
         .filter((item) => item.card && Number(item.card.hp || 0) > 0);
     const tauntersTapped = enemies.filter((item) => !!item.card.tapped && hasKeyword(runtime, item.card, "provocar"));
     const katsuWarrior = runtime.leaderIs(side, "katsu") && isWarriorCard(attacker);
+    const ranzaAlly = runtime.leaderIs(side, "ranza") && isRanzaAlly(attacker);
     if (target.type === "leader") {
         if (!runtime.state[foe].leader || Number(runtime.state[foe].leader.hp || 0) <= 0)
             return false;
@@ -117,7 +121,7 @@ export function canAttackTargetQuiet(runtime, selection, target) {
         return false;
     if (tauntersTapped.length > 0)
         return tauntersTapped.some((item) => item.index === target.index);
-    if (katsuWarrior)
+    if (katsuWarrior || ranzaAlly)
         return true;
     return !!targetCard.tapped;
 }
@@ -151,12 +155,13 @@ export function highlightTargetsFor(runtime, side) {
     clearTargetHighlights();
     let anyTarget = false;
     const katsu = runtime.leaderIs(side, "katsu");
+    const ranza = runtime.leaderIs(side, "ranza");
     const attacker = currentAttackerCard(runtime);
     const enemies = runtime.state[foe].allies
         .map((card, index) => ({ card, index }))
         .filter((item) => item.card && Number(item.card.hp || 0) > 0);
     const tauntersTapped = enemies.filter((item) => !!item.card.tapped && hasKeyword(runtime, item.card, "provocar"));
-    if (katsu && isWarriorCard(attacker)) {
+    if ((katsu && isWarriorCard(attacker)) || (ranza && isRanzaAlly(attacker))) {
         if (tauntersTapped.length) {
             for (const taunter of tauntersTapped) {
                 anyTarget = true;
@@ -217,19 +222,10 @@ export function resolveAttackOn(runtime, target) {
         endAttackCleanup(runtime);
         return;
     }
-    const katsuWarrior = !attackSelection.leader && runtime.leaderIs(side, "katsu") && isWarriorCard(attackerCard);
-    if (target.type !== "leader") {
-        const targetCard = runtime.state[foe].allies[target.index];
-        if (!targetCard || Number(targetCard.hp || 0) <= 0) {
-            runtime.log?.("Alvo inválido.");
-            endAttackCleanup(runtime);
-            return;
-        }
-        if (!katsuWarrior && !targetCard.tapped) {
-            runtime.log?.("Só é possível atacar aliados deitados.");
-            endAttackCleanup(runtime);
-            return;
-        }
+    if (!canAttackTargetQuiet(runtime, attackSelection, target)) {
+        runtime.log?.("Alvo inválido para este ataque.");
+        endAttackCleanup(runtime);
+        return;
     }
     let finalTarget = target;
     const tauntersTapped = runtime.state[foe].allies

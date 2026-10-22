@@ -76,6 +76,32 @@ npm.cmd run build:prod
 Os builds do cliente agora regeneram automaticamente as miniaturas em `client/public/publicadas` antes do `vite build`.
 Isso evita que a grade do deckbuilder e de decks salvos fique com thumbs antigas quando a arte original muda mantendo o mesmo nome.
 
+## Estatísticas de uso (sem Vercel Pro)
+
+Abra `/stats.html` no frontend ou use o link **Estatísticas** na página inicial.
+O painel consulta o backend configurado em `VITE_SERVER_URL` e não usa eventos pagos da Vercel.
+
+- Escolhidos: participações em partidas que chegaram à abertura do mulligan.
+- Cartas nos baralhos: uma ocorrência por carta diferente em cada baralho; cópias são exibidas separadamente.
+- Jogadas: cartas resolvidas da mão que emitem `card_played`, inclusive gratuitas. Não inclui tokens gerados nem reações que só emitem `effect_log`.
+- Filtros: PvP (os dois jogadores), Solo (humano), IA (oponente solo), ou todos; últimos 7, 30 ou 90 dias UTC.
+- Sem histórico retroativo, nomes de jogadores, nomes/IDs de baralhos, IPs, sessões ou listas de partidas armazenados. O ranking agregado é público e somente leitura.
+- Reconexões e espectadores não contam novamente. Não há polling no painel. Gravações são agrupadas a cada 5 segundos; uma parada abrupta pode perder o último lote.
+
+### Persistência no Railway — configuração necessária em produção
+
+O arquivo local **não sobrevive obrigatoriamente a redeploys** em discos efêmeros.
+No serviço do backend, configure um volume persistente, por exemplo montado em `/data`.
+O coletor usa automaticamente `RAILWAY_VOLUME_MOUNT_PATH`, ou defina `USAGE_STATS_FILE=/data/usage-stats.json`.
+Somente configurar a variável **não cria um volume**. O painel avisa quando o caminho persistente não está configurado ou houve erro de armazenamento.
+Sem configuração, desenvolvimento local usa `server/.data/usage-stats.json` (quando iniciado pelo script do servidor), ignorado pelo Git.
+
+Este armazenamento é para **uma única instância do backend**, não múltiplas réplicas escrevendo o mesmo arquivo. Para escalar, migrar para banco compartilhado.
+Nenhuma infraestrutura paga é provisionada pelo código; confirme a disponibilidade e custo de volumes no plano do seu provedor.
+
+API pública: `GET /usage-stats?mode=solo&days=30` (sem rota pública de escrita).
+Teste isolado: `npm.cmd --prefix server run test:usage`.
+
 ## GitHub
 
 Foi adicionada uma raiz `.gitignore` para evitar subir:

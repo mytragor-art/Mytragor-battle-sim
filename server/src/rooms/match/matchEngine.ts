@@ -1296,6 +1296,16 @@ function hasKatsuWarriorException(state: MatchState, slot: Slot, attackerId: str
 	return isKatsu && isWarrior;
 }
 
+function hasRanzaLowCostAllyException(state: MatchState, slot: Slot, attackerId: string): boolean {
+	const owner = asPlayer(state, slot);
+	const leaderDef = findCardDef(String(owner.leaderId || ""));
+	const isRanza = cardHasEffectId(leaderDef, "ranza_shadow_archer")
+		|| normalizeLoose(String(leaderDef?.key || "")) === "ranza"
+		|| normalizeLoose(String(leaderDef?.name || owner.leaderId || "")).startsWith("ranza");
+	const attackerDef = findCardDef(attackerId);
+	return isRanza && isAllyKind(attackerDef?.kind || attackerDef?.tipo) && getCardCost(attackerId) <= 4;
+}
+
 function isFieldTapped(player: any, pos: number): boolean {
 	return !!player?.fieldTapped?.[pos];
 }
@@ -2838,14 +2848,14 @@ export function playCard(state: MatchState, slot: Slot, cardId: string, targetPo
 		if (state.phase === "FINISHED") return;
 		pg.grave.push(cardId);
 		game.seq += 1;
-		broadcast("card_played", { slot, lane: "grave", cardId, cost, p1Fragments: game.p1.fragments, p2Fragments: game.p2.fragments, seq: game.seq });
+		broadcast("card_played", { slot, lane: "grave", cardId, cost, fromHand: true, p1Fragments: game.p1.fragments, p2Fragments: game.p2.fragments, seq: game.seq });
 	};
 	const finishSpellResolved = () => {
 		if (state.phase === "FINISHED") return;
 		if (String((cardDef as any)?.resolveZone || "") === "banished") {
 			(pg as any).banished.push(cardId);
 			game.seq += 1;
-			broadcast("card_played", { slot, lane: "banished", cardId, cost, p1Fragments: game.p1.fragments, p2Fragments: game.p2.fragments, seq: game.seq });
+			broadcast("card_played", { slot, lane: "banished", cardId, cost, fromHand: true, p1Fragments: game.p1.fragments, p2Fragments: game.p2.fragments, seq: game.seq });
 			return;
 		}
 		finishSpellToGrave();
@@ -3087,7 +3097,7 @@ export function playCard(state: MatchState, slot: Slot, cardId: string, targetPo
 		triggerAutoEffects(state, slot, cardId, cardDef, broadcast, askChoice, { lane: "env" }, summoned);
 		if (state.phase === "FINISHED") return;
 		game.seq += 1;
-		broadcast("card_played", { slot, lane: "env", cardId, cost, p1Fragments: game.p1.fragments, p2Fragments: game.p2.fragments, seq: game.seq });
+		broadcast("card_played", { slot, lane: "env", cardId, cost, fromHand: true, p1Fragments: game.p1.fragments, p2Fragments: game.p2.fragments, seq: game.seq });
 		return;
 	}
 
@@ -3146,7 +3156,7 @@ export function playCard(state: MatchState, slot: Slot, cardId: string, targetPo
 			// swallow errors to avoid breaking core play flow
 		}
 		game.seq += 1;
-		broadcast("card_played", { slot, lane, cardId, targetPos: finalPos, cost, p1Fragments: game.p1.fragments, p2Fragments: game.p2.fragments, seq: game.seq });
+		broadcast("card_played", { slot, lane, cardId, targetPos: finalPos, cost, fromHand: true, p1Fragments: game.p1.fragments, p2Fragments: game.p2.fragments, seq: game.seq });
 	};
 	let finalPos = -1;
 	if (typeof targetPos === "number" && targetPos >= 0 && targetPos < 5) {
@@ -3229,7 +3239,7 @@ export function playCard(state: MatchState, slot: Slot, cardId: string, targetPo
 			triggerAutoEffects(state, slot, cardId, cardDef, broadcast, askChoice, { lane, pos: finalPos }, summoned);
 			if (state.phase === "FINISHED") return;
 			game.seq += 1;
-			broadcast("card_played", { slot, lane, cardId, targetPos: finalPos, cost, p1Fragments: game.p1.fragments, p2Fragments: game.p2.fragments, seq: game.seq });
+			broadcast("card_played", { slot, lane, cardId, targetPos: finalPos, cost, fromHand: true, p1Fragments: game.p1.fragments, p2Fragments: game.p2.fragments, seq: game.seq });
 		});
 		return;
 	}
@@ -3367,6 +3377,7 @@ export function attack(
 	if (!attackerId) return;
 	const attackerDef = findCardDef(attackerId);
 	const katsuWarrior = !isLeaderAttacker && hasKatsuWarriorException(state, slot, attackerId);
+	const ranzaLowCostAlly = !isLeaderAttacker && hasRanzaLowCostAllyException(state, slot, attackerId);
 
 	const enemyTauntTapped = Array.from({ length: enemy.field.length }, (_, index) => {
 		const cid = String(enemy.field[index] || "");
@@ -3395,6 +3406,7 @@ export function attack(
 		let damage = hit ? Math.max(1, diffToResistance) : 0;
 		let targetCardId: string | null = null;
 		let killedTargetAlly = false;
+		let sentTargetAllyToGrave = false;
 		if (finalTargetLocal.type === "ally") {
 			ensureFieldSlots(enemy.field as any);
 			const enemyCard = enemy.field[finalTargetLocal.targetPos];
@@ -3411,6 +3423,7 @@ export function attack(
 				const removed = clearFieldSlotWithAuras(state, enemySlot, finalTargetLocal.targetPos);
 				if (removed) {
 					if (moveRemovedFieldCardOutOfPlay(enemy, removed) === "grave") {
+						sentTargetAllyToGrave = true;
 						handleDestroyedAllyTriggers(state, enemySlot, removed, broadcast, askChoice, { fromCombat: true });
 					}
 					killedTargetAlly = true;
@@ -3446,6 +3459,12 @@ export function attack(
 				triggeredLeaderThisTurn[slot].add(katsuBurnKey);
 				broadcast("effect_log", { slot, cardId: String(me.leaderId || ""), effect: "katsu_warrior_burn", text: `${String(me.leaderId || "Katsu")}: um aliado Guerreiro destruiu um inimigo em combate e causou 2 de dano no Escolhido inimigo.` });
 			}
+			const ranzaDrawKey = leaderEffectTurnKey(me, "ranza_shadow_archer_draw");
+			if (!triggeredLeaderThisTurn[slot].has(ranzaDrawKey) && sentTargetAllyToGrave && leaderHasEffect(me, "ranza_shadow_archer_draw") && hasRanzaLowCostAllyException(state, slot, attackerId)) {
+				drawCard(state, slot, 1, broadcast);
+				triggeredLeaderThisTurn[slot].add(ranzaDrawKey);
+				broadcast("effect_log", { slot, cardId: String(me.leaderId || ""), effect: "ranza_shadow_archer_draw", text: `${String(me.leaderId || "Ranza")}: um aliado de custo 4 ou menos derrotou um inimigo em combate e você comprou 1 carta.` });
+			}
 		}
 		const targetName = finalTargetLocal.type === "leader" ? asPlayer(state, enemySlot).leaderId : (targetCardId || String(asPlayer(state, enemySlot).field[finalTargetLocal.targetPos] || "Aliado"));
 
@@ -3471,7 +3490,7 @@ export function attack(
 			const targetCard = String(enemy.field[target.targetPos] || "");
 			if (!targetCard) return;
 			if (hasTauntTapped && !enemyTauntTapped[target.targetPos]) return;
-			if (!katsuWarrior && !isFieldTapped(enemy as any, target.targetPos)) return;
+			if (!katsuWarrior && !ranzaLowCostAlly && !isFieldTapped(enemy as any, target.targetPos)) return;
 		} else if (hasTauntTapped) {
 			return;
 		}
@@ -3572,6 +3591,7 @@ export function attack(
 		let damage = hit ? Math.max(1, diffToResistance) : 0;
 		let targetCardId: string | null = null;
 		let killedTargetAlly = false;
+		let sentTargetAllyToGrave = false;
 		if (finalTarget.type === "ally") {
 			ensureFieldSlots(enemy.field as any);
 			const enemyCard = enemy.field[finalTarget.targetPos];
@@ -3588,6 +3608,7 @@ export function attack(
 				const removed = clearFieldSlotWithAuras(state, enemySlot, finalTarget.targetPos);
 				if (removed) {
 					if (moveRemovedFieldCardOutOfPlay(enemy, removed) === "grave") {
+						sentTargetAllyToGrave = true;
 						handleDestroyedAllyTriggers(state, enemySlot, removed, broadcast, askChoice, { fromCombat: true });
 					}
 					killedTargetAlly = true;
@@ -3622,6 +3643,12 @@ export function attack(
 				applyDamageToLeader(enemy, 2);
 				triggeredLeaderThisTurn[slot].add(katsuBurnKey);
 				broadcast("effect_log", { slot, cardId: String(me.leaderId || ""), effect: "katsu_warrior_burn", text: `${String(me.leaderId || "Katsu")}: um aliado Guerreiro destruiu um inimigo em combate e causou 2 de dano no Escolhido inimigo.` });
+			}
+			const ranzaDrawKey = leaderEffectTurnKey(me, "ranza_shadow_archer_draw");
+			if (!triggeredLeaderThisTurn[slot].has(ranzaDrawKey) && sentTargetAllyToGrave && leaderHasEffect(me, "ranza_shadow_archer_draw") && hasRanzaLowCostAllyException(state, slot, attackerId)) {
+				drawCard(state, slot, 1, broadcast);
+				triggeredLeaderThisTurn[slot].add(ranzaDrawKey);
+				broadcast("effect_log", { slot, cardId: String(me.leaderId || ""), effect: "ranza_shadow_archer_draw", text: `${String(me.leaderId || "Ranza")}: um aliado de custo 4 ou menos derrotou um inimigo em combate e você comprou 1 carta.` });
 			}
 		}
 		const targetName = finalTarget.type === "leader" ? asPlayer(state, enemySlot).leaderId : (targetCardId || String(asPlayer(state, enemySlot).field[finalTarget.targetPos] || "Aliado"));

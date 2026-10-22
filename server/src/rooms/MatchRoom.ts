@@ -4,6 +4,7 @@ import { Room, Client } from "colyseus";
 import { randomInt } from "crypto";
 import { findCardDef } from "../game/cardCatalog";
 import { describeClientDiagnostic } from "../utils/clientDiagnostics";
+import { createUsageRecorder } from "../utils/usageStats";
 import { MatchState, MatchPlayerState } from "./schema/MatchState";
 import { buildSpectatorSnapshot, disposeSpectatorChannel, publishSpectatorSnapshot, relaySpectatorEvent } from "./spectatorBridge";
 import {
@@ -37,6 +38,7 @@ const RECONNECTION_GRACE_SECONDS = 60;
 
 export class MatchRoom extends Room<MatchState> {
 	maxClients = 2;
+	private recordUsage = createUsageRecorder("pvp");
 	private attackedThisTurn: Record<Slot, Set<number>> = { p1: new Set<number>(), p2: new Set<number>() };
 	private summonedThisTurn: Record<Slot, Set<number>> = { p1: new Set<number>(), p2: new Set<number>() };
 	private triggeredLeaderThisTurn: Record<Slot, Set<string>> = { p1: new Set<string>(), p2: new Set<string>() };
@@ -77,6 +79,7 @@ export class MatchRoom extends Room<MatchState> {
 	}
 
 	private broadcastMatchEvent(name: string, payload: any) {
+		this.recordUsage(name, payload, this.state.game);
 		this.broadcast(name, payload);
 		relaySpectatorEvent(this.roomId, name, payload);
 	}

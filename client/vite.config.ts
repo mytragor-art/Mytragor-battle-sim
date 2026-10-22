@@ -31,7 +31,8 @@ export default defineConfig({
 				lobby: "lobby.html",
 				soloLobby: "solo-lobby.html",
 				game: "game.html",
-				manual: "manual.html"
+				manual: "manual.html",
+				stats: "stats.html"
 			}
 		},
 		sourcemap: true

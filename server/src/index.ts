@@ -22,6 +22,7 @@ import { SoloLobbyRoom } from "./rooms/SoloLobbyRoom";
 import { SoloMatchRoom } from "./rooms/SoloMatchRoom";
 import { SpectatorRoom } from "./rooms/SpectatorRoom";
 import { recordClientDiagnostic } from "./utils/clientDiagnostics";
+import { usageStats } from "./utils/usageStats";
 
 dotenv.config();
 
@@ -39,9 +40,27 @@ function parseCorsOrigins(rawValue: string | undefined) {
 }
 
 async function main() {
+	await usageStats.initialize();
 	const app = express();
 	app.use(cors({ origin: parseCorsOrigins(process.env.CORS_ORIGIN) }));
 	app.use(express.json());
+	const usageCache = new Map<string, { expires: number; value: ReturnType<typeof usageStats.snapshot> }>();
+	app.get("/usage-stats", (req, res) => {
+		const mode = String(req.query.mode || "all");
+		const days = Number(req.query.days || 30);
+		if (!["all", "pvp", "solo", "ai"].includes(mode) || ![7, 30, 90].includes(days)) {
+			res.status(400).json({ error: "invalid_stats_filter" });
+			return;
+		}
+		const key = `${mode}:${days}`;
+		let cached = usageCache.get(key);
+		if (!cached || cached.expires <= Date.now()) {
+			cached = { expires: Date.now() + 5000, value: usageStats.snapshot(mode as "all" | "pvp" | "solo" | "ai", days) };
+			usageCache.set(key, cached);
+		}
+		res.setHeader("Cache-Control", "public, max-age=30");
+		res.json(cached.value);
+	});
 
 	const httpServer = createServer(app);
 	const gameServer = new Server({
@@ -51,6 +70,7 @@ async function main() {
 			pingMaxRetries: WEBSOCKET_PING_MAX_RETRIES
 		})
 	});
+	gameServer.onShutdown(() => usageStats.flush());
 
 	gameServer.define("lobby", LobbyRoom).filterBy(["queue"]);
 	gameServer.define("private_lobby", LobbyRoom).filterBy(["queue", "privateCode"]);

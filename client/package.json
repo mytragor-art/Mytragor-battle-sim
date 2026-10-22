@@ -3,9 +3,13 @@
 	"version": "0.1.0",
 	"private": true,
 	"scripts": {
+		"smoke:usage-live": "node scripts/usage-live-smoke.mjs",
 		"dev": "vite",
 		"dev:test": "vite --mode test",
 		"assets:thumbs": "node scripts/build-thumbnails.mjs",
+		"smoke:ranza-combat": "node scripts/ranza-combat-smoke.mjs",
+		"smoke:ranza-engine": "node scripts/ranza-engine-smoke.mjs",
+		"smoke:solo-token": "node scripts/solo-token-smoke.mjs",
 		"build": "npm run assets:thumbs && vite build",
 		"build:test": "npm run assets:thumbs && vite build --mode test",
 		"build:prod": "npm run assets:thumbs && vite build --mode production",

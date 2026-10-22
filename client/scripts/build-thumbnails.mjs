@@ -3,7 +3,7 @@ import path from "node:path";
 import sharp from "sharp";
 
 const IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".webp", ".avif"]);
-const DEFAULT_FOLDERS = ["allies", "spell", "equip", "envs", "chosens", "fragments", "trick", "tokens", "ui", "win_lose"];
+const DEFAULT_FOLDERS = ["allies", "spell", "equip", "envs", "chosens", "fragments", "trick", "tokens", "ui", "win_lose", "coleções"];
 
 function parseArgs(argv) {
 	const options = {

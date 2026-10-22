@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0b0d13" />
+  <title>Estatísticas · Mytragor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root { color-scheme: dark; --bg: #0a0a0f; --panel: #12151e; --line: rgba(224, 186, 112, .22); --gold: #f5c96a; --text: #f3ead7; --muted: #c1b8a7; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: linear-gradient(rgba(10,10,15,.54), rgba(10,10,15,.88)), url('/bgambientes/pagina desktop.png') center top / cover no-repeat, var(--bg); color: var(--text); font: 15px/1.6 "Segoe UI", sans-serif; min-height: 100dvh; }
+    a { color: var(--gold); text-underline-offset: 4px; }
+    a:hover { color: #ffe5ac; }
+    :focus-visible { outline: 3px solid var(--gold); outline-offset: 4px; }
+    .skip { position: absolute; top: -100px; left: 16px; padding: 12px; background: var(--panel); z-index: 1; }
+    .skip:focus { top: 12px; }
+    .shell { max-width: 1180px; padding: 28px 24px 60px; margin: auto; }
+    nav { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; padding: 14px 22px; border: 1px solid var(--line); border-radius: 18px; background: linear-gradient(135deg, rgba(29,30,39,.96), rgba(12,15,23,.96)); box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 12px 28px rgba(0,0,0,.25); }
+    .brand { display: flex; align-items: center; text-decoration: none; }
+    .brand img { display: block; width: 140px; height: 68px; object-fit: contain; }
+    .nav-links { display: flex; gap: 10px; flex-wrap: wrap; }
+    .nav-links a { border: 1px solid var(--line); border-radius: 9px; padding: 10px 16px; text-decoration: none; font: 600 12px/1.6 "Cinzel", Georgia, serif; background: rgba(255,255,255,.03); }
+    .nav-links a:hover { background: rgba(245,201,106,.1); border-color: var(--gold); }
+    header { padding: 38px 20px 30px; text-align: center; }
+    header::after { content: '✦'; display: block; color: var(--gold); margin-top: 20px; letter-spacing: 12px; }
+    .eyebrow { color: var(--gold); font-size: 12px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; }
+    h1, h2 { font-family: "Cinzel", Georgia, serif; line-height: 1.3; }
+    h1 { font-size: clamp(28px, 4vw, 42px); margin: 12px 0; color: var(--text); text-shadow: 0 3px 12px rgba(0,0,0,.7); }
+    h2 { font-size: 21px; margin: 0 0 8px; color: #f6d994; }
+    p { margin: 8px 0; }
+    .muted, .intro { color: var(--muted); }
+    .intro { max-width: 680px; margin: auto; font: 500 22px/1.4 "Cormorant Garamond", Georgia, serif; }
+    .controls { display: flex; align-items: end; flex-wrap: wrap; gap: 16px; padding: 22px; border: 1px solid var(--line); border-radius: 16px; background: linear-gradient(135deg, #20212a, #11151e); box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 10px 28px rgba(0,0,0,.25); }
+    label { display: grid; gap: 6px; font-size: 14px; color: var(--muted); }
+    select, button { min-height: 44px; padding: 10px 14px; border: 1px solid #5a513c; border-radius: 8px; background: #0d1119; color: var(--text); font: inherit; }
+    select { max-width: 100%; width: 100%; }
+    button { cursor: pointer; background: linear-gradient(180deg, #f3d37a, #d7a93d 52%, #8a5b1f); color: #2c1d08; font: 700 13px/1.6 "Cinzel", Georgia, serif; margin-left: auto; border-color: #e6bf68; box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 5px 14px rgba(0,0,0,.3); }
+    button:hover { background: linear-gradient(180deg, #ffe6a5, #e6b94f 52%, #a16e29); }
+    .status { min-height: 30px; margin: 16px 0 4px; color: var(--muted); }
+    .error { padding: 16px; border: 1px solid #ba6666; border-radius: 10px; background: #301b20; color: #ffd5d5; }
+    .warning { padding: 12px 16px; border-left: 3px solid var(--gold); background: #292316; color: #f5deb0; }
+    .rankings { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin: 24px 0; align-items: start; }
+    .panel { border: 1px solid var(--line); border-radius: 18px; background: linear-gradient(145deg, #1d202a, #10131c); box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 12px 28px rgba(0,0,0,.28); padding: 24px; margin: 0; min-width: 0; }
+    .panel > h2 { padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+    .section-mark { color: var(--gold); font: 600 11px/1.6 "Cinzel", Georgia, serif; letter-spacing: .16em; text-transform: uppercase; margin-bottom: 10px; }
+    .panel-heading { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 20px; }
+    .table-scroll { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+    caption { text-align: left; color: var(--muted); padding-bottom: 12px; }
+    th, td { padding: 14px 10px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+    thead th { color: var(--muted); font-size: 12px; letter-spacing: .04em; white-space: nowrap; }
+    thead th:first-child, tbody td:first-child { width: 80px; color: var(--gold); }
+    tbody th { overflow-wrap: anywhere; }
+    tbody th { font-weight: 500; font-family: "Cormorant Garamond", Georgia, serif; font-size: 20px; }
+    tbody td:first-child { font: 700 18px "Cinzel", Georgia, serif; }
+    tbody tr:first-child { background: linear-gradient(90deg, rgba(245,201,106,.12), transparent); }
+    tbody tr:first-child th { color: #ffe2a1; }
+    tbody tr:last-child > * { border-bottom: 0; }
+    tbody tr:hover { background: #1d222c; }
+    .empty { color: var(--muted); padding: 24px 0; }
+    .notes { color: var(--muted); font-size: 14px; margin-top: 24px; }
+    .notes h2 { color: var(--text); font-size: 21px; }
+    .notes li { margin: 8px 0; }
+    footer { color: var(--muted); font-size: 12px; padding-top: 24px; text-align: center; }
+    [hidden] { display: none !important; }
+    @media (max-width: 880px) {
+      body { background-image: linear-gradient(rgba(10,10,15,.6), rgba(10,10,15,.9)), url('/bgambientes/pagina mobile.png'); }
+      .rankings { grid-template-columns: 1fr; gap: 18px; }
+    }
+    @media (max-width: 600px) {
+      .shell { padding: 20px 16px 40px; }
+      nav { justify-content: center; padding: 12px; gap: 8px; }
+      .nav-links { justify-content: center; width: 100%; }
+      header { padding: 28px 0 24px; }
+      .intro { font-size: 21px; }
+      .controls { padding: 16px; }
+      .controls label { flex: 1 1 130px; }
+      .controls button { width: 100%; }
+      .panel { padding: 18px 14px; }
+      .panel-heading label { width: 100%; }
+      .table-scroll:focus-visible { outline-offset: -3px; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#main">Pular para as estatísticas</a>
+  <div class="shell">
+    <nav aria-label="Navegação principal">
+      <a class="brand" href="index.html" aria-label="Mytragor — início"><img src="/logo/logomytragor.png" alt="Mytragor" width="140" height="68" /></a>
+      <div class="nav-links"><a href="index.html">Início</a><a href="solo-lobby.html">Jogar solo / IA</a></div>
+    </nav>
+    <main id="main">
+      <header>
+        <span class="eyebrow">Salão Arcano · Estatísticas</span>
+        <h1>Os favoritos do campo.</h1>
+        <p class="intro">Confira o top 10 de escolhidos e cartas mais usados, sem quantidades, percentuais ou dados individuais de jogadores.</p>
+      </header>
+      <section class="controls" aria-label="Filtros das estatísticas">
+        <label for="mode">Modo
+          <select id="mode"><option value="all">Todos os modos</option><option value="pvp">PvP · jogadores</option><option value="solo">Solo · lado humano</option><option value="ai">IA · lado automático</option></select>
+        </label>
+        <label for="days">Período
+          <select id="days"><option value="7">Últimos 7 dias</option><option value="30" selected>Últimos 30 dias</option><option value="90">Últimos 90 dias</option></select>
+        </label>
+        <button id="refresh" type="button" aria-controls="results">Atualizar dados</button>
+      </section>
+      <p id="status" class="status" role="status" aria-live="polite" aria-atomic="true"></p>
+      <p id="error" class="error" role="alert" hidden></p>
+      <div id="results" aria-busy="true">
+        <div id="snapshot" hidden>
+          <p id="updated" class="muted"></p>
+          <aside aria-label="Estado do armazenamento">
+            <p id="durability-warning" class="warning" hidden>Armazenamento durável não configurado: as contagens podem ser perdidas em um redeploy ou reinício do servidor.</p>
+            <p id="health-warning" class="warning" hidden>Erro de persistência: os dados podem não estar sendo salvos. As contagens em memória não garantem recuperação após reinício.</p>
+          </aside>
+          <p id="empty" class="empty" hidden>Nenhum registro neste modo e período. Experimente outro filtro ou volte após novas partidas.</p>
+          <div class="rankings">
+          <section class="panel" aria-labelledby="leaders-title">
+            <div class="section-mark">Os protagonistas da arena</div>
+            <h2 id="leaders-title">Top 10 escolhidos</h2>
+            <div class="table-scroll" role="region" aria-label="Ranking de líderes; role horizontalmente se necessário" tabindex="0">
+              <table><caption>Mais usados nos baralhos, sem exibir quantidades.</caption><thead><tr><th scope="col">Posição</th><th scope="col">Escolhido</th></tr></thead><tbody id="leaders"></tbody></table>
+            </div>
+            <p id="leaders-empty" class="empty" hidden>Nenhum líder registrado neste recorte.</p>
+          </section>
+          <section class="panel" aria-labelledby="cards-title">
+            <div class="section-mark">O arsenal dos duelistas</div>
+            <div class="panel-heading">
+              <div><h2 id="cards-title">Top 10 cartas</h2><p class="muted">As favoritas por presença nos baralhos ou jogadas resolvidas.</p></div>
+              <label for="sort">Ordenar cartas por<select id="sort"><option value="decks">Baralhos</option><option value="plays">Jogadas resolvidas</option></select></label>
+            </div>
+            <div class="table-scroll" role="region" aria-label="Estatísticas de cartas; role horizontalmente se necessário" tabindex="0">
+              <table><caption id="cards-caption">Top 10 por presença nos baralhos, sem exibir quantidades.</caption><thead><tr><th scope="col">Posição</th><th scope="col">Carta</th></tr></thead><tbody id="cards"></tbody></table>
+            </div>
+            <p id="cards-empty" class="empty" hidden>Nenhuma carta registrada neste recorte.</p>
+          </section>
+          </div>
+        </div>
+      </div>
+      <section class="panel notes" aria-labelledby="notes-title">
+        <h2 id="notes-title">Como funciona o ranking</h2>
+        <ul>
+          <li>Baralhos são participações registradas, não baralhos únicos nem jogadores únicos. Solo representa o lado humano; IA, o lado automático.</li>
+          <li>Cada lista mostra apenas as primeiras 10 posições disponíveis, sem totais, cópias ou percentuais. Uma carta conta uma única vez por baralho em que aparece.</li>
+          <li>Jogadas contabilizam cartas resolvidas da mão com evento <code>card_played</code>. Tokens gerados e feitiços reativos sem esse evento ficam de fora; não é uma contagem de todas as ações da partida.</li>
+          <li>Não há histórico retroativo: apenas registros desde a ativação da coleta. Os períodos usam dias de calendário UTC.</li>
+        </ul>
+      </section>
+    </main>
+    <footer>Somente leitura · Sem atualização automática. Troque os filtros ou use “Atualizar dados”.</footer>
+    <noscript><p>Ative o JavaScript para consultar as estatísticas agregadas.</p></noscript>
+  </div>
+  <script type="module" src="/src/stats.ts"></script>
+</body>
+</html>

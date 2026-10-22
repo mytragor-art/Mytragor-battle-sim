@@ -432,6 +432,9 @@ function victoryBannerForLeader(mode: "win" | "lose" | "neutral"): VictoryArtwor
 	if (probes.some((value) => value.includes("ademais"))) {
 		return { src: "win_lose/Ademaisvitoria.jpg", credit: "Ilustração de Jeferson Cordeiro" };
 	}
+	if (probes.some((value) => value.includes("ranza"))) {
+		return { src: "win_lose/Ranzavitoria.png", credit: "Ilustração de Artur Bohrer" };
+	}
 	return null;
 }
 
@@ -1279,6 +1282,7 @@ function toBattleCard(cardId: string, side: BattleSide, index: number): BattleCa
 		tapped: tappedBySide[side].has(index),
 		summonedThisTurn: summonedBySide[side].has(index),
 		classe: card?.classe,
+		cost: Number(card?.cost || 0),
 		keywords: cardKeywords(cleanId),
 		atkBonus: 0,
 		atkBonusTemp: 0,

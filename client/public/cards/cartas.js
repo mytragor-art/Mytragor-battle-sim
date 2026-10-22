@@ -64,6 +64,21 @@ const CARD_DEFS = [
     effect: 'ademais_spider_mark',
     text: '• Quando um Aliado "Aranhas Negras" for convocado,\neste Escolhido recebe um marcador "Aranhas".\n\n• Uma vez por turno, você pode remover 4 marcadores\n"Aranhas" deste Escolhido, então cause 3 de dano ao\nEscolhido inimigo.'
   },
+  {
+    name: 'Ranza, o Arqueiro das Trevas',
+    key: 'ranza',
+    kind: 'leader',
+    img: '/coleções/primeiro conflito/Escolhidos/Ranza, o arqueiro das trevas.png',
+    classe: 'Guerreiro',
+    tipo: 'Humano',
+    filiacao: 'Sombras',
+    hp: 30,
+    maxHp: 30,
+    effectA: 'ranza_shadow_archer',
+    effectB: 'ranza_shadow_archer_draw',
+    effect: 'ranza_shadow_archer',
+    text: '• Aliados, custo 4 ou menos, do seu lado do campo,\npodem atacar inimigos que estejam dispostos.\n\n• 1 vez por turno, quando 1 Aliado, custo 4 ou menos, do\nseu lado do campo, derrotar um Aliado do Oponente em\ncombate e enviá-lo para o cemitério, compre 1 carta.'
+  },
     // Nota: recebeu stats padrão para ser alvo de ataques/efeitos.
   // Exemplos de outras cartas (adicione todas as cartas reais aqui)
   {

@@ -2,6 +2,7 @@ import { randomInt } from "crypto";
 import { Room, Client } from "colyseus";
 import { findCardDef } from "../game/cardCatalog";
 import { describeClientDiagnostic } from "../utils/clientDiagnostics";
+import { createUsageRecorder } from "../utils/usageStats";
 import { MatchState, MatchPlayerState } from "./schema/MatchState";
 import { buildSpectatorSnapshot, disposeSpectatorChannel, publishSpectatorSnapshot, relaySpectatorEvent } from "./spectatorBridge";
 import {
@@ -64,6 +65,7 @@ const INITIATIVE_TIE_DELAY_MS = 1_300;
 
 export class SoloMatchRoom extends Room<MatchState> {
 	maxClients = 1;
+	private recordUsage = createUsageRecorder("solo");
 	private attackedThisTurn: Record<Slot, Set<number>> = { p1: new Set<number>(), p2: new Set<number>() };
 	private summonedThisTurn: Record<Slot, Set<number>> = { p1: new Set<number>(), p2: new Set<number>() };
 	private triggeredLeaderThisTurn: Record<Slot, Set<string>> = { p1: new Set<string>(), p2: new Set<string>() };
@@ -226,6 +228,7 @@ export class SoloMatchRoom extends Room<MatchState> {
 	}
 
 	private broadcastMatchEvent(name: string, payload: any) {
+		this.recordUsage(name, payload, this.state.game);
 		this.broadcast(name, payload);
 		relaySpectatorEvent(this.roomId, name, payload);
 		publishSpectatorSnapshot(this.roomId, buildSpectatorSnapshot(this.state));
@@ -426,6 +429,10 @@ export class SoloMatchRoom extends Room<MatchState> {
 		return this.normalizeText(this.state.game.p2?.leaderId || "").includes("katsu");
 	}
 
+	private isRanzaArchetype(): boolean {
+		return this.normalizeText(this.state.game.p2?.leaderId || "").includes("ranza");
+	}
+
 	private isAdemaisArchetype(): boolean {
 		return this.normalizeText(this.state.game.p2?.leaderId || "").includes("ademais");
 	}
@@ -440,6 +447,11 @@ export class SoloMatchRoom extends Room<MatchState> {
 
 	private isWarriorCard(def: ReturnType<typeof findCardDef>): boolean {
 		return this.cardMatches(def, "guerreiro");
+	}
+
+	private isRanzaAlly(def: ReturnType<typeof findCardDef>): boolean {
+		const kind = this.normalizeText(def?.kind || def?.tipo);
+		return (kind === "ally" || kind === "aliado") && Number(def?.cost || 0) <= 4;
 	}
 
 	private isMarcialCard(def: ReturnType<typeof findCardDef>): boolean {
@@ -998,6 +1010,26 @@ export class SoloMatchRoom extends Room<MatchState> {
 		}
 	}
 
+	private scoreRanzaPlan(cardId: string, def: ReturnType<typeof findCardDef>): number {
+		if (!this.isRanzaArchetype()) return 0;
+		const player = this.state.game.p2 as any;
+		const enemy = this.state.game.p1 as any;
+		const cost = Number(def?.cost || 0);
+		let score = 0;
+
+		if (this.isRanzaAlly(def)) {
+			score += 28;
+			if (cost <= 2) score += 12;
+			if (this.getUnitAttack(cardId) >= 3) score += 10;
+		}
+		if (this.cardHasKeyword(def, "investida") && this.isRanzaAlly(def)) score += 18;
+		if (this.cardHasKeyword(def, "atropelar") && this.isRanzaAlly(def)) score += 10;
+		if (this.isRanzaAlly(def) && enemy.field.some((enemyCardId: string) => !!enemyCardId)) score += 12;
+		if (this.isRanzaAlly(def) && Number(player.fragments || 0) >= cost + 1) score += 6;
+
+		return score;
+	}
+
 	private scoreValbrakCitizenPlan(cardId: string, def: ReturnType<typeof findCardDef>): number {
 		if (!this.isValbrakCitizenArchetype()) return 0;
 		const player = this.state.game.p2 as any;
@@ -1063,6 +1095,7 @@ export class SoloMatchRoom extends Room<MatchState> {
 		if (this.normalizeText(player.leaderId).includes("leafae") && this.cardMatches(def, "animal")) score += 18;
 		score += this.scoreValbrakCitizenPlan(cardId, def);
 		score += this.scoreMarcialPlan(cardId, def);
+		score += this.scoreRanzaPlan(cardId, def);
 		score += this.scoreAdemaisPlan(cardId, def);
 		score += this.scoreLeafaePlan(cardId, def);
 		score += this.scoreNeutralPlan(cardId, def);
@@ -1170,6 +1203,11 @@ export class SoloMatchRoom extends Room<MatchState> {
 			if (canKill) score += 34;
 			if (!enemy.fieldTapped?.[target.targetPos]) score += 18;
 			if (Number(enemy.hp || 0) <= 10 && canKill) score += 24;
+		}
+		if (this.isRanzaArchetype() && this.isRanzaAlly(attackerDef)) {
+			if (canKill) score += 46;
+			if (!enemy.fieldTapped?.[target.targetPos]) score += 24;
+			if (Number(enemy.hp || 0) <= 10 && canKill) score += 20;
 		}
 		if (attackerName.includes("thorn") && canKill) score += Math.max(0, attack - (hp + resistance)) * 12;
 		if (attackerName.includes("gladiador implacavel") && canKill) score += 30;
