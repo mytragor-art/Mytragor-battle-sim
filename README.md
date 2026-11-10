@@ -76,6 +76,49 @@ npm.cmd run build:prod
 Os builds do cliente agora regeneram automaticamente as miniaturas em `client/public/publicadas` antes do `vite build`.
 Isso evita que a grade do deckbuilder e de decks salvos fique com thumbs antigas quando a arte original muda mantendo o mesmo nome.
 
+## Combate: Interpor e Desafio
+
+Desafio continua restringindo a escolha do alvo inicial do ataque. Depois de declarado um ataque válido,
+outro aliado com Interpor pode bloquear, mesmo quando o alvo tem Desafio. O bloqueador precisa estar
+vivo e não exaurido; ao interpor, fica exaurido e recebe o ataque no lugar do alvo original.
+
+Teste de regressão (servidor e cliente): `npm.cmd --prefix server run build`, seguido de
+`npm.cmd --prefix client run smoke:interpor-combat`.
+
+## Apresentação do campo
+
+Os campos são espelhados verticalmente: aliados e Escolhidos ficam frente a frente, perto do centro,
+e os fragmentos nas bordas externas (os do oponente no alto, os seus embaixo). Os fragmentos mantêm
+o tamanho de carta e a sobreposição horizontal; aliados, Escolhidos e ambientes são um pouco maiores.
+A faixa de identificação e os intervalos junto aos controles centrais são compactos para aproximar
+os personagens sem reduzir o tamanho das cartas.
+Fragmentos disponíveis mostram a frente; indisponíveis mostram o verso, sem transparência.
+Os slots de ambiente ficam dentro de cada playmat, à lateral e perto da divisória central, sem
+moldura ou título adicional. No celular em pé, ficam na mesma lateral das pilhas para não reduzir
+a largura dos aliados. Os mesmos slots e ações de consulta e arraste são preservados.
+Equipamentos vinculados mostram uma faixa sob seu personagem, também espelhada no campo do oponente;
+passe o mouse ou use a consulta por toque para ver a carta inteira.
+As faixas são compactas e a linha de suportes não estica os espaços vazios: os fragmentos continuam
+abaixo dos aliados, mas ficam mais próximos deles (com o movimento espelhado para o oponente).
+Suportes sem vínculo continuam em sua própria faixa. Slots, índices, regras e ações não são alterados
+por essa organização visual.
+
+A mão do jogador fica sobreposta à borda inferior, podendo cobrir parte dos fragmentos sem reservar
+uma faixa que reduza o campo. As cartas formam um leque discreto, centralizado, com sobreposição
+adaptativa e destaque por mouse ou teclado. Quando a quantidade não cabe sem prejudicar a seleção,
+a mão permite rolagem horizontal, inclusive por toque. Os custos ficam na parte exposta das cartas;
+no PC, a altura da mão acompanha o espaço liberado pelos fragmentos, mantendo a maior parte das cartas
+visível, e somente a carta apontada ou focada sobe para consulta.
+Cliques, arraste e consulta por toque são preservados. Em celulares deitados, a base da mão é recortada
+para não invadir a linha dos personagens; a consulta continua mostrando a carta inteira.
+Na preparação do seu turno, todas as cartas com custo disponível e condições de entrada atendidas
+recebem brilho, independentemente da seleção. O destaque acompanha os fragmentos restantes a cada
+atualização da partida. Truques reativos não recebem esse brilho: seus gatilhos continuam sendo
+oferecidos pelas escolhas de reação existentes.
+
+Testes de apresentação: `npm.cmd --prefix client run smoke:field-layout` e
+`npm.cmd --prefix client run smoke:hand-layout`.
+
 ## Estatísticas de uso (sem Vercel Pro)
 
 Abra `/stats.html` no frontend ou use o link **Estatísticas** na página inicial.
@@ -140,4 +183,3 @@ npm.cmd run dev
 ```
 
 Depois abra a URL mostrada pelo Vite, normalmente `http://localhost:5173`.
-

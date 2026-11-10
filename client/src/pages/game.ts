@@ -5,6 +5,8 @@ import { animateCardTransfer, animateEl, bindAttackTargetHover, setChosenReady, 
 import { getGameInputs, log, logText, renderButtonRow } from "../ui/gameView";
 import { setupBoardScale } from "../ui/boardScale";
 import { setupArenaSlots } from "../ui/arenaSlots";
+import { layoutEquipment } from "../ui/equipmentLayout";
+import { layoutPlayerHand } from "../ui/handLayout";
 import { getAvatarId, getDisplayName } from "../ui/profile";
 import { createMobileCardInspect, type MobileInspectCard } from "../ui/mobileCardInspect";
 import { renderCardRulesText } from "../ui/cardRulesText";
@@ -3199,6 +3201,27 @@ function renderEnvSlot(slotId: "you-env" | "ai-env", envCardId: string | null, a
 	slotEl.appendChild(cardEl);
 }
 
+function canHighlightHandCard(cardId: string): boolean {
+	if (isSpectator || isMatchFinished || !isMyTurn || currentPhase !== "PREP") return false;
+	const card = resolveCard(cardId);
+	if (!card) return false;
+	const kind = getCardKind(cardId);
+	if (kind === "truque") return false;
+	if (kind === "spell" && (card.effect === "bem_treinado" || card.effect === "freeser")) return false;
+	const rawCost = Number(card.cost);
+	const cost = Number.isFinite(rawCost) && rawCost >= 0 ? rawCost : 1;
+	if (!(currentMyFragments >= cost)) return false;
+	if (kind === "ally" && getFirstEmptyFieldPos(currentMyField) < 0
+		&& !currentMyField.some((id, index) => !!id && !summonedBySide.you.has(index))) return false;
+	if (kind === "equip" && (getFirstEmptyFieldPos(currentMySupport) < 0
+		|| (!currentMyLeader && !currentMyField.some(Boolean)))) return false;
+	if (card.effect === "destroy_env" && !currentMyEnv && !currentEnemyEnv) return false;
+	if (card.effect === "destroy_equip"
+		&& ![...currentMySupport, ...currentEnemySupport].some(id => !!id && getCardKind(id) === "equip")) return false;
+	if (card.effect === "destroy_enemy_ally" && !currentEnemyField.some(Boolean)) return false;
+	return true;
+}
+
 function renderSideHand(containerId: "youHand" | "aiHand", cards: string[], selectable: boolean): void {
 	const container = document.getElementById(containerId);
 	if (!container) return;
@@ -3226,6 +3249,7 @@ function renderSideHand(containerId: "youHand" | "aiHand", cards: string[], sele
 					}
 					renderSideHand("youHand", cards, true);
 				}, { cardId, side: "you", lane: "hand" });
+			cardEl.classList.toggle("is-playable", canHighlightHandCard(cardId));
 			container.appendChild(cardEl);
 			if (newEntryFlags[renderedIndex]) animateEl(cardEl, "anim-draw");
 			renderedIndex += 1;
@@ -3245,6 +3269,10 @@ function applyHandStackLayout(containerId: "youHand" | "aiHand"): void {
 	const container = document.getElementById(containerId) as HTMLElement | null;
 	if (!container) return;
 	handStackLayoutFrames[containerId] = 0;
+	if (containerId === "youHand") {
+		layoutPlayerHand(container);
+		return;
+	}
 	container.classList.remove("handStacked");
 	container.style.removeProperty("--hand-overlap");
 	if (!window.matchMedia("(max-width: 980px) and (orientation: portrait) and (pointer: coarse)").matches) return;
@@ -3271,6 +3299,14 @@ const handStackLayoutFrames: Record<"youHand" | "aiHand", number> = { youHand: 0
 function queueHandStackLayout(containerId: "youHand" | "aiHand"): void {
 	if (handStackLayoutFrames[containerId]) return;
 	handStackLayoutFrames[containerId] = requestAnimationFrame(() => applyHandStackLayout(containerId));
+}
+
+const playerHand = document.getElementById("youHand");
+if (playerHand) {
+	const observer = new ResizeObserver(() => queueHandStackLayout("youHand"));
+	for (const element of [playerHand, document.getElementById("board"), document.querySelector(".boardWrap")]) {
+		if (element) observer.observe(element);
+	}
 }
 
 window.addEventListener("resize", () => {
@@ -4294,10 +4330,12 @@ function renderEnemyField(field: string[], hpValues: number[]) {
 
 function renderMySupport(support: string[]) {
 	renderLane("you-support", support, null);
+	layoutEquipment("you", support, currentMySupportAttach, (cardId) => getCardKind(cardId) === "equip");
 }
 
 function renderEnemySupport(support: string[]) {
 	renderLane("ai-support", support, null);
+	layoutEquipment("ai", support, currentEnemySupportAttach, (cardId) => getCardKind(cardId) === "equip");
 }
 
 async function joinMatch() {

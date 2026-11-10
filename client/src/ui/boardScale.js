@@ -36,6 +36,13 @@ function recalcArenaScale() {
     }
 }
 export function setupBoardScale() {
+    const board = document.querySelector(".battleTable, .board");
+    const wrap = document.querySelector(".boardWrap");
+    const observer = new ResizeObserver(recalcArenaScale);
+    if (board)
+        observer.observe(board);
+    if (wrap)
+        observer.observe(wrap);
     window.addEventListener("resize", () => {
         clearTimeout(window.__arenaScaleTO);
         recalcArenaScale();

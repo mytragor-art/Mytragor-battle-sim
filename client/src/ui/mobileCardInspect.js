@@ -240,10 +240,12 @@ export function createMobileCardInspect() {
             if (Math.hypot(touch.clientX - startX, touch.clientY - startY) > MOVE_CANCEL_PX)
                 cancelTracking();
         }, { passive: true });
-        element.addEventListener("touchend", () => {
+        element.addEventListener("touchend", (event) => {
             clearHold();
             touchIdentifier = null;
-        }, { passive: true });
+            if (suppressNextClick && event.cancelable)
+                event.preventDefault();
+        }, { passive: false });
         element.addEventListener("touchcancel", cancelTracking, { passive: true });
         element.addEventListener("contextmenu", (event) => {
             if (!isMobileInspectEnabled())

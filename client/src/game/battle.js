@@ -228,10 +228,7 @@ export function resolveAttackOn(runtime, target) {
         return;
     }
     let finalTarget = target;
-    const tauntersTapped = runtime.state[foe].allies
-        .map((card, index) => ({ card, index }))
-        .filter((entry) => entry.card && !!entry.card.tapped && Number(entry.card.hp || 0) > 0 && hasKeyword(runtime, entry.card, "provocar"));
-    if (!runtime.serverAuthoritative && !tauntersTapped.length && (target.type === "leader" || target.type === "ally")) {
+    if (!runtime.serverAuthoritative && (target.type === "leader" || target.type === "ally")) {
         const blockers = runtime.state[foe].allies
             .map((card, index) => ({ card, index }))
             .filter((entry) => {

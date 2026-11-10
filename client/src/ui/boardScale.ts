@@ -18,7 +18,6 @@ function recalcArenaScale() {
 		const isMobileBoard = window.matchMedia("(max-width: 980px)").matches;
 		const isPortraitMobile = isMobileBoard && window.matchMedia("(orientation: portrait)").matches;
 		const isShortMobile = isMobileBoard && window.innerHeight <= 500;
-
 		let scale = Math.min(scaleX, scaleY);
 		if (!Number.isFinite(scale) || scale <= 0) scale = 1;
 		const isCompactDesktop = !isMobileBoard && (window.innerWidth < 1180 || window.innerHeight < 760);
@@ -40,6 +39,11 @@ function recalcArenaScale() {
 }
 
 export function setupBoardScale() {
+	const board = document.querySelector(".battleTable, .board");
+	const wrap = document.querySelector(".boardWrap");
+	const observer = new ResizeObserver(recalcArenaScale);
+	if (board) observer.observe(board);
+	if (wrap) observer.observe(wrap);
 	window.addEventListener("resize", () => {
 		clearTimeout((window as any).__arenaScaleTO);
 		recalcArenaScale();

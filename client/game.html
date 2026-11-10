@@ -53,19 +53,20 @@
             <div class="tableSurface" aria-hidden="true"></div>
 
             <div class="arena opponentArena" id="opArena">
-              <div class="fragDock" id="ai-fragsDock" aria-label="Fragmentos do oponente"></div>
-
               <div class="arenaGrid">
+                <section class="environmentDock environmentDock--opponent" aria-label="Ambiente ativo do oponente">
+                  <div class="slot" id="ai-env" aria-label="Ambiente do oponente">
+                    <span class="slotLabel">Ambiente</span>
+                  </div>
+                </section>
                 <div class="mainArea">
                   <div class="lane" id="ai-support"></div>
                   <div class="lane" id="ai-field"></div>
 
                   <div class="leaderBar">
                     <div class="slot" id="ai-leader"></div>
-                    <div class="slot" id="ai-env">
-                      <span class="slotLabel">Amb</span>
-                    </div>
                   </div>
+                  <div class="fragDock" id="ai-fragsDock" aria-label="Fragmentos do oponente"></div>
                 </div>
 
                 <div class="pilesCol">
@@ -115,8 +116,6 @@
             </div>
 
             <div class="arena playerArena" id="youArena">
-              <div class="fragDock" id="you-fragsDock" aria-label="Seus fragmentos"></div>
-
               <div class="sideTitle bottom">
                 <div class="nameLine">
                   <b id="youName">Você</b>
@@ -130,16 +129,19 @@
               </div>
 
               <div class="arenaGrid">
+                <section class="environmentDock environmentDock--player" aria-label="Seu ambiente ativo">
+                  <div class="slot" id="you-env" aria-label="Seu ambiente">
+                    <span class="slotLabel">Ambiente</span>
+                  </div>
+                </section>
                 <div class="mainArea">
                   <div class="leaderBar">
                     <div class="slot" id="you-leader"></div>
-                    <div class="slot" id="you-env">
-                      <span class="slotLabel">Amb</span>
-                    </div>
                   </div>
 
                   <div class="lane" id="you-field"></div>
                   <div class="lane" id="you-support"></div>
+                  <div class="fragDock" id="you-fragsDock" aria-label="Seus fragmentos"></div>
                 </div>
 
                 <div class="pilesCol">

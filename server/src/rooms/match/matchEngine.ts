@@ -3506,7 +3506,7 @@ export function attack(
 			return;
 		}
 
-		if (!hasTauntTapped && (finalTarget.type === "leader" || finalTarget.type === "ally")) {
+		if (finalTarget.type === "leader" || finalTarget.type === "ally") {
 			const blockers: number[] = [];
 			for (let index = 0; index < enemy.field.length; index += 1) {
 				const cid = String(enemy.field[index] || "");
