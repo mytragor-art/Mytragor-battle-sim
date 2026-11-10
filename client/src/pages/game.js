@@ -6,6 +6,7 @@ import { setupBoardScale } from "../ui/boardScale";
 import { setupArenaSlots } from "../ui/arenaSlots";
 import { layoutEquipment } from "../ui/equipmentLayout";
 import { layoutPlayerHand } from "../ui/handLayout";
+import { canChooseOnField, createFieldChoiceController } from "../ui/fieldChoices";
 import { getAvatarId, getDisplayName } from "../ui/profile";
 import { createMobileCardInspect } from "../ui/mobileCardInspect";
 import { renderCardRulesText } from "../ui/cardRulesText";
@@ -208,6 +209,13 @@ let activeWaitingTimer = null;
 let activeChoiceHighlightedElements = [];
 let activeChoiceIsMinimized = false;
 let activeChoiceTitleText = "Escolha pendente";
+const fieldChoices = createFieldChoiceController(resolveChoiceHighlightElement, optionId => {
+    if (!room || !activeChoiceId)
+        return;
+    room.send("effect_choice_submit", { choiceId: activeChoiceId, optionId });
+    hideCardChoiceModal(false);
+}, () => hideCardChoiceModal(true));
+let pendingFieldChoicePayload = null;
 let activePileSide = "you";
 let activePileWhich = "deck";
 let myTurnCount = 0;
@@ -1732,6 +1740,10 @@ function buildHandCard(cardId, selected, onClick, inspectorView) {
     button.onmouseleave = () => setHoveredInspector(null);
     button.onblur = () => setHoveredInspector(null);
     button.ondragstart = (event) => {
+        if (fieldChoices.active) {
+            event.preventDefault();
+            return;
+        }
         if (!event.dataTransfer || !isMyTurn || currentPhase !== "PREP")
             return;
         event.dataTransfer.effectAllowed = "move";
@@ -2503,16 +2515,29 @@ function resolveChoiceHighlightElement(option) {
     const pos = Number(option?.pos);
     if (!side)
         return null;
+    let targetId;
     if ((lane === "field" || lane === "ally") && Number.isInteger(pos) && pos >= 0) {
-        return document.getElementById(`${side}-ally-${pos}`);
+        targetId = `${side}-ally-${pos}`;
     }
-    if (lane === "support" && Number.isInteger(pos) && pos >= 0) {
-        return document.getElementById(`${side}-support-${pos}`);
+    else if (lane === "support" && Number.isInteger(pos) && pos >= 0) {
+        targetId = `${side}-support-${pos}`;
     }
-    if (lane === "leader") {
-        return document.getElementById(side === "you" ? "you-leader" : "ai-leader");
+    else if (lane === "leader") {
+        targetId = `${side}-leader`;
     }
-    return null;
+    else if (lane === "env") {
+        const leaderId = side === "you" ? currentMyLeader : currentEnemyLeader;
+        const isLeader = !!option?.cardId && String(option.cardId) === leaderId;
+        targetId = `${side}-${isLeader ? "leader" : "env"}`;
+    }
+    else {
+        return null;
+    }
+    const element = document.getElementById(targetId);
+    const cardId = String(option?.cardId || "");
+    if (cardId && element?.querySelector(":scope > [data-card-id]")?.dataset.cardId !== cardId)
+        return null;
+    return element;
 }
 function applyChoiceBoardHighlights(payload) {
     clearChoiceBoardHighlights();
@@ -2563,6 +2588,8 @@ function hideCardChoiceModal(sendCancel = true) {
     if (!modal)
         return;
     modal.style.display = "none";
+    fieldChoices.hide();
+    pendingFieldChoicePayload = null;
     activeChoiceIsMinimized = false;
     hideChoiceRestoreDock();
     clearChoiceBoardHighlights();
@@ -2605,7 +2632,22 @@ function startCountdown(containerId, valueId, timeoutMs, store) {
             restoreValueEl.textContent = String(remaining);
             restoreContainer.classList.toggle("is-danger", remaining <= 10);
         }
+        if (store === "choice") {
+            const fieldCountdown = document.getElementById("fieldChoiceCountdown");
+            const fieldValue = document.getElementById("fieldChoiceCountdownValue");
+            if (fieldCountdown && fieldValue && fieldChoices.active) {
+                fieldCountdown.style.display = "block";
+                fieldValue.textContent = String(remaining);
+                fieldCountdown.classList.toggle("is-danger", remaining <= 10);
+            }
+        }
         if (remainingMs <= 0) {
+            if (store === "choice")
+                pendingFieldChoicePayload = null;
+            if (store === "choice" && fieldChoices.active) {
+                hideCardChoiceModal(false);
+                return;
+            }
             if (store === "choice" && activeChoiceTimer) {
                 window.clearInterval(activeChoiceTimer);
                 activeChoiceTimer = null;
@@ -2802,6 +2844,21 @@ function hideChoiceWaitingModal() {
         countdown.classList.remove("is-danger");
     }
 }
+function refreshFieldChoice() {
+    if (pendingFieldChoicePayload && activeChoiceId
+        && canChooseOnField(pendingFieldChoicePayload.options, resolveChoiceHighlightElement)) {
+        clearChoiceBoardHighlights();
+        fieldChoices.show(pendingFieldChoicePayload);
+        pendingFieldChoicePayload = null;
+        activeChoiceIsMinimized = false;
+        hideChoiceRestoreDock();
+        const modal = document.getElementById("cardChoiceModal");
+        if (modal)
+            modal.style.display = "none";
+        document.getElementById("cardChoiceGrid")?.replaceChildren();
+    }
+    fieldChoices.refresh();
+}
 function showEffectChoiceModal(payload) {
     const modal = document.getElementById("cardChoiceModal");
     const title = document.getElementById("cardChoiceTitle");
@@ -2809,6 +2866,9 @@ function showEffectChoiceModal(payload) {
     if (!modal || !title || !grid)
         return;
     const options = Array.isArray(payload?.options) ? payload.options : [];
+    fieldChoices.hide();
+    pendingFieldChoicePayload = null;
+    modal.setAttribute("aria-modal", "true");
     const isMobileChoiceLayout = window.innerWidth <= 980;
     const denseChoiceCards = options.length >= 12;
     const choiceCardWidth = denseChoiceCards ? 68 : 72;
@@ -2822,6 +2882,12 @@ function showEffectChoiceModal(payload) {
     applyChoiceBoardHighlights(payload);
     grid.innerHTML = "";
     grid.style.display = "block";
+    if (fieldChoices.show({ ...payload, options })) {
+        modal.style.display = "none";
+        startCountdown("cardChoiceCountdown", "cardChoiceCountdownValue", Number(payload?.timeoutMs || 0), "choice");
+        return;
+    }
+    pendingFieldChoicePayload = { ...payload, options };
     const layout = document.createElement("div");
     layout.style.display = "grid";
     layout.style.gridTemplateColumns = isMobileChoiceLayout ? "1fr" : "minmax(0, 1fr) minmax(180px, 220px)";
@@ -3082,6 +3148,8 @@ function getFirstEmptyFieldPos(field) {
     return -1;
 }
 function tryPlayCard(cardId, targetPos) {
+    if (fieldChoices.active)
+        return;
     if (!room || !isMyTurn || currentPhase !== "PREP")
         return;
     if (!cardId)
@@ -4253,6 +4321,7 @@ function bindActiveMatchRoom() {
             renderMySupport(mySupport);
             renderEnemyField(enemyField, enemyFieldHp);
             renderEnemySupport(enemySupport);
+            refreshFieldChoice();
             animateVisibleHandTransfers(myHandTransferSnapshots, "you", previousMyHand, hand, previousMyField, myField, previousMySupport, mySupport, previousMyEnv, currentMyEnv, previousMyGrave, currentMyGrave, previousMyBanished, currentMyBanished);
             animateHiddenHandTransfers(enemyHandTransferSnapshots, "ai", previousEnemyHand, previousHandCards.aiHand, previousEnemyField, enemyField, previousEnemySupport, enemySupport, null, enemyEnv, previousEnemyGrave, currentEnemyGrave, previousEnemyBanished, currentEnemyBanished);
             animateBoardPileTransfers(boardTransferSnapshots, "you-field", "you-support", previousMyField, myField, previousMySupport, mySupport, previousMyGrave, currentMyGrave, previousMyBanished, currentMyBanished, document.querySelector("#you-grave > .deckVisualCard:last-of-type") || document.getElementById("you-grave"), document.querySelector("#you-banished > .deckVisualCard:last-of-type") || document.getElementById("you-banished"));
@@ -4736,6 +4805,7 @@ async function joinMatch() {
                 renderMySupport(mySupport);
                 renderEnemyField(enemyField, enemyFieldHp);
                 renderEnemySupport(enemySupport);
+                refreshFieldChoice();
                 animateVisibleHandTransfers(myHandTransferSnapshots, "you", previousMyHand, hand, previousMyField, myField, previousMySupport, mySupport, previousMyEnv, currentMyEnv, previousMyGrave, currentMyGrave, previousMyBanished, currentMyBanished);
                 animateHiddenHandTransfers(enemyHandTransferSnapshots, "ai", previousEnemyHand, previousHandCards.aiHand, previousEnemyField, enemyField, previousEnemySupport, enemySupport, null, enemyEnv, previousEnemyGrave, currentEnemyGrave, previousEnemyBanished, currentEnemyBanished);
                 animateBoardPileTransfers(boardTransferSnapshots, "you-field", "you-support", previousMyField, myField, previousMySupport, mySupport, previousMyGrave, currentMyGrave, previousMyBanished, currentMyBanished, document.querySelector("#you-grave > .deckVisualCard:last-of-type") || document.getElementById("you-grave"), document.querySelector("#you-banished > .deckVisualCard:last-of-type") || document.getElementById("you-banished"));
@@ -4788,7 +4858,7 @@ if (view.btnPlay)
     view.btnPlay.onclick = () => !isSpectator && selectedHandCardId && tryPlayCard(selectedHandCardId);
 if (view.btnLeaderPower)
     view.btnLeaderPower.onclick = () => {
-        if (isSpectator)
+        if (isSpectator || fieldChoices.active)
             return;
         if (!canUseLeaderPower())
             return;
@@ -4797,7 +4867,7 @@ if (view.btnLeaderPower)
     };
 if (view.btnAttack)
     view.btnAttack.onclick = () => {
-        if (isSpectator)
+        if (isSpectator || fieldChoices.active)
             return;
         if (!isMyTurn || currentPhase !== "COMBAT")
             return;
@@ -4809,7 +4879,7 @@ if (view.btnAttack)
     };
 if (view.btnTargetLeader)
     view.btnTargetLeader.onclick = () => {
-        if (isSpectator)
+        if (isSpectator || fieldChoices.active)
             return;
         if (!isMyTurn || currentPhase !== "COMBAT")
             return;
@@ -4830,9 +4900,9 @@ if (attackConfirmEls.modal) {
     });
 }
 if (view.btnNextPhase)
-    view.btnNextPhase.onclick = () => !isSpectator && room?.send("next_phase");
+    view.btnNextPhase.onclick = () => !isSpectator && !fieldChoices.active && room?.send("next_phase");
 if (view.btnEndTurn)
-    view.btnEndTurn.onclick = () => !isSpectator && room?.send("end_turn");
+    view.btnEndTurn.onclick = () => !isSpectator && !fieldChoices.active && room?.send("end_turn");
 if (view.btnConcede)
     view.btnConcede.onclick = () => {
         if (isSpectator || isMatchFinished || !room)

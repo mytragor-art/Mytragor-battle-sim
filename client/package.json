@@ -13,6 +13,8 @@
 		"smoke:field-layout": "node scripts/field-layout-smoke.mjs",
 		"smoke:hand-layout": "node scripts/hand-layout-smoke.mjs",
 		"smoke:hand-playability": "node scripts/hand-playability-smoke.mjs",
+		"smoke:field-choice": "node scripts/field-choice-smoke.mjs",
+		"smoke:field-choice-catalog": "node scripts/field-choice-catalog-smoke.mjs",
 		"smoke:solo-token": "node scripts/solo-token-smoke.mjs",
 		"build": "npm run assets:thumbs && vite build",
 		"build:test": "npm run assets:thumbs && vite build --mode test",

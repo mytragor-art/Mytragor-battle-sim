@@ -7,6 +7,7 @@ import { setupBoardScale } from "../ui/boardScale";
 import { setupArenaSlots } from "../ui/arenaSlots";
 import { layoutEquipment } from "../ui/equipmentLayout";
 import { layoutPlayerHand } from "../ui/handLayout";
+import { canChooseOnField, createFieldChoiceController } from "../ui/fieldChoices";
 import { getAvatarId, getDisplayName } from "../ui/profile";
 import { createMobileCardInspect, type MobileInspectCard } from "../ui/mobileCardInspect";
 import { renderCardRulesText } from "../ui/cardRulesText";
@@ -257,6 +258,12 @@ let activeWaitingTimer: number | null = null;
 let activeChoiceHighlightedElements: HTMLElement[] = [];
 let activeChoiceIsMinimized = false;
 let activeChoiceTitleText = "Escolha pendente";
+const fieldChoices = createFieldChoiceController(resolveChoiceHighlightElement, optionId => {
+	if (!room || !activeChoiceId) return;
+	room.send("effect_choice_submit", { choiceId: activeChoiceId, optionId });
+	hideCardChoiceModal(false);
+}, () => hideCardChoiceModal(true));
+let pendingFieldChoicePayload: Parameters<typeof fieldChoices.show>[0] | null = null;
 let activePileSide: BattleSide = "you";
 let activePileWhich: "deck" | "grave" | "banished" = "deck";
 let myTurnCount = 0;
@@ -1761,6 +1768,10 @@ function buildHandCard(cardId: string, selected: boolean, onClick?: () => void, 
 	button.onmouseleave = () => setHoveredInspector(null);
 	button.onblur = () => setHoveredInspector(null);
 	button.ondragstart = (event) => {
+		if (fieldChoices.active) {
+			event.preventDefault();
+			return;
+		}
 		if (!event.dataTransfer || !isMyTurn || currentPhase !== "PREP") return;
 		event.dataTransfer.effectAllowed = "move";
 		event.dataTransfer.setData("text/plain", cardId);
@@ -2555,16 +2566,24 @@ function resolveChoiceHighlightElement(option: any): HTMLElement | null {
 	const lane = String(option?.lane || "").toLowerCase();
 	const pos = Number(option?.pos);
 	if (!side) return null;
+	let targetId: string;
 	if ((lane === "field" || lane === "ally") && Number.isInteger(pos) && pos >= 0) {
-		return document.getElementById(`${side}-ally-${pos}`) as HTMLElement | null;
+		targetId = `${side}-ally-${pos}`;
+	} else if (lane === "support" && Number.isInteger(pos) && pos >= 0) {
+		targetId = `${side}-support-${pos}`;
+	} else if (lane === "leader") {
+		targetId = `${side}-leader`;
+	} else if (lane === "env") {
+		const leaderId = side === "you" ? currentMyLeader : currentEnemyLeader;
+		const isLeader = !!option?.cardId && String(option.cardId) === leaderId;
+		targetId = `${side}-${isLeader ? "leader" : "env"}`;
+	} else {
+		return null;
 	}
-	if (lane === "support" && Number.isInteger(pos) && pos >= 0) {
-		return document.getElementById(`${side}-support-${pos}`) as HTMLElement | null;
-	}
-	if (lane === "leader") {
-		return document.getElementById(side === "you" ? "you-leader" : "ai-leader") as HTMLElement | null;
-	}
-	return null;
+	const element = document.getElementById(targetId);
+	const cardId = String(option?.cardId || "");
+	if (cardId && element?.querySelector<HTMLElement>(":scope > [data-card-id]")?.dataset.cardId !== cardId) return null;
+	return element;
 }
 
 function applyChoiceBoardHighlights(payload: any) {
@@ -2613,6 +2632,8 @@ function hideCardChoiceModal(sendCancel: boolean = true) {
 	const modal = document.getElementById("cardChoiceModal") as HTMLElement | null;
 	if (!modal) return;
 	modal.style.display = "none";
+	fieldChoices.hide();
+	pendingFieldChoicePayload = null;
 	activeChoiceIsMinimized = false;
 	hideChoiceRestoreDock();
 	clearChoiceBoardHighlights();
@@ -2654,7 +2675,21 @@ function startCountdown(containerId: string, valueId: string, timeoutMs: number,
 			restoreValueEl.textContent = String(remaining);
 			restoreContainer.classList.toggle("is-danger", remaining <= 10);
 		}
+		if (store === "choice") {
+			const fieldCountdown = document.getElementById("fieldChoiceCountdown");
+			const fieldValue = document.getElementById("fieldChoiceCountdownValue");
+			if (fieldCountdown && fieldValue && fieldChoices.active) {
+				fieldCountdown.style.display = "block";
+				fieldValue.textContent = String(remaining);
+				fieldCountdown.classList.toggle("is-danger", remaining <= 10);
+			}
+		}
 		if (remainingMs <= 0) {
+			if (store === "choice") pendingFieldChoicePayload = null;
+			if (store === "choice" && fieldChoices.active) {
+				hideCardChoiceModal(false);
+				return;
+			}
 			if (store === "choice" && activeChoiceTimer) {
 				window.clearInterval(activeChoiceTimer);
 				activeChoiceTimer = null;
@@ -2859,12 +2894,30 @@ function hideChoiceWaitingModal() {
 	}
 }
 
+function refreshFieldChoice() {
+	if (pendingFieldChoicePayload && activeChoiceId
+		&& canChooseOnField(pendingFieldChoicePayload.options, resolveChoiceHighlightElement)) {
+		clearChoiceBoardHighlights();
+		fieldChoices.show(pendingFieldChoicePayload);
+		pendingFieldChoicePayload = null;
+		activeChoiceIsMinimized = false;
+		hideChoiceRestoreDock();
+		const modal = document.getElementById("cardChoiceModal");
+		if (modal) modal.style.display = "none";
+		document.getElementById("cardChoiceGrid")?.replaceChildren();
+	}
+	fieldChoices.refresh();
+}
+
 function showEffectChoiceModal(payload: any) {
 	const modal = document.getElementById("cardChoiceModal") as HTMLElement | null;
 	const title = document.getElementById("cardChoiceTitle");
 	const grid = document.getElementById("cardChoiceGrid") as HTMLElement | null;
 	if (!modal || !title || !grid) return;
 	const options = Array.isArray(payload?.options) ? payload.options : [];
+	fieldChoices.hide();
+	pendingFieldChoicePayload = null;
+	modal.setAttribute("aria-modal", "true");
 	const isMobileChoiceLayout = window.innerWidth <= 980;
 	const denseChoiceCards = options.length >= 12;
 	const choiceCardWidth = denseChoiceCards ? 68 : 72;
@@ -2878,6 +2931,12 @@ function showEffectChoiceModal(payload: any) {
 	applyChoiceBoardHighlights(payload);
 	grid.innerHTML = "";
 	grid.style.display = "block";
+	if (fieldChoices.show({ ...payload, options })) {
+		modal.style.display = "none";
+		startCountdown("cardChoiceCountdown", "cardChoiceCountdownValue", Number(payload?.timeoutMs || 0), "choice");
+		return;
+	}
+	pendingFieldChoicePayload = { ...payload, options };
 
 	const layout = document.createElement("div");
 	layout.style.display = "grid";
@@ -3130,6 +3189,7 @@ function getFirstEmptyFieldPos(field: string[]): number {
 }
 
 function tryPlayCard(cardId: string, targetPos?: number): void {
+	if (fieldChoices.active) return;
 	if (!room || !isMyTurn || currentPhase !== "PREP") return;
 	if (!cardId) return;
 	const cardKind = getCardKind(cardId);
@@ -4211,6 +4271,7 @@ function bindActiveMatchRoom() {
 			renderMySupport(mySupport);
 			renderEnemyField(enemyField, enemyFieldHp);
 			renderEnemySupport(enemySupport);
+			refreshFieldChoice();
 			animateVisibleHandTransfers(myHandTransferSnapshots, "you", previousMyHand, hand, previousMyField, myField, previousMySupport, mySupport, previousMyEnv, currentMyEnv, previousMyGrave, currentMyGrave, previousMyBanished, currentMyBanished);
 			animateHiddenHandTransfers(enemyHandTransferSnapshots, "ai", previousEnemyHand, previousHandCards.aiHand, previousEnemyField, enemyField, previousEnemySupport, enemySupport, null, enemyEnv, previousEnemyGrave, currentEnemyGrave, previousEnemyBanished, currentEnemyBanished);
 			animateBoardPileTransfers(boardTransferSnapshots, "you-field", "you-support", previousMyField, myField, previousMySupport, mySupport, previousMyGrave, currentMyGrave, previousMyBanished, currentMyBanished, document.querySelector("#you-grave > .deckVisualCard:last-of-type") || document.getElementById("you-grave"), document.querySelector("#you-banished > .deckVisualCard:last-of-type") || document.getElementById("you-banished"));
@@ -4670,6 +4731,7 @@ async function joinMatch() {
 				renderMySupport(mySupport);
 				renderEnemyField(enemyField, enemyFieldHp);
 				renderEnemySupport(enemySupport);
+				refreshFieldChoice();
 				animateVisibleHandTransfers(
 					myHandTransferSnapshots,
 					"you",
@@ -4769,20 +4831,20 @@ if (initiativeStartFirstButton) initiativeStartFirstButton.onclick = () => !isSp
 if (initiativeStartSecondButton) initiativeStartSecondButton.onclick = () => !isSpectator && room?.send("choose_starter", { starterSlot: slot === "p1" ? "p2" : "p1" });
 if (view.btnPlay) view.btnPlay.onclick = () => !isSpectator && selectedHandCardId && tryPlayCard(selectedHandCardId);
 if (view.btnLeaderPower) view.btnLeaderPower.onclick = () => {
-	if (isSpectator) return;
+	if (isSpectator || fieldChoices.active) return;
 	if (!canUseLeaderPower()) return;
 	animateChosenPowerActivation("you");
 	room?.send("leader_power");
 };
 if (view.btnAttack) view.btnAttack.onclick = () => {
-	if (isSpectator) return;
+	if (isSpectator || fieldChoices.active) return;
 	if (!isMyTurn || currentPhase !== "COMBAT") return;
 	if (selectedAttackerPos === null) return;
 	if (selectedTargetType === "ally" && selectedTargetPos !== null) return resolveSelectedBoardAttack({ type: "ally", side: "ai", index: selectedTargetPos });
 	resolveSelectedBoardAttack({ type: "leader", side: "ai" });
 };
 if (view.btnTargetLeader) view.btnTargetLeader.onclick = () => {
-	if (isSpectator) return;
+	if (isSpectator || fieldChoices.active) return;
 	if (!isMyTurn || currentPhase !== "COMBAT") return;
 	selectedTargetType = "leader";
 	selectedTargetPos = null;
@@ -4796,8 +4858,8 @@ if (attackConfirmEls.modal) {
 		if (event.target === attackConfirmEls.modal) hideAttackConfirmModal();
 	});
 }
-if (view.btnNextPhase) view.btnNextPhase.onclick = () => !isSpectator && room?.send("next_phase");
-if (view.btnEndTurn) view.btnEndTurn.onclick = () => !isSpectator && room?.send("end_turn");
+if (view.btnNextPhase) view.btnNextPhase.onclick = () => !isSpectator && !fieldChoices.active && room?.send("next_phase");
+if (view.btnEndTurn) view.btnEndTurn.onclick = () => !isSpectator && !fieldChoices.active && room?.send("end_turn");
 if (view.btnConcede) view.btnConcede.onclick = () => {
 	if (isSpectator || isMatchFinished || !room) return;
 	if (window.confirm("Conceder a partida? O oponente vencerá automaticamente.")) room.send("concede");

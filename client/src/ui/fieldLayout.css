@@ -305,6 +305,26 @@
 	bottom: auto;
 }
 
+#board #you-support > .attachedEquipment.choiceEquipmentExpanded,
+#board #ai-support > .attachedEquipment.choiceEquipmentExpanded {
+	left: calc(var(--choice-equipment-column) * (var(--slotW) + var(--gap)));
+	top: calc(var(--slotH) + var(--equipment-depth) * var(--equipment-peek) + 8px);
+	bottom: auto;
+	z-index: 40;
+	clip-path: none;
+	border-radius: 8px;
+}
+
+#board #ai-support > .attachedEquipment.choiceEquipmentExpanded {
+	top: auto;
+	bottom: calc(var(--slotH) + var(--equipment-depth) * var(--equipment-peek) + 8px);
+}
+
+#arenaCol:has(.choiceEquipmentExpanded) #youHandDock {
+	visibility: hidden;
+	pointer-events: none;
+}
+
 @media (min-width: 981px), (hover: hover) and (pointer: fine) {
 	#board {
 		min-width: calc(7 * var(--environment-card-w) + 5 * var(--slot-gap, 2px) + var(--pile-col-w, var(--environment-card-w)) + 90px);

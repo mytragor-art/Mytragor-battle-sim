@@ -290,14 +290,14 @@
   </div>
 </div>
 
-<div id="cardChoiceModal" class="modal choiceSheetModal" style="display:none;z-index:10000;">
+<div id="cardChoiceModal" class="modal choiceSheetModal" style="display:none;z-index:10000;" role="dialog" aria-labelledby="cardChoiceTitle">
   <div class="modalBox choiceSheetBox">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+    <div class="choiceSheetHeader" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
       <div>
         <h3 id="cardChoiceTitle" style="margin:0">Escolha uma carta</h3>
         <div id="cardChoiceCountdown" class="choiceCountdown" style="display:none;">Tempo restante: <span id="cardChoiceCountdownValue">40</span>s</div>
       </div>
-      <div style="display:flex;gap:8px;align-items:center;">
+      <div class="choiceSheetControls" style="display:flex;gap:8px;align-items:center;">
         <button class="btn" onclick="minimizeCardChoice()">Minimizar</button>
         <button class="btn" onclick="hideCardChoice()">Fechar</button>
       </div>
@@ -313,8 +313,17 @@
   </button>
 </div>
 
+<section id="fieldChoiceBar" class="fieldChoiceBar" hidden aria-label="Escolha de alvo no campo">
+  <div class="fieldChoiceMessage">
+    <strong id="fieldChoiceTitle" aria-live="polite"></strong>
+    <div id="fieldChoiceHint"></div>
+    <div id="fieldChoiceCountdown" class="choiceCountdown" style="display:none;">Tempo restante: <span id="fieldChoiceCountdownValue"></span>s</div>
+  </div>
+  <div id="fieldChoiceActions" class="fieldChoiceActions"></div>
+</section>
+
 <div id="choiceWaitingModal" class="modal" style="display:none;align-items:center;justify-content:center;z-index:10001;">
-  <div class="modalBox waitingChoiceBox">
+  <div class="modalBox waitingChoiceBox" role="status" aria-live="polite">
     <div class="waitingChoiceIcon">⏳</div>
     <h2 id="choiceWaitingTitle" class="waitingChoiceTitle">Seu oponente está escolhendo</h2>
     <p id="choiceWaitingText" class="waitingChoiceText">Aguarde a decisão para a partida continuar.</p>
@@ -322,7 +331,7 @@
   </div>
 </div>
 
-<div id="attackConfirmModal" class="modal attackConfirmModal" style="display:none;z-index:10003;">
+<div id="attackConfirmModal" class="modal attackConfirmModal" style="display:none;z-index:10003;" role="dialog" aria-modal="true" aria-labelledby="attackConfirmTitle">
   <div class="modalBox attackConfirmBox">
     <div class="attackConfirmHead">
       <span class="attackConfirmBadge">Combate</span>

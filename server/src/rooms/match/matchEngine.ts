@@ -7,7 +7,7 @@ import type { TurnPhase } from "../schema/GameState";
 
 export type Slot = "p1" | "p2";
 export type AttackTarget = { type: "leader" } | { type: "ally"; targetPos: number };
-export type ChoiceOption = { id: string; label: string; description?: string; side?: Slot; lane?: "field" | "support" | "env" | "deck" | "grave"; pos?: number; cardId?: string; disabled?: boolean; disabledReason?: string };
+export type ChoiceOption = { id: string; label: string; description?: string; side?: Slot; lane?: "field" | "support" | "env" | "hand" | "deck" | "grave"; pos?: number; cardId?: string; disabled?: boolean; disabledReason?: string };
 export type ChoicePayload = {
 	title: string;
 	options: ChoiceOption[];
@@ -727,7 +727,7 @@ function handleDestroyedAllyTriggers(
 			if (String(cardDef?.effect || "") !== "bem_treinado") continue;
 			const cost = getCardCost(cid);
 			if (Number(owner.fragments || 0) < cost) continue;
-			reactionOptions.push({ id: `bem-react-${index}`, label: cid, side: ownerSlot, lane: "support", pos: index, cardId: cid, description: `Pagar ${cost} fragmento(s) para convocar um aliado Marcial do cemitério.` });
+			reactionOptions.push({ id: `bem-react-${index}`, label: cid, side: ownerSlot, lane: "hand", pos: index, cardId: cid, description: `Pagar ${cost} fragmento(s) para convocar um aliado Marcial do cemitério.` });
 		}
 		if (reactionOptions.length) {
 			askChoice(ownerSlot, { title: `${destroyedCardId}: deseja ativar Alerta de Fuga?`, options: [...reactionOptions, { id: "bem-react-skip", label: "Não ativar" }], allowCancel: true }, (optionId) => {
@@ -791,7 +791,7 @@ function handleDestroyedAllyTriggers(
 		if (freePos < 0) return;
 		const options: ChoiceOption[] = handMatches.map((idx, order) => {
 			const cid = String(owner.hand[idx] || "");
-			return { id: `bartolomeu-${idx}-${order}`, label: cid, side: ownerSlot, lane: "support", pos: idx, cardId: cid };
+			return { id: `bartolomeu-${idx}-${order}`, label: cid, side: ownerSlot, lane: "hand", pos: idx, cardId: cid };
 		});
 		askChoice(ownerSlot, { title: `${destroyedCardId}: escolha um Cidadão da mão para invocar`, options, allowCancel: true }, (optionId) => {
 			if (!optionId) return;
@@ -907,7 +907,7 @@ function maybeOfferCounterToActivation(
 			label: `Ativar ${cid}`,
 			description: `Pagar ${cost} fragmento(s) para anular ${activatedCardId}.`,
 			side: defenderSlot,
-			lane: "support",
+			lane: "hand",
 			pos: index,
 			cardId: cid
 		});
@@ -1188,7 +1188,7 @@ function offerTransformar(
 				id: `transform-target-${entry.index}`,
 				label: entry.cardId,
 				side: slot,
-				lane: "deck" as const,
+				lane: "hand" as const,
 				pos: entry.index,
 				cardId: entry.cardId,
 				description: `Convocar sem pagar custo (custo ${getCardCost(entry.cardId)}).`
@@ -1570,7 +1570,7 @@ function triggerAutoEffects(
 			if (!cid) continue;
 			const def = findCardDef(cid);
 			if (!isSpellKind(def?.kind || def?.tipo)) continue;
-			options.push({ id: `anular-${i}`, label: cid, side: enemySlot(slot), lane: "support", pos: i, cardId: cid });
+			options.push({ id: `anular-${i}`, label: cid, side: enemySlot(slot), lane: "hand", pos: i, cardId: cid });
 		}
 		if (!options.length) {
 			broadcast("effect_log", { slot, cardId, effect, text: `${cardId}: nenhuma magia na mão inimiga para anular.` });
@@ -1631,7 +1631,7 @@ function triggerAutoEffects(
 			const def = findCardDef(cid);
 			const filiacao = normalizeKind(String(def?.filiacao || ""));
 			const discardable = ["religioso", "marcial", "arcana"].includes(filiacao);
-			options.push({ id: `espiao-${i}`, label: cid, side: enemySlot(slot), lane: "support", pos: i, cardId: cid, disabled: !discardable, disabledReason: discardable ? undefined : "Esta carta não pode ser descartada por Espionagem Sorrateira." });
+			options.push({ id: `espiao-${i}`, label: cid, side: enemySlot(slot), lane: "hand", pos: i, cardId: cid, disabled: !discardable, disabledReason: discardable ? undefined : "Esta carta não pode ser descartada por Espionagem Sorrateira." });
 		}
 		askChoice(slot, { title: `${cardId}: escolha carta para descartar`, options, allowCancel: true }, (optionId) => {
 			if (!optionId) {
@@ -1656,7 +1656,7 @@ function triggerAutoEffects(
 		for (let i = 0; i < me.hand.length; i += 1) {
 			const cid = String(me.hand[i] || "");
 			if (!cid) continue;
-			options.push({ id: `charlatao-${i}`, label: cid, side: slot, lane: "support", pos: i, cardId: cid });
+			options.push({ id: `charlatao-${i}`, label: cid, side: slot, lane: "hand", pos: i, cardId: cid });
 		}
 		if (!options.length) {
 			broadcast("effect_log", { slot, cardId, effect, text: drawn > 0 ? `${cardId}: comprou 1 carta, mas não havia carta na mão para descartar.` : `${cardId}: não foi possível comprar e não havia carta na mão para descartar.` });
@@ -1692,7 +1692,7 @@ function triggerAutoEffects(
 			for (let i = 0; i < me.hand.length; i += 1) {
 				const cid = String(me.hand[i] || "");
 				if (!cid) continue;
-				handOptions.push({ id: `student-hand-${i}`, label: cid, side: slot, lane: "support", pos: i, cardId: cid });
+				handOptions.push({ id: `student-hand-${i}`, label: cid, side: slot, lane: "hand", pos: i, cardId: cid });
 			}
 			if (!handOptions.length) {
 				broadcast("effect_log", { slot, cardId, effect, text: `${cardId}: sem cartas na mão para colocar no fundo do baralho.` });
@@ -2032,7 +2032,7 @@ function triggerAutoEffects(
 			for (let i = 0; i < foe.hand.length; i += 1) {
 				const cid = String(foe.hand[i] || "");
 				if (!cid) continue;
-				options.push({ id: `hand-${i}`, label: cid, side: enemySlot(slot), lane: "support", pos: i, cardId: cid });
+				options.push({ id: `hand-${i}`, label: cid, side: enemySlot(slot), lane: "hand", pos: i, cardId: cid });
 			}
 			askChoice(slot, { title: `${cardId}: escolha carta da mão do oponente para descartar`, options, allowCancel: true }, (optionId) => {
 				if (!optionId) return;

@@ -149,3 +149,68 @@
 		z-index: 140;
 	}
 }
+
+.fieldChoiceBar {
+	position: fixed;
+	top: max(8px, env(safe-area-inset-top));
+	left: 50%;
+	transform: translateX(-50%);
+	z-index: 10002;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	width: min(640px, calc(100vw - 16px));
+	max-height: min(130px, 22dvh);
+	padding: 8px 12px;
+	box-sizing: border-box;
+	overflow: auto;
+	background: #0b1322;
+	border: 1px solid #7dd3fc;
+	border-radius: 10px;
+	box-shadow: 0 6px 20px rgba(0, 0, 0, .4);
+	color: #e2e8f0;
+	font-size: 12px;
+}
+
+.fieldChoiceBar[hidden] {
+	display: none !important;
+}
+
+.fieldChoiceMessage {
+	flex: 1;
+	min-width: 0;
+}
+
+#fieldChoiceHint {
+	margin-top: 3px;
+	color: #bae6fd;
+}
+
+.fieldChoiceActions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.fieldChoiceActions .btn {
+	min-height: 44px;
+	height: auto;
+	padding: 6px 10px;
+	font-size: 11px;
+}
+
+#board .choiceBoardHighlight {
+	cursor: crosshair;
+}
+
+#board .slot.choiceBoardSelected,
+#board .slot.choiceBoardSelected > .card.slotCard {
+	--battle-glow:255,220,90;
+	outline: 2px solid #ffdc5a;
+	outline-offset: 2px;
+}
+
+#board .choiceBoardHighlight:focus-visible {
+	outline: 3px solid #fff4c6;
+	outline-offset: 3px;
+}

@@ -48,56 +48,31 @@
 .chosenReady{
   position:relative;
   overflow:visible !important;
-  box-shadow:
-    0 0 10px rgba(255,255,255,.45),
-    0 0 18px rgba(255,80,180,.45),
-    0 0 26px rgba(80,180,255,.40),
-    0 0 34px rgba(255,220,80,.35);
-  animation: chosenPulse 1.8s ease-in-out infinite;
 }
 .chosenReady::before{
   content:"";
   position:absolute;
-  inset:-10px;
-  border-radius:16px;
+  inset:-6px;
+  border-radius:inherit;
   pointer-events:none;
-  background:
-    radial-gradient(circle at 15% 20%, rgba(255,255,255,.95) 0 2px, transparent 3px),
-    radial-gradient(circle at 80% 18%, rgba(120,220,255,.95) 0 2px, transparent 3px),
-    radial-gradient(circle at 92% 65%, rgba(255,120,220,.95) 0 2px, transparent 3px),
-    radial-gradient(circle at 20% 82%, rgba(255,230,90,.95) 0 2px, transparent 3px),
-    radial-gradient(circle at 50% 5%, rgba(180,120,255,.9) 0 1.5px, transparent 3px);
-  animation: chosenStars 1.4s linear infinite;
+  border:1px solid rgba(255,220,90,.6);
+  box-shadow:0 0 14px rgba(255,220,90,.4);
+  animation:chosenAura 2.8s ease-in-out infinite;
   z-index:5;
 }
 .chosenReady::after{
   content:"";
   position:absolute;
-  inset:-6px;
-  border-radius:18px;
+  inset:-2px;
+  border-radius:inherit;
   pointer-events:none;
-  border:1px solid rgba(255,255,255,.35);
-  box-shadow:
-    0 0 12px rgba(255,255,255,.35),
-    0 0 22px rgba(120,220,255,.32),
-    0 0 28px rgba(255,120,220,.28);
-  animation: chosenAura 2.2s linear infinite;
+  border:1px solid rgba(255,244,198,.9);
   z-index:4;
 }
 
-@keyframes chosenPulse{
-  0%,100%{ filter:brightness(1); }
-  50%{ filter:brightness(1.18); }
-}
-@keyframes chosenStars{
-  0%{ opacity:.45; transform:rotate(0deg) scale(1); }
-  50%{ opacity:1; transform:rotate(4deg) scale(1.04); }
-  100%{ opacity:.45; transform:rotate(0deg) scale(1); }
-}
 @keyframes chosenAura{
-  0%{ filter:hue-rotate(0deg); opacity:.65; }
-  50%{ opacity:1; }
-  100%{ filter:hue-rotate(360deg); opacity:.65; }
+  0%,100%{ opacity:.35; }
+  50%{ opacity:.85; }
 }
 
 .attackArrowSvg{
@@ -121,4 +96,72 @@
 .attackTargetGlow{
   outline:2px solid rgba(255,40,40,.9);
   box-shadow:0 0 18px rgba(255,0,0,.55);
+}
+
+#board .card.slotCard.can-attack:not(.tapped) {
+  --battle-glow:248,113,113;
+}
+
+#board .slot.combat-target,
+#board .card.slotCard.can-be-targeted {
+  --battle-glow:74,222,128;
+}
+
+#board .slot.selected > .card.slotCard.can-attack,
+#board .card.slotCard.can-attack.is-selected,
+#board .card.slotCard.chosenReady,
+#board #btnLeaderPower.is-ready:not(:disabled),
+#arenaCol #youHand > .card.handCard.is-playable {
+  --battle-glow:255,220,90;
+}
+
+#board .slot.attackTargetGlow,
+#board .slot.attackTargetGlow > .card.slotCard {
+  --battle-glow:255,105,90;
+}
+
+#board .slot.dropTarget,
+#board .slot.dropTarget > .card.slotCard {
+  --battle-glow:45,212,191;
+}
+
+#board .choiceBoardHighlight,
+#board .slot.choiceBoardHighlight,
+#board .choiceBoardHighlight > .card.slotCard,
+#board .slot.choiceBoardHighlight > .card.slotCard {
+  --battle-glow:125,211,252;
+}
+
+#board .card.slotCard.can-attack:not(.tapped),
+#board .card.slotCard.can-be-targeted,
+#board .card.slotCard.chosenReady,
+#board .slot.combat-target > .card.slotCard,
+#board .slot.attackTargetGlow,
+#board .slot.attackTargetGlow > .card.slotCard,
+#board .slot.dropTarget,
+#board .slot.dropTarget > .card.slotCard,
+#board .choiceBoardHighlight,
+#board .choiceBoardHighlight > .card.slotCard,
+#board #btnLeaderPower.is-ready:not(:disabled),
+#arenaCol #youHand > .card.handCard.is-playable {
+  border-color:rgb(var(--battle-glow));
+  outline:1px solid rgba(var(--battle-glow),.85);
+  outline-offset:1px;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.35),
+    0 0 8px rgba(var(--battle-glow),.65),
+    0 0 20px rgba(var(--battle-glow),.28),
+    0 8px 18px rgba(0,0,0,.32);
+}
+
+#arenaCol #youHand > .card.handCard.is-playable:focus-visible {
+  outline:2px solid #fff4c6;
+  outline-offset:3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chosenReady::before {
+    animation:none;
+    opacity:.6;
+  }
 }

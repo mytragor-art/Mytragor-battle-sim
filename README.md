@@ -115,9 +115,45 @@ Na preparação do seu turno, todas as cartas com custo disponível e condiçõe
 recebem brilho, independentemente da seleção. O destaque acompanha os fragmentos restantes a cada
 atualização da partida. Truques reativos não recebem esse brilho: seus gatilhos continuam sendo
 oferecidos pelas escolhas de reação existentes.
+Os destaques usam contorno luminoso e halo curto: dourado para cartas jogáveis, atacante selecionado
+e poder do Escolhido; vermelho para atacantes disponíveis; verde para alvos válidos; coral para
+o alvo apontado; azul para escolhas de efeito; turquesa para destino de arraste. A aura do Escolhido
+pulsa suavemente apenas no contorno e fica estática com a preferência de movimento reduzido.
+Efeitos com alvos identificáveis no campo, como Mãos Flamejantes, permitem escolher diretamente nas
+cartas destacadas, por clique, toque ou Enter/Espaço, sem abrir modal. Uma indicação curta mostra
+a instrução, o prazo e as opções de cancelar ou confirmar seleções múltiplas, quando permitidas.
+Os mesmos IDs e limites de escolha são enviados ao servidor; dano, custos, gatilhos e regras não mudam.
+Buscas, cartas fora da mesa e escolhas ambíguas continuam no modal original centralizado.
+Os modais de confirmação de ataque e espera também permanecem na posição original.
+
+Escolhas diretas revisadas no catálogo:
+
+- Dano e cura: Mãos Flamejantes, Aranhas Negras, Milícia (as duas etapas), Cervo de Galhos Brancos,
+  Pica-pau Agulheiro, Troca de Energia, Tônico Revigorante, Fruto Abençoado, Redoma Santa e o poder de Leafae.
+- Controle, bônus e remoção: Aranhas Negras, Executor, Goblin Sabotador, Profanação de Terreno,
+  Controle de Correntezas, Quebra-Aço, Sede de Vingança, Invasão de Cativeiro e Bem Treinado.
+- Catedral Ensolarada, pagamento alternativo com Aranhas Negras, Agiota e substituição de aliados
+  também usam os alvos do campo. Em cartas de escolha A/B, a decisão do efeito continua no modal;
+  somente a etapa seguinte de selecionar um alvo no campo dispensa o modal.
+- Interpor permite clicar no bloqueador: Jabuti Barreira, Gladiador Impenetrável, Aerin Nieloy e O Protetor.
+  A opção de não interpor permanece disponível na indicação da escolha.
+- Para equipar Lâmina Serralhada, Manto de Couro, Orbe de Absorção, Redoma Santa,
+  Aranhas Negras, Quelíceras ou Livro Arcano Instável, clique diretamente no portador destacado.
+  Ao destruir ou deslocar equipamentos acoplados, os elegíveis se abrem temporariamente em cartas
+  inteiras separadas, sobre a faixa de suportes/fragmentos, sem cobrir os portadores ou redimensionar
+  o campo. A mão fica oculta apenas durante essa seleção para não cobrir os equipamentos.
+  Ao escolher, cancelar ou esgotar o prazo, as faixas compactas e a mão voltam ao normal.
+
+Escolhas da mão, deck e cemitério continuam no modal, mesmo quando existe uma cópia idêntica no campo.
+Isso inclui buscas, descartes, Orbe de Absorção e a decisão de topo do Livro Arcano Instável;
+confirmações de ativação de truques também permanecem no modal.
+Efeitos de entrada reavaliam os alvos quando a atualização do campo chega, sem reiniciar o prazo da escolha.
 
 Testes de apresentação: `npm.cmd --prefix client run smoke:field-layout` e
 `npm.cmd --prefix client run smoke:hand-layout`.
+Testes de escolhas: `npm.cmd --prefix client run smoke:field-choice`; para conferir o catálogo
+contra as escolhas reais do motor, execute `npm.cmd --prefix server run build` e depois
+`npm.cmd --prefix client run smoke:field-choice-catalog`.
 
 ## Estatísticas de uso (sem Vercel Pro)
 
