@@ -81,6 +81,9 @@ Isso evita que a grade do deckbuilder e de decks salvos fique com thumbs antigas
 Desafio continua restringindo a escolha do alvo inicial do ataque. Depois de declarado um ataque válido,
 outro aliado com Interpor pode bloquear, mesmo quando o alvo tem Desafio. O bloqueador precisa estar
 vivo e não exaurido; ao interpor, fica exaurido e recebe o ataque no lugar do alvo original.
+Decisões de combate, incluindo Interpor, mantêm o modal centralizado com imagens, nomes e
+identificação do atacante e do alvo original antes das opções. Atualizações do campo não
+substituem esse modal pela seleção direta nas cartas.
 
 Teste de regressão (servidor e cliente): `npm.cmd --prefix server run build`, seguido de
 `npm.cmd --prefix client run smoke:interpor-combat`.

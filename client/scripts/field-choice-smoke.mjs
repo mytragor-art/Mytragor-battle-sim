@@ -23,6 +23,8 @@ class Element {
     };
   }
   appendChild(child) { this.children.push(child); return child; }
+  append(...children) { this.children.push(...children); }
+  set innerHTML(value) { assert.equal(value, ''); this.children = []; }
   replaceChildren(...children) { this.children = children; }
   contains(child) { return this === child || this.children.some(element => element.contains(child)); }
   getAttribute(name) { return this.attributes.get(name) ?? null; }
@@ -83,7 +85,7 @@ for (const extension of ['js', 'ts']) {
       return resolveChoiceHighlightElement;
     }`, { compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.ESNext } }).outputText;
   const { createResolver } = await import(`data:text/javascript;base64,${Buffer.from(harness).toString('base64')}`);
-  const elements = new Map(['board', 'fieldChoiceBar', 'fieldChoiceTitle', 'fieldChoiceHint', 'fieldChoiceActions', 'fieldChoiceCountdown', 'cardChoiceModal', 'cardChoiceGrid']
+  const elements = new Map(['board', 'fieldChoiceBar', 'fieldChoiceTitle', 'fieldChoiceHint', 'fieldChoiceActions', 'fieldChoiceCountdown', 'cardChoiceModal', 'cardChoiceTitle', 'cardChoiceGrid']
     .map(id => [id, new Element(id)]));
   const options = [];
   for (const [side, serverSide] of [['you', 'p1'], ['ai', 'p2']]) {
@@ -250,5 +252,80 @@ for (const extension of ['js', 'ts']) {
   offBoard.refresh();
   assert.equal(controller.active, false, 'A state patch cannot promote a hand choice to the field');
   scenarios += 7;
+  const modalFunctions = parsed.statements.filter(node => ts.isFunctionDeclaration(node)
+    && ['showEffectChoiceModal', 'createChoiceDuelPanel', 'createCounteredCardPanel', 'buildChoiceAttackerSummary',
+      'refreshFieldChoice'].includes(node.name?.text));
+  assert.equal(modalFunctions.length, 5);
+  const modalHarness = ts.transpileModule(`
+    export function createModal(fieldChoices, canChooseOnField, resolveChoiceHighlightElement, slot, width) {
+      const window = { innerWidth: width };
+      let pendingFieldChoicePayload = null, activeChoiceId = null, activeChoiceTitleText = '', activeChoiceIsMinimized = false;
+      const calls = [], room = { send: (type, payload) => calls.push({ type, ...payload }) };
+      const CARD_BACK_ASSET = 'back.png', asAssetPath = value => value;
+      const resolveCard = id => ({ name: id, img: id + '.png' });
+      const setThumbnailSource = (image, src) => { image.src = src; };
+      const sideFromServerSlot = side => side === slot ? 'you' : 'ai';
+      const getChoiceOptionVisual = option => ({ cardId: option.cardId, muted: false });
+      const hideChoiceRestoreDock = () => {}, hideChoiceWaitingModal = () => {}, applyChoiceBoardHighlights = () => {};
+      const clearChoiceBoardHighlights = () => {}, startCountdown = (...args) => calls.push({ countdown: args });
+      const bindMobileCardInspect = () => {};
+      const hideCardChoiceModal = sendCancel => {
+        if (sendCancel) room.send('effect_choice_submit', { choiceId: activeChoiceId, optionId: null });
+        fieldChoices.hide();
+        document.getElementById('cardChoiceModal').style.display = 'none';
+      };
+      ${modalFunctions.map(node => node.getText(parsed)).join('\n')}
+      return { show: showEffectChoiceModal, refresh: refreshFieldChoice, calls,
+        pending: () => pendingFieldChoicePayload };
+    }`, { compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.ESNext } }).outputText;
+  const { createModal } = await import(`data:text/javascript;base64,${Buffer.from(modalHarness).toString('base64')}`);
+  const descendants = element => [element, ...element.children.flatMap(descendants)];
+  for (const width of [390, 1280]) {
+    for (const slot of ['p1', 'p2']) {
+      for (const target of ['Gladiador Ousado', 'Ranza, o Arqueiro das Trevas']) {
+        const modalTest = createModal(controller, canChooseOnField, resolve, slot, width);
+        const block = { ...field, id: 'block-0', label: 'Interpor' };
+        const decline = { id: 'block-cancel', label: 'Não interpor', side: 'p1' };
+        const payload = {
+          choiceId: 'interpor-choice', title: 'Escolher aliado para interpor?', options: [block, decline],
+          attackerId: 'Cão de Caça Feroz', attackerName: 'Cão de Caça Feroz', attackerAttack: 4,
+          targetCardId: target, targetName: target, targetResistance: 2, targetHp: 6, targetMaxHp: 8,
+          timeoutMs: 30000
+        };
+        assert.equal(canChooseOnField(payload.options, resolve), true, 'Reproduce Interpor as an eligible field choice');
+        modalTest.show(payload);
+        assert.equal(controller.active, false, 'Combat decisions must retain their context in the modal');
+        assert.equal(modal.style.display, 'flex');
+        assert.equal(modalTest.pending(), null, 'A later state patch must not hide combat context');
+        modalTest.refresh();
+        assert.equal(modal.style.display, 'flex');
+        const grid = elements.get('cardChoiceGrid');
+        const choices = grid.children[0].children[0];
+        const panel = choices.children[0];
+        const content = descendants(panel);
+        for (const text of ['Combate Atual', 'Atacante', 'Alvo original', payload.attackerName, target,
+          'ATK 4 x RES 2', 'Vida alvo 6/8']) {
+          assert.ok(content.some(element => element.textContent === text), text);
+        }
+        assert.equal(content.filter(element => element.src).length, 2, 'Both combatant thumbnails are visible');
+        assert.equal(modalTest.calls[0].countdown[2], 30000, 'Combat choices keep their timeout');
+        for (const option of payload.options) {
+          const button = descendants(choices).find(element => element.title === option.label);
+          assert.ok(button, option.label);
+          button.onclick();
+          assert.deepEqual(modalTest.calls.at(-1), {
+            type: 'effect_choice_submit', choiceId: payload.choiceId, optionId: option.id
+          });
+        }
+        scenarios++;
+      }
+    }
+  }
+  const ordinaryChoice = createModal(controller, canChooseOnField, resolve, 'p1', 1280);
+  ordinaryChoice.show({ choiceId: 'ordinary-choice', options: [field] });
+  assert.equal(controller.active, true, 'Noncombat effects still use direct field selection');
+  assert.equal(modal.style.display, 'none');
+  controller.hide();
+  scenarios++;
 }
 console.log(`Direct field choices: ${scenarios} JS/TS scenarios passed (12 characters, 10 equipment, IDs, keyboard, multiselect, cancel, state sync and cleanup).`);

@@ -2719,6 +2719,11 @@ function createChoiceDuelPanel(payload) {
         wrap.style.display = "grid";
         wrap.style.gap = "4px";
         wrap.style.justifyItems = "center";
+        const role = document.createElement("div");
+        role.textContent = tone === "atk" ? "Atacante" : "Alvo original";
+        role.style.fontSize = "12px";
+        role.style.fontWeight = "700";
+        wrap.appendChild(role);
         const card = resolveCard(cardId);
         const thumb = document.createElement("img");
         setThumbnailSource(thumb, card?.img || CARD_BACK_ASSET);
@@ -2882,12 +2887,14 @@ function showEffectChoiceModal(payload) {
     applyChoiceBoardHighlights(payload);
     grid.innerHTML = "";
     grid.style.display = "block";
-    if (fieldChoices.show({ ...payload, options })) {
+    const hasCombatContext = !!(payload?.attackerId || payload?.targetCardId);
+    if (!hasCombatContext && fieldChoices.show({ ...payload, options })) {
         modal.style.display = "none";
         startCountdown("cardChoiceCountdown", "cardChoiceCountdownValue", Number(payload?.timeoutMs || 0), "choice");
         return;
     }
-    pendingFieldChoicePayload = { ...payload, options };
+    if (!hasCombatContext)
+        pendingFieldChoicePayload = { ...payload, options };
     const layout = document.createElement("div");
     layout.style.display = "grid";
     layout.style.gridTemplateColumns = isMobileChoiceLayout ? "1fr" : "minmax(0, 1fr) minmax(180px, 220px)";
@@ -2929,6 +2936,8 @@ function showEffectChoiceModal(payload) {
         previewWrap.appendChild(infoBox);
     }
     const duelPanel = createChoiceDuelPanel(payload);
+    if (duelPanel)
+        choicesWrap.appendChild(duelPanel);
     const counteredCardPanel = createCounteredCardPanel(payload);
     const timeoutMs = Number(payload?.timeoutMs || 0);
     if (timeoutMs > 0) {
@@ -3079,10 +3088,6 @@ function showEffectChoiceModal(payload) {
             groupGrid.appendChild(item);
         }
         choicesWrap.appendChild(groupGrid);
-    }
-    if (duelPanel) {
-        duelPanel.style.marginTop = "10px";
-        choicesWrap.appendChild(duelPanel);
     }
     if (counteredCardPanel)
         choicesWrap.appendChild(counteredCardPanel);
