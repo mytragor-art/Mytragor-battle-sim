@@ -151,25 +151,34 @@
 }
 
 .fieldChoiceBar {
+	--field-choice-accent: #7dd3fc;
 	position: fixed;
-	top: max(8px, env(safe-area-inset-top));
+	top: 50%;
 	left: 50%;
 	transform: translateX(-50%);
 	z-index: 10002;
 	display: flex;
 	align-items: center;
 	gap: 10px;
-	width: min(640px, calc(100vw - 16px));
-	max-height: min(130px, 22dvh);
+	width: min(520px, calc(100vw - 16px));
+	max-height: min(160px, 30dvh);
 	padding: 8px 12px;
 	box-sizing: border-box;
 	overflow: auto;
 	background: #0b1322;
-	border: 1px solid #7dd3fc;
+	border: 1px solid var(--field-choice-accent);
 	border-radius: 10px;
 	box-shadow: 0 6px 20px rgba(0, 0, 0, .4);
 	color: #e2e8f0;
 	font-size: 12px;
+}
+
+.fieldChoiceBar[data-choice-kind="activation"] {
+	--field-choice-accent: #c4a0ff;
+}
+
+.fieldChoiceBar[data-choice-kind="replacement"] {
+	--field-choice-accent: #ffb15f;
 }
 
 .fieldChoiceBar[hidden] {
@@ -183,7 +192,7 @@
 
 #fieldChoiceHint {
 	margin-top: 3px;
-	color: #bae6fd;
+	color: var(--field-choice-accent);
 }
 
 .fieldChoiceActions {
@@ -205,8 +214,7 @@
 
 #board .slot.choiceBoardSelected,
 #board .slot.choiceBoardSelected > .card.slotCard {
-	--battle-glow:255,220,90;
-	outline: 2px solid #ffdc5a;
+	outline: 3px double rgb(var(--battle-glow));
 	outline-offset: 2px;
 }
 

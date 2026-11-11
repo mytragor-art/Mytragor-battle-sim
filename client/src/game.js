@@ -9,4 +9,5 @@ import "./ui/mobileCardInspect.css";
 import "./ui/handOverflowFixes.css";
 import "./ui/fieldLayout.css";
 import "./ui/playerHandLayout.css";
+import "./ui/modalTheme.css";
 import "./pages/game";

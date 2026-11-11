@@ -6,8 +6,8 @@ import { getGameInputs, log, logText, renderButtonRow } from "../ui/gameView";
 import { setupBoardScale } from "../ui/boardScale";
 import { setupArenaSlots } from "../ui/arenaSlots";
 import { layoutEquipment } from "../ui/equipmentLayout";
-import { layoutPlayerHand } from "../ui/handLayout";
-import { canChooseOnField, createFieldChoiceController } from "../ui/fieldChoices";
+import { layoutOpponentHand, layoutPlayerHand } from "../ui/handLayout";
+import { canChooseOnField, createFieldChoiceController, getFieldChoiceKind } from "../ui/fieldChoices";
 import { getAvatarId, getDisplayName } from "../ui/profile";
 import { createMobileCardInspect, type MobileInspectCard } from "../ui/mobileCardInspect";
 import { renderCardRulesText } from "../ui/cardRulesText";
@@ -33,6 +33,7 @@ type CardDef = {
 	damage?: number;
 	ac?: number;
 	description?: string;
+	descricao?: string;
 	text?: string;
 };
 
@@ -1226,6 +1227,8 @@ function asThumbnailAssetPath(path: string): string {
 function setThumbnailSource(image: HTMLImageElement, path: string): void {
 	const originalSource = asAssetPath(path);
 	const thumbnailSource = asThumbnailAssetPath(path);
+	const currentSource = image.getAttribute("src");
+	if (currentSource === thumbnailSource || currentSource === originalSource) return;
 	image.onerror = thumbnailSource === originalSource
 		? null
 		: () => {
@@ -1779,6 +1782,39 @@ function buildHandCard(cardId: string, selected: boolean, onClick?: () => void, 
 	};
 	if (onClick) button.onclick = onClick;
 	return button;
+}
+
+function reconcileChildren(container: HTMLElement, children: HTMLElement[]): void {
+	const retained = new Set(children);
+	for (const child of Array.from(container.children)) {
+		if (!retained.has(child as HTMLElement)) child.remove();
+	}
+	for (let index = 0; index < children.length; index += 1) {
+		if (container.children[index] !== children[index]) {
+			container.insertBefore(children[index], container.children[index] || null);
+		}
+	}
+}
+
+function syncBoardCard(slot: HTMLElement, cardId: string, inspectorView: InspectorView): HTMLButtonElement | null {
+	let card = slot.querySelector<HTMLButtonElement>(":scope > button.card");
+	if (!cardId || card?.dataset.cardId !== cardId) {
+		for (const old of Array.from(slot.querySelectorAll(":scope > .card"))) old.remove();
+		if (!cardId) return null;
+		card = buildHandCard(cardId, false, undefined, inspectorView);
+		card.className = "card slotCard";
+		card.style.width = "100%";
+		card.style.height = "100%";
+		card.style.margin = "0";
+		slot.appendChild(card);
+	}
+	const image = card.querySelector<HTMLImageElement>(".slotCardImg");
+	const definition = resolveCard(cardId);
+	if (image && definition?.img) setThumbnailSource(image, definition.img);
+	for (const badge of Array.from(card.querySelectorAll(":scope > .markerTag, :scope > .allyStatsRow, :scope > .equipAttachTag"))) {
+		badge.remove();
+	}
+	return card;
 }
 
 function hideMulliganModal(): void {
@@ -2424,6 +2460,12 @@ function renderPileModal(): void {
 	if (!modal || !title || !grid) return;
 	const sideLabel = activePileSide === "you" ? "Você" : "Oponente";
 	title.textContent = `${sideLabel} • ${pileLabel(activePileWhich)}`;
+	const cards = pileCards(activePileSide, activePileWhich);
+	const hideFace = activePileWhich === "deck" && !isMatchFinished;
+	const renderKey = JSON.stringify([activePileSide, activePileWhich, hideFace,
+		cards.map(cardId => [cardId, hideFace ? cardBackAssetForSide(activePileSide) : resolveCard(cardId)?.img])]);
+	if (grid.dataset.renderKey === renderKey) return;
+	grid.dataset.renderKey = renderKey;
 	grid.innerHTML = "";
 	grid.style.display = "grid";
 	grid.style.gridTemplateColumns = "repeat(auto-fill, minmax(63px, 1fr))";
@@ -2456,7 +2498,6 @@ function renderPileModal(): void {
 		tabs.appendChild(tab);
 	}
 
-	const cards = pileCards(activePileSide, activePileWhich);
 	if (!cards.length) {
 		const empty = document.createElement("div");
 		empty.style.opacity = "0.75";
@@ -2498,11 +2539,15 @@ function renderVisiblePileSlot(slotId: string, countId: string, cards: string[],
 	const countEl = document.getElementById(countId);
 	if (countEl) countEl.textContent = String(cards.length);
 	if (!slotEl) return;
-	for (const old of Array.from(slotEl.querySelectorAll(":scope > .deckVisualCard"))) old.remove();
-	if (!cards.length) return;
 	const side: BattleSide = slotId.startsWith("you") ? "you" : "ai";
 	const topCardId = String(cards[cards.length - 1] || "").trim();
 	const topCard = resolveCard(topCardId);
+	const source = hideFace ? cardBackAssetForSide(side) : (topCard?.img || CARD_BACK_ASSET);
+	const renderKey = JSON.stringify([Math.min(3, cards.length), topCardId, hideFace, source]);
+	if (slotEl.dataset.pileRenderKey === renderKey) return;
+	slotEl.dataset.pileRenderKey = renderKey;
+	for (const old of Array.from(slotEl.querySelectorAll(":scope > .deckVisualCard"))) old.remove();
+	if (!cards.length) return;
 	for (let layer = 0; layer < Math.min(3, cards.length); layer += 1) {
 		const cardEl = document.createElement("div");
 		cardEl.className = "card slotCard deckVisualCard";
@@ -2516,7 +2561,7 @@ function renderVisiblePileSlot(slotId: string, countId: string, cards: string[],
 		cardEl.style.zIndex = String(10 + layer);
 		const image = document.createElement("img");
 		image.className = "slotCardImg";
-		setThumbnailSource(image, hideFace ? cardBackAssetForSide(side) : (topCard?.img || CARD_BACK_ASSET));
+		setThumbnailSource(image, source);
 		image.alt = hideFace ? "Carta virada" : (topCard?.name || topCardId || "Carta");
 		cardEl.appendChild(image);
 		if (layer === Math.min(3, cards.length) - 1 && !hideFace) {
@@ -2556,7 +2601,10 @@ function bindPileSlots(): void {
 }
 
 function clearChoiceBoardHighlights() {
-	for (const element of activeChoiceHighlightedElements) element.classList.remove("choiceBoardHighlight");
+	for (const element of activeChoiceHighlightedElements) {
+		element.classList.remove("choiceBoardHighlight");
+		element.removeAttribute("data-choice-kind");
+	}
 	activeChoiceHighlightedElements = [];
 }
 
@@ -2595,6 +2643,7 @@ function applyChoiceBoardHighlights(payload: any) {
 		if (!element || seen.has(element)) continue;
 		seen.add(element);
 		element.classList.add("choiceBoardHighlight");
+		element.setAttribute("data-choice-kind", getFieldChoiceKind(payload));
 		activeChoiceHighlightedElements.push(element);
 	}
 }
@@ -2737,55 +2786,31 @@ function createChoiceDuelPanel(payload: any): HTMLElement | null {
 	if (!attackerId && !targetCardId) return null;
 
 	const panel = document.createElement("div");
-	panel.style.display = "grid";
-	panel.style.gap = "8px";
-	panel.style.padding = "10px";
-	panel.style.border = "1px solid rgba(255,255,255,.14)";
-	panel.style.borderRadius = "10px";
-	panel.style.background = "rgba(255,255,255,.04)";
+	panel.className = "choiceDuelPanel";
 
 	const title = document.createElement("div");
 	title.textContent = "Combate Atual";
-	title.style.fontSize = "12px";
-	title.style.fontWeight = "700";
-	title.style.opacity = "0.95";
+	title.className = "choiceContextTitle";
 	panel.appendChild(title);
 
 	const row = document.createElement("div");
-	row.style.display = "grid";
-	row.style.gridTemplateColumns = "1fr auto 1fr";
-	row.style.gap = "8px";
-	row.style.alignItems = "start";
+	row.className = "choiceDuelRow";
 
 	const buildMini = (cardId: string, name: string, tone: "atk" | "def") => {
 		const wrap = document.createElement("div");
-		wrap.style.display = "grid";
-		wrap.style.gap = "4px";
-		wrap.style.justifyItems = "center";
+		wrap.className = `choiceDuelUnit choiceDuelUnit--${tone}`;
 		const role = document.createElement("div");
 		role.textContent = tone === "atk" ? "Atacante" : "Alvo original";
-		role.style.fontSize = "12px";
-		role.style.fontWeight = "700";
+		role.className = "choiceDuelRole";
 		wrap.appendChild(role);
 		const card = resolveCard(cardId);
 		const thumb = document.createElement("img");
+		thumb.className = "choiceDuelImage";
 		setThumbnailSource(thumb, card?.img || CARD_BACK_ASSET);
 		thumb.alt = name || cardId || (tone === "atk" ? "Atacante" : "Alvo");
-		thumb.style.width = "72px";
-		thumb.style.height = "100px";
-		thumb.style.objectFit = "cover";
-		thumb.style.borderRadius = "8px";
-		thumb.style.border = tone === "atk"
-			? "1px solid rgba(248,113,113,.55)"
-			: "1px solid rgba(125,211,252,.55)";
-		thumb.style.boxShadow = "0 6px 14px rgba(0,0,0,.35)";
 		const label = document.createElement("div");
+		label.className = "choiceDuelName";
 		label.textContent = name || cardId || (tone === "atk" ? "Atacante" : "Alvo");
-		label.style.fontSize = "11px";
-		label.style.lineHeight = "1.15";
-		label.style.textAlign = "center";
-		label.style.maxWidth = "96px";
-		label.style.opacity = "0.95";
 		wrap.appendChild(thumb);
 		wrap.appendChild(label);
 		return wrap;
@@ -2793,10 +2818,9 @@ function createChoiceDuelPanel(payload: any): HTMLElement | null {
 
 	row.appendChild(buildMini(attackerId, attackerName, "atk"));
 	const versus = document.createElement("div");
-	versus.textContent = "x";
-	versus.style.alignSelf = "center";
-	versus.style.fontWeight = "800";
-	versus.style.opacity = "0.9";
+	versus.textContent = "→";
+	versus.className = "choiceDuelArrow";
+	versus.setAttribute("aria-label", "ataca");
 	row.appendChild(versus);
 	row.appendChild(buildMini(targetCardId, targetName, "def"));
 
@@ -2806,29 +2830,16 @@ function createChoiceDuelPanel(payload: any): HTMLElement | null {
 	const hasHpLine = Number.isFinite(targetHp) || Number.isFinite(targetMaxHp);
 	if (hasRiskLine || hasHpLine) {
 		const stats = document.createElement("div");
-		stats.style.display = "flex";
-		stats.style.flexWrap = "wrap";
-		stats.style.gap = "6px";
-		stats.style.justifyContent = "center";
+		stats.className = "choiceDuelStats";
 		if (hasRiskLine) {
 			const risk = document.createElement("div");
-			risk.style.padding = "3px 8px";
-			risk.style.borderRadius = "999px";
-			risk.style.border = "1px solid rgba(255,255,255,.18)";
-			risk.style.background = "rgba(15,23,42,.72)";
-			risk.style.fontSize = "11px";
-			risk.style.fontWeight = "700";
+			risk.className = "choiceStat";
 			risk.textContent = `ATK ${Number.isFinite(attackerAttack) ? attackerAttack : "?"} x RES ${Number.isFinite(targetResistance) ? targetResistance : "?"}`;
 			stats.appendChild(risk);
 		}
 		if (hasHpLine) {
 			const hp = document.createElement("div");
-			hp.style.padding = "3px 8px";
-			hp.style.borderRadius = "999px";
-			hp.style.border = "1px solid rgba(255,255,255,.18)";
-			hp.style.background = "rgba(15,23,42,.72)";
-			hp.style.fontSize = "11px";
-			hp.style.fontWeight = "700";
+			hp.className = "choiceStat";
 			hp.textContent = `Vida alvo ${Number.isFinite(targetHp) ? targetHp : "?"}/${Number.isFinite(targetMaxHp) ? targetMaxHp : "?"}`;
 			stats.appendChild(hp);
 		}
@@ -2843,43 +2854,23 @@ function createCounteredCardPanel(payload: any): HTMLElement | null {
 	if (!cardId) return null;
 	const card = resolveCard(cardId);
 	const panel = document.createElement("div");
-	panel.style.display = "grid";
-	panel.style.gridTemplateColumns = "64px minmax(0, 1fr)";
-	panel.style.gap = "10px";
-	panel.style.alignItems = "center";
-	panel.style.padding = "10px";
-	panel.style.border = "1px solid rgba(248,113,113,.55)";
-	panel.style.borderRadius = "8px";
-	panel.style.background = "rgba(127,29,29,.22)";
+	panel.className = "choiceCounteredPanel";
 
 	const image = document.createElement("img");
 	setThumbnailSource(image, card?.img || CARD_BACK_ASSET);
 	image.alt = card?.name || cardId;
-	image.style.width = "64px";
-	image.style.height = "88px";
-	image.style.objectFit = "cover";
-	image.style.borderRadius = "6px";
-	image.style.border = "1px solid rgba(255,255,255,.22)";
 	panel.appendChild(image);
 
 	const copy = document.createElement("div");
-	copy.style.display = "grid";
-	copy.style.gap = "3px";
+	copy.className = "choiceOptionText";
 	const label = document.createElement("div");
 	label.textContent = "Carta a responder";
-	label.style.fontSize = "11px";
-	label.style.fontWeight = "700";
-	label.style.textTransform = "uppercase";
-	label.style.opacity = "0.85";
+	label.className = "choiceContextTitle";
 	const name = document.createElement("div");
 	name.textContent = card?.name || cardId;
-	name.style.fontSize = "14px";
-	name.style.fontWeight = "700";
+	name.className = "choiceCounteredName";
 	const description = document.createElement("div");
-	description.textContent = String(card?.text || card?.descricao || "Anule esta magia ou truque antes que o efeito seja resolvido.");
-	description.style.fontSize = "12px";
-	description.style.lineHeight = "1.25";
-	description.style.opacity = "0.92";
+	description.textContent = String(card?.text || card?.description || card?.descricao || "Anule esta magia ou truque antes que o efeito seja resolvido.");
 	copy.append(label, name, description);
 	panel.appendChild(copy);
 	return panel;
@@ -2923,10 +2914,8 @@ function showEffectChoiceModal(payload: any) {
 	fieldChoices.hide();
 	pendingFieldChoicePayload = null;
 	modal.setAttribute("aria-modal", "true");
-	const isMobileChoiceLayout = window.innerWidth <= 980;
 	const denseChoiceCards = options.length >= 12;
-	const choiceCardWidth = denseChoiceCards ? 68 : 72;
-	const choiceCardHeight = denseChoiceCards ? 94 : 100;
+	modal.classList.toggle("choiceSheetModal--collection", options.length > 6);
 	activeChoiceId = String(payload?.choiceId || "");
 	activeChoiceTitleText = String(payload?.title || "Escolha pendente");
 	title.textContent = activeChoiceTitleText;
@@ -2945,36 +2934,25 @@ function showEffectChoiceModal(payload: any) {
 	if (!hasCombatContext) pendingFieldChoicePayload = { ...payload, options };
 
 	const layout = document.createElement("div");
-	layout.style.display = "grid";
-	layout.style.gridTemplateColumns = isMobileChoiceLayout ? "1fr" : "minmax(0, 1fr) minmax(180px, 220px)";
-	layout.style.gap = "10px";
-	layout.style.alignItems = "start";
+	layout.className = "effectChoiceLayout";
 
 	const choicesWrap = document.createElement("div");
-	choicesWrap.style.display = "grid";
-	choicesWrap.style.gap = "10px";
+	choicesWrap.className = "effectChoiceOptions";
 
-	const previewWrap = document.createElement("div");
-	previewWrap.style.display = "grid";
-	previewWrap.style.gap = "6px";
-	previewWrap.style.alignContent = "start";
-	previewWrap.style.minWidth = "0";
+	const previewWrap = document.createElement("details");
+	previewWrap.className = "choicePreview";
+	const previewToggle = document.createElement("summary");
+	previewToggle.textContent = "Consultar carta e detalhes";
+	previewWrap.appendChild(previewToggle);
 	const previewImg = document.createElement("img");
-	previewImg.style.width = "100%";
-	previewImg.style.maxWidth = window.innerWidth <= 980 ? "160px" : "220px";
-	previewImg.style.borderRadius = "8px";
-	previewImg.style.border = "1px solid rgba(255,255,255,.16)";
+	previewImg.className = "choicePreviewImage";
 	previewImg.src = asAssetPath(CARD_BACK_ASSET);
 	previewImg.alt = "Prévia";
-	previewImg.style.filter = "none";
-	previewImg.style.justifySelf = "center";
 	const previewMeta = document.createElement("div");
-	previewMeta.style.fontSize = "13px";
-	previewMeta.style.opacity = "0.9";
-	previewMeta.style.whiteSpace = "pre-line";
-	previewMeta.textContent = "Passe o mouse em uma opção para pré-visualizar.";
+	previewMeta.className = "choicePreviewMeta";
+	previewMeta.textContent = "Passe o mouse ou use o foco em uma opção. No celular, segure a carta para consultar.";
 	const attackerSummary = buildChoiceAttackerSummary(payload);
-	if (attackerSummary) {
+	if (attackerSummary && !hasCombatContext) {
 		const infoBox = document.createElement("div");
 		infoBox.style.padding = "10px 12px";
 		infoBox.style.border = "1px solid rgba(255,255,255,.14)";
@@ -2984,25 +2962,21 @@ function showEffectChoiceModal(payload: any) {
 		infoBox.style.lineHeight = "1.35";
 		infoBox.style.whiteSpace = "pre-line";
 		infoBox.textContent = attackerSummary;
-		previewWrap.appendChild(infoBox);
+		choicesWrap.appendChild(infoBox);
 	}
 	const duelPanel = createChoiceDuelPanel(payload);
 	if (duelPanel) choicesWrap.appendChild(duelPanel);
 	const counteredCardPanel = createCounteredCardPanel(payload);
+	if (counteredCardPanel) choicesWrap.appendChild(counteredCardPanel);
 	const timeoutMs = Number(payload?.timeoutMs || 0);
+	const timeoutInfo = document.createElement("div");
 	if (timeoutMs > 0) {
-		const seconds = Math.max(1, Math.floor(timeoutMs / 1000));
-		const timeoutInfo = document.createElement("div");
-		timeoutInfo.style.fontSize = "12px";
-		timeoutInfo.style.opacity = "0.95";
-		timeoutInfo.textContent = `⏱ Você tem ${seconds}s para escolher. Após isso, o jogo escolhe aleatoriamente.`;
-		previewWrap.appendChild(timeoutInfo);
+		timeoutInfo.className = "choiceTimeoutNote";
+		timeoutInfo.textContent = "Ao fim do prazo, o jogo escolhe aleatoriamente.";
 	}
 	startCountdown("cardChoiceCountdown", "cardChoiceCountdownValue", timeoutMs, "choice");
-	if (!isMobileChoiceLayout) {
-		previewWrap.appendChild(previewImg);
-		previewWrap.appendChild(previewMeta);
-	}
+	previewWrap.append(previewImg, previewMeta);
+	let hasPreviewCard = false;
 
 	const isMultiSelect = payload?.multiSelect === true;
 	const selectedOptionIds = new Set<string>();
@@ -3019,15 +2993,13 @@ function showEffectChoiceModal(payload: any) {
 	if (isMultiSelect) {
 		submitButton = document.createElement("button");
 		submitButton.type = "button";
-		submitButton.className = "primary";
-		submitButton.style.marginTop = "8px";
+		submitButton.className = "btn primary choiceSubmit";
 		submitButton.onclick = () => {
 			if (!room || !activeChoiceId) return;
 			room.send("effect_choice_submit", { choiceId: activeChoiceId, optionId: Array.from(selectedOptionIds).join("|") });
 			hideCardChoiceModal(false);
 		};
 		updateSubmitState();
-		previewWrap.appendChild(submitButton);
 	}
 	const hasSide = options.some((option: any) => option?.side != null);
 	const sideGroups = hasSide
@@ -3041,6 +3013,7 @@ function showEffectChoiceModal(payload: any) {
 	for (const group of sideGroups) {
 		if (!group.options.length) continue;
 		const groupTitle = document.createElement("div");
+		groupTitle.className = "choiceGroupTitle";
 		groupTitle.textContent = group.label;
 		groupTitle.style.fontSize = "12px";
 		groupTitle.style.fontWeight = "700";
@@ -3048,20 +3021,17 @@ function showEffectChoiceModal(payload: any) {
 		choicesWrap.appendChild(groupTitle);
 
 		const groupGrid = document.createElement("div");
-		groupGrid.style.display = "grid";
-		groupGrid.style.gridTemplateColumns = `repeat(auto-fill, minmax(${choiceCardWidth}px, 1fr))`;
-		groupGrid.style.gap = "8px";
+		groupGrid.className = denseChoiceCards ? "choiceOptionsGrid choiceOptionsGrid--dense" : "choiceOptionsGrid";
 
 		for (const option of group.options) {
+		const negative = isNegativeChoiceOption(option);
+		const isAction = hasCombatContext || !!payload?.activatedCardId || negative || (!option?.lane && !option?.cardId);
 		const item = document.createElement("div");
-		item.style.display = "grid";
-		item.style.gap = "4px";
-		item.style.alignContent = "start";
+		item.className = isAction ? "choiceOption choiceOption--action" : "choiceOption";
 		const button = document.createElement("button");
 		button.type = "button";
-		button.className = "card slotCard";
-		button.style.width = `${choiceCardWidth}px`;
-		button.style.height = `${choiceCardHeight}px`;
+		button.className = isAction ? "choiceAction" : "card slotCard choiceCard";
+		button.classList.toggle("choiceAction--secondary", negative);
 		const disabled = !!option?.disabled;
 		button.style.cursor = disabled ? "not-allowed" : "pointer";
 		if (disabled) button.style.opacity = "0.45";
@@ -3072,13 +3042,13 @@ function showEffectChoiceModal(payload: any) {
 		if (cardId) button.dataset.cardId = cardId;
 		const card = resolveCard(cardId);
 		button.classList.toggle("choiceCardMuted", visual.muted);
-		if (card?.img) {
+		if (!negative && card?.img) {
 			const image = document.createElement("img");
-			image.className = "slotCardImg";
+			image.className = isAction ? "choiceActionImage" : "slotCardImg";
 			setThumbnailSource(image, card.img);
 			image.alt = card.name || cardId;
 			button.appendChild(image);
-		} else {
+		} else if (!isAction) {
 			const fallback = document.createElement("div");
 			fallback.className = "slotCardFallback";
 			fallback.textContent = String(option?.label || "Escolher");
@@ -3087,14 +3057,24 @@ function showEffectChoiceModal(payload: any) {
 		button.title = disabled
 			? String(option?.disabledReason || option?.label || "Indisponível")
 			: String(option?.label || cardId || "Escolher");
-		button.onmouseenter = () => {
+		const updatePreview = () => {
 			if (!cardId) return;
-			setInspector(cardId);
 			setThumbnailSource(previewImg, card?.img || CARD_BACK_ASSET);
+			previewImg.alt = card?.name || cardId;
 			previewImg.style.filter = visual.muted ? "grayscale(1) saturate(0.15) contrast(1.05) brightness(0.92)" : "none";
 			previewMeta.textContent = [String(option?.description || option?.label || "").trim(), cardPreviewDetails(cardId, card, false, false)].filter(Boolean).join("\n\n");
 		};
-		if (cardId) bindMobileCardInspect(item, cardId);
+		if (!hasPreviewCard && !negative && card?.img) {
+			updatePreview();
+			hasPreviewCard = true;
+		}
+		const inspectOption = () => {
+			updatePreview();
+			if (cardId) setInspector(cardId);
+		};
+		button.onmouseenter = inspectOption;
+		button.onfocus = inspectOption;
+		if (cardId && !negative) bindMobileCardInspect(item, cardId);
 		button.onclick = () => {
 			if (disabled) return;
 			if (!room || !activeChoiceId) return;
@@ -3108,37 +3088,41 @@ function showEffectChoiceModal(payload: any) {
 				}
 				const selected = selectedOptionIds.has(currentId);
 				button.classList.toggle("selected", selected);
-				button.style.outline = selected ? "2px solid #ffd54f" : "";
-				button.style.outlineOffset = selected ? "2px" : "";
+				button.setAttribute("aria-pressed", String(selected));
 				updateSubmitState();
 				return;
 			}
 			room.send("effect_choice_submit", { choiceId: activeChoiceId, optionId: String(option?.id || "") });
 			hideCardChoiceModal(false);
 		};
+		if (isMultiSelect) button.setAttribute("aria-pressed", "false");
 		item.appendChild(button);
 		const optionText = document.createElement("div");
-		optionText.style.fontSize = denseChoiceCards ? "10px" : "11px";
-		optionText.style.lineHeight = "1.2";
-		optionText.style.opacity = "0.95";
-		optionText.style.minHeight = denseChoiceCards ? "22px" : "24px";
-		optionText.style.whiteSpace = "pre-line";
-		optionText.textContent = String(option?.description || option?.label || "");
-		item.appendChild(optionText);
+		optionText.className = "choiceOptionText";
+		const optionLabel = document.createElement("strong");
+		optionLabel.textContent = String(option?.label || card?.name || "Escolher");
+		optionText.appendChild(optionLabel);
+		const description = String(option?.description || "").trim();
+		if (description) {
+			const detail = document.createElement("span");
+			detail.textContent = description;
+			optionText.appendChild(detail);
+		} else if (hasCombatContext && String(option?.id || "").startsWith("block-")) {
+			const detail = document.createElement("span");
+			detail.textContent = negative ? "Manter o ataque no alvo original." : "Recebe o ataque no lugar do alvo original e fica exaurido.";
+			optionText.appendChild(detail);
+		}
+		if (isAction) button.appendChild(optionText);
+		else item.appendChild(optionText);
 		groupGrid.appendChild(item);
 		}
 		choicesWrap.appendChild(groupGrid);
 	}
 
-	if (counteredCardPanel) choicesWrap.appendChild(counteredCardPanel);
-
-	if (isMobileChoiceLayout) {
-		layout.style.gridTemplateColumns = "1fr";
-		previewWrap.style.order = "-1";
-	}
-
 	layout.appendChild(choicesWrap);
-	layout.appendChild(previewWrap);
+	if (timeoutMs > 0) layout.appendChild(timeoutInfo);
+	if (hasPreviewCard) layout.appendChild(previewWrap);
+	if (submitButton) layout.appendChild(submitButton);
 	grid.appendChild(layout);
 	modal.style.display = "flex";
 }
@@ -3148,9 +3132,16 @@ function renderDeckSlot(slotId: "you-deck" | "ai-deck", countId: "youDeckCount" 
 	const countEl = document.getElementById(countId);
 	if (countEl) countEl.textContent = String(Math.max(0, Number(total || 0)));
 	if (!slotEl) return;
-	for (const old of Array.from(slotEl.querySelectorAll(":scope > .deckVisualCard"))) old.remove();
-	if (Number(total || 0) <= 0) return;
+	if (Number(total || 0) <= 0) {
+		for (const old of Array.from(slotEl.querySelectorAll(":scope > .deckVisualCard"))) old.remove();
+		return;
+	}
 	const side: BattleSide = slotId === "you-deck" ? "you" : "ai";
+	const existingImage = slotEl.querySelector<HTMLImageElement>(":scope > .deckVisualCard .slotCardImg");
+	if (existingImage) {
+		setThumbnailSource(existingImage, cardBackAssetForSide(side));
+		return;
+	}
 	const back = document.createElement("div");
 	back.className = "card slotCard slotCardBack deckVisualCard";
 	back.style.width = "100%";
@@ -3215,7 +3206,8 @@ function renderEnvSlot(slotId: "you-env" | "ai-env", envCardId: string | null, a
 	const slotEl = document.getElementById(slotId);
 	if (!slotEl) return;
 	const side: BattleSide = slotId === "you-env" ? "you" : "ai";
-	for (const oldCard of Array.from(slotEl.querySelectorAll(":scope > .card"))) oldCard.remove();
+	const cardId = String(envCardId || "").trim();
+	const cardEl = syncBoardCard(slotEl, cardId, { cardId, side, lane: "env" });
 	slotEl.classList.remove("dropTarget");
 	slotEl.ondragenter = null;
 	slotEl.ondragover = null;
@@ -3248,20 +3240,13 @@ function renderEnvSlot(slotId: "you-env" | "ai-env", envCardId: string | null, a
 			tryPlayCard(draggedCardId);
 		};
 	}
-	const cardId = String(envCardId || "").trim();
-	if (!cardId) return;
-	const cardEl = buildHandCard(cardId, false, undefined, { cardId, side, lane: "env" });
-	cardEl.className = "card slotCard";
-	cardEl.style.width = "100%";
-	cardEl.style.height = "100%";
-	cardEl.style.margin = "0";
+	if (!cardEl) return;
 	slotEl.onmousemove = () => setHoveredInspector({ cardId, side, lane: "env" });
 	slotEl.onmouseleave = () => setHoveredInspector(null);
 	slotEl.onclick = () => {
 		const target = { cardId, side, lane: "env" } as const;
 		setInspector(target);
 	};
-	slotEl.appendChild(cardEl);
 }
 
 function canHighlightHandCard(cardId: string): boolean {
@@ -3289,12 +3274,27 @@ function renderSideHand(containerId: "youHand" | "aiHand", cards: string[], sele
 	const container = document.getElementById(containerId);
 	if (!container) return;
 	const previousCards = previousHandCards[containerId] || [];
-	container.innerHTML = "";
+	if (containerId === "aiHand") {
+		const count = document.getElementById("enemyHandCount");
+		if (count) count.textContent = `${cards.length} ${cards.length === 1 ? "carta" : "cartas"}`;
+	}
 	if (!cards.length) {
 		previousHandCards[containerId] = [];
-		container.innerHTML = `<div style="opacity:.7;font-size:12px;padding:4px">—</div>`;
+		if (container.querySelector(".handCard") || !container.children.length) {
+			container.innerHTML = `<div style="opacity:.7;font-size:12px;padding:4px">—</div>`;
+		}
+		queueHandStackLayout(containerId);
 		return;
 	}
+	const available = new Map<string, HTMLElement[]>();
+	for (const card of Array.from(container.querySelectorAll<HTMLElement>(":scope > .handCard"))) {
+		if (card.classList.contains("slotCardBack") === selectable) continue;
+		const key = card.dataset.cardId || "";
+		const copies = available.get(key) || [];
+		copies.push(card);
+		available.set(key, copies);
+	}
+	const nextCards: HTMLElement[] = [];
 	const newEntryFlags = selectable
 		? getNewHandEntryFlags(cards, previousCards)
 		: cards.map((_, index) => index >= previousCards.length);
@@ -3302,7 +3302,7 @@ function renderSideHand(containerId: "youHand" | "aiHand", cards: string[], sele
 	for (const cardId of cards) {
 		if (selectable) {
 			const selected = cardId === selectedHandCardId;
-			const cardEl = buildHandCard(cardId, selected, () => {
+			const onClick = () => {
 					setInspector({ cardId, side: "you", lane: "hand" });
 					selectedHandCardId = cardId;
 					if (view.selectedCardEl) view.selectedCardEl.textContent = selectedHandCardId;
@@ -3311,19 +3311,26 @@ function renderSideHand(containerId: "youHand" | "aiHand", cards: string[], sele
 						return;
 					}
 					renderSideHand("youHand", cards, true);
-				}, { cardId, side: "you", lane: "hand" });
+				};
+			const cardEl = available.get(cardId)?.shift()
+				|| buildHandCard(cardId, selected, onClick, { cardId, side: "you", lane: "hand" });
+			cardEl.onclick = onClick;
+			cardEl.classList.toggle("is-selected", selected);
 			cardEl.classList.toggle("is-playable", canHighlightHandCard(cardId));
-			container.appendChild(cardEl);
+			nextCards.push(cardEl);
 			if (newEntryFlags[renderedIndex]) animateEl(cardEl, "anim-draw");
 			renderedIndex += 1;
 			continue;
 		}
-		const backCardEl = buildBackCard("ai");
+		const backCardEl = available.get(cardId)?.shift() || buildBackCard("ai");
 		backCardEl.dataset.cardId = cardId;
-		container.appendChild(backCardEl);
+		const image = backCardEl.querySelector<HTMLImageElement>(".slotCardImg");
+		if (image) setThumbnailSource(image, cardBackAssetForSide("ai"));
+		nextCards.push(backCardEl);
 		if (newEntryFlags[renderedIndex]) animateEl(backCardEl, "anim-draw");
 		renderedIndex += 1;
 	}
+	reconcileChildren(container, nextCards);
 	previousHandCards[containerId] = cards.slice();
 	queueHandStackLayout(containerId);
 }
@@ -3336,25 +3343,7 @@ function applyHandStackLayout(containerId: "youHand" | "aiHand"): void {
 		layoutPlayerHand(container);
 		return;
 	}
-	container.classList.remove("handStacked");
-	container.style.removeProperty("--hand-overlap");
-	if (!window.matchMedia("(max-width: 980px) and (orientation: portrait) and (pointer: coarse)").matches) return;
-	const cards = Array.from(container.querySelectorAll(":scope > .handCard")) as HTMLElement[];
-	if (cards.length <= 1) return;
-	const parent = container.parentElement as HTMLElement | null;
-	if (!parent) return;
-	const availableWidth = Math.max(parent.getBoundingClientRect().width - 16, 1);
-	const firstCardRect = cards[0].getBoundingClientRect();
-	const cardWidth = firstCardRect.width || cards[0].offsetWidth || 1;
-	const gap = parseFloat(getComputedStyle(container).gap) || 0;
-	const totalWidth = (cardWidth * cards.length) + (gap * Math.max(cards.length - 1, 0));
-	if (totalWidth <= availableWidth) return;
-	const requiredOverlap = (totalWidth - availableWidth) / Math.max(cards.length - 1, 1);
-	const maxOverlap = cardWidth * 0.58;
-	const overlap = Math.min(requiredOverlap, maxOverlap);
-	if (overlap <= 0) return;
-	container.classList.add("handStacked");
-	container.style.setProperty("--hand-overlap", `${overlap}px`);
+	layoutOpponentHand(container);
 }
 
 const handStackLayoutFrames: Record<"youHand" | "aiHand", number> = { youHand: 0, aiHand: 0 };
@@ -3369,6 +3358,11 @@ if (playerHand) {
 	const observer = new ResizeObserver(() => queueHandStackLayout("youHand"));
 	for (const element of [playerHand, document.getElementById("board"), document.querySelector(".boardWrap")]) {
 		if (element) observer.observe(element);
+	}
+	const opponentHand = document.getElementById("aiHand");
+	if (opponentHand) {
+		const observer = new ResizeObserver(() => queueHandStackLayout("aiHand"));
+		observer.observe(opponentHand);
 	}
 }
 
@@ -3399,7 +3393,9 @@ function renderLane(zoneId: "you-field" | "ai-field" | "you-support" | "ai-suppo
 		if (existingCard && previousCards[index] && previousCards[index] !== incomingCardId) {
 			if (!consumeLanePileFlight(zoneId, previousCards[index])) spawnDeathGhost(slotEl, existingCard);
 		}
-		for (const oldCard of Array.from(slotEl.querySelectorAll(":scope > .card"))) oldCard.remove();
+		const side: BattleSide = zoneId.startsWith("you") ? "you" : "ai";
+		const lane: InspectorLane = zoneId.endsWith("field") ? "field" : "support";
+		const cardEl = syncBoardCard(slotEl, incomingCardId, { cardId: incomingCardId, side, lane, index });
 		slotEl.classList.remove("clickable", "selected", "dropTarget", "combat-target");
 		slotEl.onclick = null;
 		slotEl.ondragenter = null;
@@ -3437,25 +3433,18 @@ function renderLane(zoneId: "you-field" | "ai-field" | "you-support" | "ai-suppo
 			};
 		}
 		const cardId = cards[index];
-		if (!cardId) {
+		if (!cardEl) {
 			bindMobileCardInspect(slotEl, null);
 			slotEl.onmousemove = null;
 			slotEl.onmouseleave = null;
 			continue;
 		}
-		const side: BattleSide = zoneId.startsWith("you") ? "you" : "ai";
-		const lane: InspectorLane = zoneId.endsWith("field") ? "field" : "support";
 		bindMobileCardInspect(slotEl, { cardId, side, lane, index });
-		const cardEl = buildHandCard(cardId, false, undefined, { cardId, side, lane, index });
-		cardEl.className = "card slotCard";
-		if (zoneId === "you-field" && tappedBySide.you.has(index)) cardEl.classList.add("tapped");
-		if (zoneId === "ai-field" && tappedBySide.ai.has(index)) cardEl.classList.add("tapped");
-		if (zoneId === "you-field" && canSelectCombatAttacker(index)) cardEl.classList.add("can-attack");
-		if (zoneId === "ai-field" && canSelectCombatTarget({ type: "ally", side: "ai", index })) cardEl.classList.add("can-be-targeted");
+		cardEl.classList.toggle("tapped", lane === "field" && tappedBySide[side].has(index));
+		cardEl.classList.toggle("can-attack", zoneId === "you-field" && canSelectCombatAttacker(index));
+		cardEl.classList.toggle("can-be-targeted", zoneId === "ai-field" && canSelectCombatTarget({ type: "ally", side: "ai", index }));
 		const renderSide: BattleSide = side;
-		if ((zoneId === "you-field" || zoneId === "ai-field") && untapPulseBySide[renderSide] && justUntappedBySide[renderSide].has(index)) {
-			cardEl.classList.add("just-untapped");
-		}
+		cardEl.classList.toggle("just-untapped", lane === "field" && untapPulseBySide[renderSide] && justUntappedBySide[renderSide].has(index));
 		cardEl.style.width = "100%";
 		cardEl.style.height = "100%";
 		cardEl.style.margin = "0";
@@ -3477,7 +3466,6 @@ function renderLane(zoneId: "you-field" | "ai-field" | "you-support" | "ai-suppo
 		}
 		slotEl.onmousemove = () => setHoveredInspector({ cardId, side, lane, index });
 		slotEl.onmouseleave = () => setHoveredInspector(null);
-		slotEl.appendChild(cardEl);
 		if (!previousCards[index] && cardId) animateEl(cardEl, "anim-play");
 		if (activeIndex === index) slotEl.classList.add("selected");
 		if (zoneId === "ai-field" && canSelectCombatTarget({ type: "ally", side: "ai", index })) slotEl.classList.add("combat-target");
@@ -3513,16 +3501,14 @@ function renderLane(zoneId: "you-field" | "ai-field" | "you-support" | "ai-suppo
 function renderLeaderSlot(slotId: "you-leader" | "ai-leader", leaderId: string, currentHpValue?: number): void {
 	const slotEl = document.getElementById(slotId);
 	if (!slotEl) return;
-	for (const oldCard of Array.from(slotEl.querySelectorAll(":scope > .card"))) oldCard.remove();
 	const leader = String(leaderId || "").trim();
-	if (!leader) return;
 	const side: BattleSide = slotId === "you-leader" ? "you" : "ai";
-	const cardEl = buildHandCard(leader, false, undefined, { cardId: leader, side, lane: "leader" });
-	cardEl.className = "card slotCard";
+	const cardEl = syncBoardCard(slotEl, leader, { cardId: leader, side, lane: "leader" });
+	if (!cardEl) return;
 	const tapped = side === "you" ? currentMyLeaderTapped : currentEnemyLeaderTapped;
 	const leaderPowerReady = side === "you" && hasManualLeaderPower(leader) && canUseLeaderPower();
-	if (tapped) cardEl.classList.add("tapped");
-	if (untapPulseBySide[side] && justUntappedLeaderBySide[side]) cardEl.classList.add("just-untapped");
+	cardEl.classList.toggle("tapped", tapped);
+	cardEl.classList.toggle("just-untapped", untapPulseBySide[side] && justUntappedLeaderBySide[side]);
 	setChosenReady(cardEl, leaderPowerReady);
 	cardEl.style.width = "100%";
 	cardEl.style.height = "100%";
@@ -3543,7 +3529,6 @@ function renderLeaderSlot(slotId: "you-leader" | "ai-leader", leaderId: string, 
 		setInspector(target);
 	};
 
-	slotEl.appendChild(cardEl);
 }
 
 function getFieldVitalMarksForSide(side: BattleSide, index: number): number {
@@ -3610,23 +3595,23 @@ function getFragImage(playerState: any): string {
 function renderFragments(containerId: "you-fragsDock" | "ai-fragsDock", total: unknown, maxTotal: unknown, fragImage: string, spentFirst: boolean = false): void {
 	const container = document.getElementById(containerId);
 	if (!container) return;
-	container.innerHTML = "";
+	const existing = Array.from(container.querySelectorAll<HTMLElement>(":scope > .fragToken"));
+	const tokens: HTMLElement[] = [];
 	const cap = Math.max(0, Math.min(10, Number(maxTotal || 10)));
 	const amount = Math.max(0, Math.min(cap, Number(total || 0)));
 	const activeStartIndex = spentFirst ? 1 : 0;
 	const fragmentBackImage = asAssetPath(CARD_BACK_ASSET);
 	for (let index = 0; index < cap; index += 1) {
-		const token = document.createElement("div");
-		token.className = "fragToken ready";
+		const token = existing[index] || document.createElement("div");
+		token.classList.add("fragToken", "ready");
 		token.style.setProperty("--frag-img", `url('${fragImage}')`);
 		token.style.setProperty("--frag-back-img", `url('${fragmentBackImage}')`);
-		if (spentFirst && index === 0) {
-			token.classList.add("spent");
-			token.title = "Fragmento indisponível por Caminhos Perigosos";
-		}
-		if (index >= activeStartIndex && index < activeStartIndex + amount) token.classList.add("on");
-		container.appendChild(token);
+		token.classList.toggle("spent", spentFirst && index === 0);
+		token.title = spentFirst && index === 0 ? "Fragmento indisponível por Caminhos Perigosos" : "";
+		token.classList.toggle("on", index >= activeStartIndex && index < activeStartIndex + amount);
+		tokens.push(token);
 	}
+	reconcileChildren(container, tokens);
 }
 
 function formatPhaseLabel(phase: unknown): string {

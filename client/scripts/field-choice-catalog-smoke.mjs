@@ -124,6 +124,7 @@ for (const slot of ['p1', 'p2']) {
     { p1: new Set(), p2: new Set() }, { p1: new Set(), p2: new Set() },
     choices(agiota, 'Aranhas Negras, Agiota', 'a', payments));
   assert.ok(payments.some(request => request.direct && request.payload.options.some(option => option.id === 'agiota-no')));
+  assert.ok(payments.some(request => request.payload.choiceKind === 'activation'));
   scenarios++;
 
   const executor = fixture(slot);
@@ -140,6 +141,8 @@ for (const slot of ['p1', 'p2']) {
     { p1: new Set(), p2: new Set() }, { p1: new Set(), p2: new Set() },
     choices(executor, 'Aranhas Negras, Executor', 'a', displacements, `support-${other}-4`));
   const displacement = displacements.find(request => request.payload.title.includes('para deslocar'));
+  assert.ok(displacements.some(request => request.payload.choiceKind === 'replacement'),
+    'Full-field replacement has its own presentation, not an ordinary target selection');
   assert.ok(displacement?.direct);
   assert.equal(displacement.payload.options.length, 22, 'Executor includes 10 allies, 10 supports and 2 environments');
   assert.deepEqual(new Set(displacement.payload.options.map(option => option.lane)), new Set(['field', 'support', 'env']));

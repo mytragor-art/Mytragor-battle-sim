@@ -132,6 +132,16 @@
   --battle-glow:125,211,252;
 }
 
+#board .choiceBoardHighlight[data-choice-kind="activation"],
+#board .choiceBoardHighlight[data-choice-kind="activation"] > .card.slotCard {
+  --battle-glow:196,160,255;
+}
+
+#board .choiceBoardHighlight[data-choice-kind="replacement"],
+#board .choiceBoardHighlight[data-choice-kind="replacement"] > .card.slotCard {
+  --battle-glow:255,177,95;
+}
+
 #board .card.slotCard.can-attack:not(.tapped),
 #board .card.slotCard.can-be-targeted,
 #board .card.slotCard.chosenReady,

@@ -1,3 +1,19 @@
+export function layoutOpponentHand(container: HTMLElement): void {
+	const cards = Array.from(container.querySelectorAll<HTMLElement>(":scope > .handCard"));
+	const style = getComputedStyle(container);
+	const availableWidth = Math.max(0, container.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight));
+	const cardWidth = cards[0]?.offsetWidth || 0;
+	const requiredOverlap = cards.length > 1
+		? (cards.length * cardWidth - availableWidth) / (cards.length - 1)
+		: 0;
+	const overlap = cards.length > 1
+		? Math.min(Math.max(0, cardWidth - 8), Math.max(cardWidth * 0.18, requiredOverlap))
+		: 0;
+	container.style.setProperty("--opponent-hand-overlap", `${overlap}px`);
+	container.classList.remove("handStacked");
+	container.style.removeProperty("--hand-overlap");
+}
+
 export function layoutPlayerHand(container: HTMLElement): void {
 	const cards = Array.from(container.querySelectorAll<HTMLElement>(":scope > .handCard"));
 	container.style.setProperty("--player-hand-count", String(cards.length));

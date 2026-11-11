@@ -43,7 +43,10 @@
 
   <div class="col" id="arenaCol">
     <div class="handDock" id="enemyHandDock">
-      <div class="handDockTitle">Mão do Oponente</div>
+      <div class="opponentHandHeader">
+        <div class="handDockTitle">Mão do Oponente</div>
+        <span id="enemyHandCount">0 cartas</span>
+      </div>
       <div class="hand" id="aiHand" aria-label="Mão do oponente"></div>
     </div>
     <div class="boardWrap">
@@ -292,14 +295,14 @@
 
 <div id="cardChoiceModal" class="modal choiceSheetModal" style="display:none;z-index:10000;" role="dialog" aria-labelledby="cardChoiceTitle">
   <div class="modalBox choiceSheetBox">
-    <div class="choiceSheetHeader" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+    <div class="choiceSheetHeader">
       <div>
         <h3 id="cardChoiceTitle" style="margin:0">Escolha uma carta</h3>
         <div id="cardChoiceCountdown" class="choiceCountdown" style="display:none;">Tempo restante: <span id="cardChoiceCountdownValue">40</span>s</div>
       </div>
-      <div class="choiceSheetControls" style="display:flex;gap:8px;align-items:center;">
-        <button class="btn" onclick="minimizeCardChoice()">Minimizar</button>
-        <button class="btn" onclick="hideCardChoice()">Fechar</button>
+      <div class="choiceSheetControls">
+        <button class="btn" onclick="minimizeCardChoice()" title="Ocultar a janela sem responder à escolha">Ver campo</button>
+        <button class="btn" onclick="hideCardChoice()" title="Cancelar a escolha atual">Cancelar</button>
       </div>
     </div>
     <div class="gridMini" id="cardChoiceGrid"></div>

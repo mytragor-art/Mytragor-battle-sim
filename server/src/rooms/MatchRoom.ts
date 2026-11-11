@@ -343,6 +343,7 @@ export class MatchRoom extends Room<MatchState> {
 			choiceId,
 			title: payload.title,
 			options: payload.options,
+			choiceKind: payload.choiceKind,
 			sourceCardId: this.inferChoiceSourceCardId(payload),
 			activatedCardId: payload.activatedCardId,
 			attackerId: payload.attackerId,
@@ -656,4 +657,3 @@ export class MatchRoom extends Room<MatchState> {
 		return true;
 	}
 }
-

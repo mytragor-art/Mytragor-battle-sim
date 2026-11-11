@@ -84,6 +84,10 @@ vivo e não exaurido; ao interpor, fica exaurido e recebe o ataque no lugar do a
 Decisões de combate, incluindo Interpor, mantêm o modal centralizado com imagens, nomes e
 identificação do atacante e do alvo original antes das opções. Atualizações do campo não
 substituem esse modal pela seleção direta nas cartas.
+Os modais usam fundo azul-noite opaco, detalhes dourados e ações textuais para recusar efeitos.
+O contexto e os custos ficam visíveis; a prévia ampliada e os detalhes da carta podem ser abertos
+em “Consultar carta e detalhes”. “Ver campo” minimiza sem responder, enquanto “Cancelar” envia
+o cancelamento da escolha. Listas longas rolam sem esconder o cabeçalho; a espera usa uma janela compacta.
 
 Teste de regressão (servidor e cliente): `npm.cmd --prefix server run build`, seguido de
 `npm.cmd --prefix client run smoke:interpor-combat`.
@@ -114,6 +118,11 @@ no PC, a altura da mão acompanha o espaço liberado pelos fragmentos, mantendo 
 visível, e somente a carta apontada ou focada sobe para consulta.
 Cliques, arraste e consulta por toque são preservados. Em celulares deitados, a base da mão é recortada
 para não invadir a linha dos personagens; a consulta continua mostrando a carta inteira.
+O oponente tem uma faixa centralizada com contagem de cartas, versos de tamanho fixo e sobreposição
+adaptativa em todas as telas; mãos muito numerosas permitem rolagem sem ocultar cartas nem revelar sua frente.
+Cartas e imagens que não mudaram são reaproveitadas nas atualizações da partida, evitando piscadas
+na mão, no campo e nas pilhas. Compras e entradas reais continuam animadas; estados, custos disponíveis
+e marcadores continuam sendo atualizados normalmente.
 Na preparação do seu turno, todas as cartas com custo disponível e condições de entrada atendidas
 recebem brilho, independentemente da seleção. O destaque acompanha os fragmentos restantes a cada
 atualização da partida. Truques reativos não recebem esse brilho: seus gatilhos continuam sendo
@@ -126,6 +135,11 @@ Efeitos com alvos identificáveis no campo, como Mãos Flamejantes, permitem esc
 cartas destacadas, por clique, toque ou Enter/Espaço, sem abrir modal. Uma indicação curta mostra
 a instrução, o prazo e as opções de cancelar ou confirmar seleções múltiplas, quando permitidas.
 Os mesmos IDs e limites de escolha são enviados ao servidor; dano, custos, gatilhos e regras não mudam.
+As escolhas diferenciam alvo de efeito (azul), ativação (violeta) e substituição de aliado com campo
+cheio (laranja). A instrução identifica a ação também por texto e fica junto das cartas destacadas,
+abaixo ou acima delas conforme o espaço; escolhas que abrangem os dois campos usam a divisória central
+quando há espaço sem cobrir as cartas.
+O aviso acompanha redimensionamento, rolagem e atualizações do campo, sem cobrir as cartas quando há espaço.
 Buscas, cartas fora da mesa e escolhas ambíguas continuam no modal original centralizado.
 Os modais de confirmação de ataque e espera também permanecem na posição original.
 

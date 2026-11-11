@@ -1663,6 +1663,7 @@ export class SoloMatchRoom extends Room<MatchState> {
 			choiceId,
 			title: payload.title,
 			options: payload.options,
+			choiceKind: payload.choiceKind,
 			sourceCardId: this.inferChoiceSourceCardId(payload),
 			activatedCardId: payload.activatedCardId,
 			attackerId: payload.attackerId,

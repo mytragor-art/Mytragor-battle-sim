@@ -10,6 +10,7 @@ export type AttackTarget = { type: "leader" } | { type: "ally"; targetPos: numbe
 export type ChoiceOption = { id: string; label: string; description?: string; side?: Slot; lane?: "field" | "support" | "env" | "hand" | "deck" | "grave"; pos?: number; cardId?: string; disabled?: boolean; disabledReason?: string };
 export type ChoicePayload = {
 	title: string;
+	choiceKind?: "activation" | "target" | "replacement";
 	options: ChoiceOption[];
 	allowCancel?: boolean;
 	multiSelect?: boolean;
@@ -730,7 +731,7 @@ function handleDestroyedAllyTriggers(
 			reactionOptions.push({ id: `bem-react-${index}`, label: cid, side: ownerSlot, lane: "hand", pos: index, cardId: cid, description: `Pagar ${cost} fragmento(s) para convocar um aliado Marcial do cemitério.` });
 		}
 		if (reactionOptions.length) {
-			askChoice(ownerSlot, { title: `${destroyedCardId}: deseja ativar Alerta de Fuga?`, options: [...reactionOptions, { id: "bem-react-skip", label: "Não ativar" }], allowCancel: true }, (optionId) => {
+			askChoice(ownerSlot, { title: `${destroyedCardId}: deseja ativar Alerta de Fuga?`, choiceKind: "activation", options: [...reactionOptions, { id: "bem-react-skip", label: "Não ativar" }], allowCancel: true }, (optionId) => {
 				if (!optionId || optionId === "bem-react-skip") return;
 				const reactionPick = reactionOptions.find((option) => option.id === optionId);
 				if (!reactionPick || !reactionPick.cardId) return;
@@ -920,6 +921,7 @@ function maybeOfferCounterToActivation(
 		defenderSlot,
 		{
 			title: `Interrupção Perfeita: deseja anular ${activatedCardId}?`,
+			choiceKind: "activation",
 			activatedCardId,
 			options: [...counterOptions, { id: "counter-no", label: "Não ativar", description: `Deixar ${activatedCardId} resolver normalmente.` }],
 			allowCancel: true
@@ -1683,7 +1685,7 @@ function triggerAutoEffects(
 			{ id: "student-yes", label: "Ativar efeito", description: "Coloque 1 carta da mão no fundo do baralho e compre 1 carta." },
 			{ id: "student-no", label: "Não ativar", description: "Não use o efeito agora." }
 		];
-		askChoice(slot, { title: `${cardId}: deseja ativar o efeito?`, options: activateOptions, allowCancel: true }, (activateId) => {
+		askChoice(slot, { title: `${cardId}: deseja ativar o efeito?`, choiceKind: "activation", options: activateOptions, allowCancel: true }, (activateId) => {
 			if (!activateId || activateId === "student-no") {
 				broadcast("effect_log", { slot, cardId, effect, text: `${cardId}: você escolheu não ativar o efeito.` });
 				return;
@@ -1737,7 +1739,7 @@ function triggerAutoEffects(
 			{ id: "xama-yes", label: "Ativar efeito", description: "Desloque 1 Kobold do seu cemitério e compre 1 carta." },
 			{ id: "xama-no", label: "Não ativar", description: "Não use o efeito agora." }
 		];
-		askChoice(slot, { title: `${cardId}: deseja ativar o efeito?`, options: activateOptions, allowCancel: true }, (activateId) => {
+		askChoice(slot, { title: `${cardId}: deseja ativar o efeito?`, choiceKind: "activation", options: activateOptions, allowCancel: true }, (activateId) => {
 			if (!activateId || activateId === "xama-no") {
 				broadcast("effect_log", { slot, cardId, effect, text: `${cardId}: você escolheu não ativar o efeito.` });
 				return;
@@ -2774,7 +2776,7 @@ export function playCard(state: MatchState, slot: Slot, cardId: string, targetPo
 				...agiotaOptions,
 				{ id: "agiota-no", label: "Não usar", description: `Pagar o custo normal de ${cost} fragmento(s).` }
 			];
-			askChoice(slot, { title: `${cardId}: deseja usar Aranhas Negras, Agiota?`, options, allowCancel: true }, (optionId) => {
+			askChoice(slot, { title: `${cardId}: deseja usar Aranhas Negras, Agiota?`, choiceKind: "activation", options, allowCancel: true }, (optionId) => {
 				if (!optionId || optionId === "agiota-no") {
 					playCard(state, slot, cardId, targetPos, `${sanitizedCardKind} __NO_AGIOTA`.trim(), broadcast, summoned, triggeredLeaderThisTurn, askChoice);
 					return;
@@ -3188,7 +3190,7 @@ export function playCard(state: MatchState, slot: Slot, cardId: string, targetPo
 			});
 		}
 		if (!replaceOptions.length) return void broadcast("error", { text: "Campo cheio. Só é possível substituir aliados que já estavam em campo desde turnos anteriores." });
-		askChoice(slot, { title: `${cardId}: escolha um aliado do turno anterior para substituir`, options: replaceOptions, allowCancel: true, sourceCardId: cardId }, (optionId) => {
+		askChoice(slot, { title: `${cardId}: escolha um aliado do turno anterior para substituir`, choiceKind: "replacement", options: replaceOptions, allowCancel: true, sourceCardId: cardId }, (optionId) => {
 			if (!optionId) return;
 			const pick = replaceOptions.find((option) => option.id === optionId);
 			if (!pick || typeof pick.pos !== "number" || !pick.cardId) return;
@@ -3601,6 +3603,7 @@ export function attack(
 				];
 				askChoice(enemySlot, {
 					title: `${emboscadaCardId}: deseja ativar contra ${attackerId}?`,
+					choiceKind: "activation",
 					options,
 					allowCancel: true,
 					attackerId,
@@ -3662,6 +3665,7 @@ export function attack(
 			];
 			askChoice(enemySlot, {
 				title: `${contricaoCardId}: deseja negar o ataque de ${attackerId}?`,
+				choiceKind: "activation",
 				options,
 				allowCancel: true,
 				attackerId,

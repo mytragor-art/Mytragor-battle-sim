@@ -11,6 +11,7 @@ export type FieldChoiceOption = {
 
 type FieldChoicePayload = {
 	title?: string;
+	choiceKind?: "activation" | "target" | "replacement";
 	options: FieldChoiceOption[];
 	allowCancel?: boolean;
 	multiSelect?: boolean;
@@ -20,6 +21,10 @@ type FieldChoicePayload = {
 };
 
 type ResolveTarget = (option: FieldChoiceOption) => HTMLElement | null;
+
+export function getFieldChoiceKind(payload: Pick<FieldChoicePayload, "choiceKind">): NonNullable<FieldChoicePayload["choiceKind"]> {
+	return payload.choiceKind || "target";
+}
 
 export function canChooseOnField(options: readonly FieldChoiceOption[], resolve: ResolveTarget): boolean {
 	const targets = new Set<HTMLElement>();
@@ -51,7 +56,7 @@ export function createFieldChoiceController(
 	if (!bar || !title || !hint || !actions || !countdown || !board) {
 		throw new Error("Interface de escolha direta no campo incompleta.");
 	}
-	const attributes = ["tabindex", "role", "aria-label", "aria-pressed"] as const;
+	const attributes = ["tabindex", "role", "aria-label", "aria-pressed", "data-choice-kind"] as const;
 	let state: {
 		payload: FieldChoicePayload;
 		selected: Set<string>;
@@ -60,6 +65,42 @@ export function createFieldChoiceController(
 		controls: Map<string, HTMLButtonElement>;
 		confirm: HTMLButtonElement | null;
 	} | null = null;
+
+	const positionBar = () => {
+		if (!state || bar.hidden) return;
+		const targets = Array.from(state.targets.keys(), element => element.getBoundingClientRect())
+			.filter(rect => rect.width > 0 && rect.height > 0);
+		const bounds = targets.length ? {
+			left: Math.min(...targets.map(rect => rect.left)),
+			right: Math.max(...targets.map(rect => rect.right)),
+			top: Math.min(...targets.map(rect => rect.top)),
+			bottom: Math.max(...targets.map(rect => rect.bottom))
+		} : board.getBoundingClientRect();
+		const size = bar.getBoundingClientRect();
+		const margin = 8;
+		const gap = 12;
+		const maxTop = Math.max(margin, window.innerHeight - size.height - margin);
+		const center = board.querySelector(".centerBar")?.getBoundingClientRect();
+		const centerTop = center ? (center.top + center.bottom - size.height) / 2 : 0;
+		const spansCenter = center && bounds.top < center.top && bounds.bottom > center.bottom
+			&& targets.every(rect => rect.bottom <= centerTop || rect.top >= centerTop + size.height);
+		let top = bounds.bottom + gap;
+		if (spansCenter) {
+			top = centerTop;
+		} else if (top > maxTop) {
+			top = bounds.top - size.height - gap;
+			if (top < margin) {
+				top = center ? centerTop
+					: (window.innerHeight - size.height) / 2;
+			};
+		}
+		const left = Math.max(size.width / 2 + margin,
+			Math.min((bounds.left + bounds.right) / 2, window.innerWidth - size.width / 2 - margin));
+		bar.style.left = `${left}px`;
+		bar.style.top = `${Math.max(margin, Math.min(top, maxTop))}px`;
+	}
+
+	const positionObserver = new ResizeObserver(positionBar);
 
 	function clearTargets() {
 		if (!state) return;
@@ -117,6 +158,7 @@ export function createFieldChoiceController(
 			state.targets.set(element, option);
 			state.saved.set(element, attributes.map(attribute => element.getAttribute(attribute)));
 			element.classList.add("choiceBoardHighlight");
+			element.setAttribute("data-choice-kind", getFieldChoiceKind(state.payload));
 			if (option.lane === "support" && element.classList.contains("attachedEquipment")
 				&& Number.isInteger(option.pos) && Number(option.pos) >= 0 && Number(option.pos) < 5) {
 				element.classList.add("choiceEquipmentExpanded");
@@ -127,12 +169,19 @@ export function createFieldChoiceController(
 			element.setAttribute("aria-label", [option.label || option.cardId || "Escolher alvo", option.description].filter(Boolean).join(". "));
 		}
 		updateSelection();
+		positionBar();
 	}
 
 	const hide = () => {
 		clearTargets();
 		state = null;
 		bar.hidden = true;
+		bar.removeAttribute("data-choice-kind");
+		bar.style.removeProperty("left");
+		bar.style.removeProperty("top");
+		positionObserver.disconnect();
+		window.removeEventListener("resize", positionBar);
+		window.removeEventListener("scroll", positionBar, true);
 		countdown.style.display = "none";
 		actions.replaceChildren();
 	};
@@ -174,10 +223,15 @@ export function createFieldChoiceController(
 				confirm: null as HTMLButtonElement | null
 			};
 			state = choice;
+			const kind = getFieldChoiceKind(payload);
+			bar.setAttribute("data-choice-kind", kind);
 			title.textContent = payload.title || "Escolha um alvo";
+			const purpose = kind === "activation" ? "Ativar efeito"
+				: kind === "replacement" ? "Substituir aliado" : "Escolher alvo";
 			hint.textContent = payload.multiSelect
-				? "Selecione as cartas destacadas e confirme."
-				: "Clique ou toque em uma carta destacada.";
+				? `${purpose}: selecione as cartas destacadas e confirme.`
+				: kind === "replacement" ? "Substituir aliado: clique em quem sairá para abrir a vaga."
+					: `${purpose}: clique ou toque em uma carta destacada.`;
 			for (const option of payload.options) {
 				if (resolve(option)) continue;
 				const button = document.createElement("button");
@@ -207,8 +261,12 @@ export function createFieldChoiceController(
 				button.onclick = () => { if (state === choice) cancel(); };
 				actions.appendChild(button);
 			}
-			refresh();
 			bar.hidden = false;
+			refresh();
+			positionObserver.observe(bar);
+			positionObserver.observe(board);
+			window.addEventListener("resize", positionBar);
+			window.addEventListener("scroll", positionBar, true);
 			return true;
 		}
 	};

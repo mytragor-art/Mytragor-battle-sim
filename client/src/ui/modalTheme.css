@@ -1,0 +1,180 @@
+.modal {
+	--dialog-gold: #d6b570;
+	--dialog-muted: #b6becb;
+	--dialog-line: rgba(214, 181, 112, .25);
+	background: rgba(3, 6, 12, .66);
+	padding: 12px;
+}
+
+.modal .modalBox {
+	box-sizing: border-box;
+	max-width: calc(100vw - 24px);
+	max-height: min(86vh, 86dvh);
+	background: linear-gradient(160deg, #141d2b, #0b101b 75%);
+	border: 1px solid var(--dialog-line);
+	border-radius: 14px;
+	padding: 18px;
+	color: #f0eadc;
+	box-shadow: 0 20px 70px rgba(0, 0, 0, .6), inset 0 1px rgba(255, 236, 194, .05);
+	font-family: Arial, sans-serif;
+	font-size: 13px;
+	line-height: 1.4;
+	scrollbar-color: #78633d #0b101b;
+}
+
+.modal h2, .modal h3 {
+	color: #e6cc94;
+	font-family: Georgia, serif;
+	line-height: 1.2;
+	text-shadow: none;
+}
+
+.modal .btn, .modal .choiceAction, .modal .choicePreview > summary {
+	font-family: Arial, sans-serif;
+	text-transform: none;
+	letter-spacing: normal;
+	text-shadow: none;
+}
+
+.modal .btn {
+	min-height: 40px;
+	height: auto;
+	padding: 8px 12px;
+	border: 1px solid rgba(195, 205, 222, .23);
+	border-radius: 8px;
+	background: #1b2535;
+	color: #ede8dd;
+	box-shadow: none;
+	font-size: 13px;
+}
+
+.modal .btn.primary {
+	background: linear-gradient(180deg, #dfc488, #b99755);
+	border-color: #e5cb91;
+	color: #211b10;
+	font-weight: 700;
+}
+
+.modal .btn:hover:not(:disabled), .modal .choiceAction:hover:not(:disabled) {
+	border-color: var(--dialog-gold);
+	filter: brightness(1.1);
+}
+
+.modal button:focus-visible, .modal summary:focus-visible {
+	outline: 2px solid #f1dba7;
+	outline-offset: 3px;
+}
+
+.modal button:disabled {
+	opacity: .45;
+	cursor: not-allowed;
+}
+
+#cardChoiceModal .choiceSheetBox {
+	display: flex;
+	flex-direction: column;
+	width: 480px;
+	max-width: calc(100vw - 24px);
+	overflow: hidden;
+}
+
+#cardChoiceModal.choiceSheetModal--collection .choiceSheetBox {
+	width: 680px;
+}
+
+.choiceSheetHeader {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 10px 16px;
+	padding-bottom: 12px;
+	border-bottom: 1px solid var(--dialog-line);
+	flex: 0 0 auto;
+}
+
+.choiceSheetHeader > :first-child { flex: 1 1 180px; min-width: 0; }
+.choiceSheetHeader h3 { font-size: 20px; overflow-wrap: anywhere; }
+.choiceSheetControls { display: flex; flex-wrap: wrap; gap: 6px; }
+.choiceSheetControls .btn { min-height: 34px; padding: 5px 9px; font-size: 12px; }
+
+#cardChoiceGrid {
+	min-height: 0;
+	overflow: auto;
+	margin-top: 12px;
+	padding: 3px;
+}
+
+.effectChoiceLayout, .effectChoiceOptions { display: grid; gap: 10px; min-width: 0; }
+.choiceContextTitle, .choiceGroupTitle { color: var(--dialog-gold); font-size: 12px; font-weight: 700; }
+.choiceDuelPanel { display: grid; gap: 8px; padding: 10px; border-radius: 9px; background: #101927; border: 1px solid rgba(195, 205, 222, .12); }
+.choiceDuelRow { display: grid; grid-template-columns: minmax(0, 1fr) 18px minmax(0, 1fr); align-items: start; gap: 6px; }
+.choiceDuelUnit { display: grid; grid-template-columns: 48px minmax(0, 1fr); align-items: center; gap: 5px 8px; min-width: 0; }
+.choiceDuelRole { grid-column: 1 / -1; color: #bfc9d9; font-size: 12px; }
+.choiceDuelUnit--atk .choiceDuelRole { color: #efa18e; }
+.choiceDuelImage { width: 48px; height: 67px; object-fit: cover; border: 1px solid #64748b; border-radius: 5px; }
+.choiceDuelUnit--atk .choiceDuelImage { border-color: #b87262; }
+.choiceDuelName { font-size: 12px; font-weight: 700; overflow-wrap: anywhere; }
+.choiceDuelArrow { align-self: center; color: var(--dialog-gold); font-size: 20px; }
+.choiceDuelStats { display: flex; flex-wrap: wrap; gap: 6px; }
+.choiceStat { font-size: 12px; color: #e7decb; background: #1c2737; border-radius: 5px; padding: 3px 7px; }
+
+.choiceOptionsGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 10px; }
+.choiceOption { display: grid; align-content: start; gap: 5px; min-width: 0; }
+.choiceOption--action { grid-column: 1 / -1; }
+.modal .choiceCard { width: 76px !important; height: 106px !important; border-radius: 7px; justify-self: center; }
+.modal .choiceOptionsGrid--dense .choiceCard { width: 68px !important; height: 95px !important; }
+.choiceOptionText { display: grid; gap: 4px; min-width: 0; white-space: pre-line; font-size: 12px; line-height: 1.35; overflow-wrap: anywhere; }
+.choiceOptionText > strong { color: #f0eadc; font-weight: 700; }
+.choiceOptionText > span { color: var(--dialog-muted); font-weight: 400; }
+.choiceOption:not(.choiceOption--action) .choiceOptionText { text-align: center; font-size: 11px; }
+
+.modal .choiceAction {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	width: 100%;
+	min-height: 46px;
+	padding: 9px 12px;
+	border: 1px solid rgba(214, 181, 112, .4);
+	border-radius: 8px;
+	background: #222b38;
+	color: #f0eadc;
+	text-align: left;
+	cursor: pointer;
+}
+
+.modal .choiceAction--secondary { background: #111925; border-color: rgba(195, 205, 222, .2); }
+.choiceActionImage { flex: 0 0 auto; width: 32px; height: 45px; object-fit: cover; border-radius: 4px; }
+.modal .choiceAction.selected, .modal .choiceCard.selected { outline: 2px solid var(--dialog-gold); outline-offset: 2px; }
+.choiceCounteredPanel { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px; border-left: 2px solid #b87262; background: #101927; border-radius: 6px; }
+.choiceCounteredPanel > img { width: 48px; height: 67px; object-fit: cover; border-radius: 5px; }
+.choiceCounteredName { color: #f0eadc; font-weight: 700; font-size: 14px; }
+.choicePreview { border-top: 1px solid var(--dialog-line); padding-top: 8px; }
+.choicePreview > summary { cursor: pointer; color: var(--dialog-gold); padding: 5px 0; font-size: 12px; }
+.choicePreviewImage { display: block; width: min(160px, 100%); height: auto; margin: 10px auto; border-radius: 8px; }
+.choicePreviewMeta { font-size: 12px; color: #ced4df; white-space: pre-line; overflow-wrap: anywhere; }
+.choiceTimeoutNote { color: var(--dialog-muted); font-size: 11px; }
+.modal .choiceSubmit { position: sticky; bottom: 0; width: 100%; }
+.modal .choiceCountdown { color: #e2c78e; font-size: 12px; text-shadow: none; letter-spacing: normal; }
+.modal .choiceCountdown.is-danger, .modal .choiceCountdown.is-danger span { color: #ff9a86; }
+
+.modal .waitingChoiceBox { width: 340px; padding: 22px; text-align: center; }
+.waitingChoiceIcon { color: var(--dialog-gold); font-size: 22px; }
+.waitingChoiceTitle { margin: 8px 0; font-size: 20px; }
+.waitingChoiceText { margin: 8px 0 12px; color: var(--dialog-muted); }
+.modal .attackConfirmBox { width: 390px; }
+.modal .attackConfirmBadge { color: #efa18e; border-color: rgba(239, 161, 142, .35); background: rgba(239, 161, 142, .07); }
+
+@media (max-width: 520px) {
+	.modal .modalBox { padding: 14px; }
+	.choiceSheetHeader { gap: 8px; padding-bottom: 10px; }
+	.choiceSheetHeader > :first-child { flex-basis: 100%; }
+	.choiceSheetHeader h3 { font-size: 19px; }
+	.choiceSheetControls .btn { min-height: 40px; }
+	.choiceDuelUnit { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+	.choiceDuelRole { grid-column: 1; }
+	.choiceDuelName { font-size: 12px; }
+	.attackConfirmActions { flex-wrap: wrap; }
+	.attackConfirmActions .btn { flex: 1; min-width: 100px; }
+}

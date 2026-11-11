@@ -32,9 +32,22 @@ class Element {
   removeAttribute(name) { this.attributes.delete(name); }
   querySelector() { return this.children[0] || null; }
   addEventListener(type, callback) { this.listeners.set(type, callback); }
+  getBoundingClientRect() {
+    return this.rect || { left: 400, right: 480, top: 200, bottom: 310, width: 80, height: 110 };
+  }
 }
 globalThis.Node = Element;
 globalThis.KeyboardEvent = class { constructor(key) { this.key = key; } };
+const windowListeners = new Map();
+globalThis.window = {
+  innerWidth: 1280, innerHeight: 900,
+  addEventListener: (type, callback) => windowListeners.set(type, callback),
+  removeEventListener: type => windowListeners.delete(type)
+};
+globalThis.ResizeObserver = class {
+  observe() {}
+  disconnect() {}
+};
 let scenarios = 0;
 for (const extension of ['js', 'ts']) {
   let helper = await readFile(new URL(`../src/ui/fieldChoices.${extension}`, import.meta.url), 'utf8');
@@ -123,6 +136,8 @@ for (const extension of ['js', 'ts']) {
   controller = createFieldChoiceController(resolve, id => { sent.push(id); controller.hide(); },
     () => { canceled++; controller.hide(); });
   const target = elements.get('you-ally-0');
+  const bar = elements.get('fieldChoiceBar');
+  bar.rect = { left: 0, right: 520, top: 0, bottom: 90, width: 520, height: 90 };
   target.setAttribute('role', 'group');
   target.setAttribute('tabindex', '-1');
   const dispatch = (element, key = null) => {
@@ -133,6 +148,9 @@ for (const extension of ['js', 'ts']) {
     return event;
   };
   controller.show({ options });
+  assert.equal(bar.getAttribute('data-choice-kind'), 'target');
+  assert.equal(target.getAttribute('data-choice-kind'), 'target');
+  assert.equal(bar.style.top, '322px', 'Place the prompt just below the cards instead of at the top of the screen');
   assert.equal(controller.active, true);
   assert.equal(elements.get('fieldChoiceBar').hidden, false);
   const invalid = dispatch(new Element());
@@ -143,7 +161,43 @@ for (const extension of ['js', 'ts']) {
   assert.equal(target.getAttribute('role'), 'group');
   assert.equal(target.getAttribute('tabindex'), '-1');
   assert.equal(target.classes.has('choiceBoardHighlight'), false);
+  assert.equal(target.getAttribute('data-choice-kind'), null, 'Remove the operation color after submitting');
+  assert.equal(windowListeners.size, 0, 'Remove positioning listeners when the choice closes');
   scenarios += 7;
+  for (const kind of ['activation', 'replacement']) {
+    controller.show({ options: [field], choiceKind: kind });
+    assert.equal(target.getAttribute('data-choice-kind'), kind);
+    assert.equal(bar.getAttribute('data-choice-kind'), kind);
+    assert.ok(elements.get('fieldChoiceHint').textContent.startsWith(kind === 'activation' ? 'Ativar efeito' : 'Substituir aliado'));
+    controller.refresh();
+    assert.equal(target.getAttribute('data-choice-kind'), kind, 'Preserve the operation color after state sync');
+    target.rect = { left: 400, right: 480, top: 780, bottom: 890, width: 80, height: 110 };
+    windowListeners.get('resize')();
+    assert.equal(bar.style.top, '678px', 'Move above low cards instead of covering them');
+    controller.hide();
+    assert.equal(target.getAttribute('data-choice-kind'), null);
+    assert.equal(bar.getAttribute('data-choice-kind'), null);
+    target.rect = null;
+    scenarios++;
+  }
+  const board = elements.get('board');
+  board.querySelector = () => ({ getBoundingClientRect: () => ({ top: 450, bottom: 500 }) });
+  const upper = elements.get('ai-ally-0');
+  upper.rect = { left: 400, right: 480, top: 100, bottom: 210, width: 80, height: 110 };
+  target.rect = { left: 400, right: 480, top: 700, bottom: 810, width: 80, height: 110 };
+  controller.show({ options: [field, options[6]] });
+  assert.equal(bar.style.top, '430px', 'Keep choices spanning both sides near the central divider');
+  controller.hide();
+  board.querySelector = Element.prototype.querySelector;
+  target.rect = upper.rect = null;
+  window.innerWidth = 390;
+  bar.rect = { left: 0, right: 374, top: 0, bottom: 90, width: 374, height: 90 };
+  controller.show({ options: [field] });
+  assert.equal(bar.style.left, '195px', 'Keep the prompt inside narrow viewports');
+  controller.hide();
+  window.innerWidth = 1280;
+  bar.rect = { left: 0, right: 520, top: 0, bottom: 90, width: 520, height: 90 };
+  scenarios += 2;
   controller.show({ options: options.slice(0, 3), multiSelect: true, minSelections: 1, maxSelections: 2 });
   const actions = elements.get('fieldChoiceActions');
   const confirm = actions.children.find(button => button.className === 'btn primary');
@@ -254,8 +308,8 @@ for (const extension of ['js', 'ts']) {
   scenarios += 7;
   const modalFunctions = parsed.statements.filter(node => ts.isFunctionDeclaration(node)
     && ['showEffectChoiceModal', 'createChoiceDuelPanel', 'createCounteredCardPanel', 'buildChoiceAttackerSummary',
-      'refreshFieldChoice'].includes(node.name?.text));
-  assert.equal(modalFunctions.length, 5);
+      'refreshFieldChoice', 'isNegativeChoiceOption', 'normalizeKind'].includes(node.name?.text));
+  assert.equal(modalFunctions.length, 7);
   const modalHarness = ts.transpileModule(`
     export function createModal(fieldChoices, canChooseOnField, resolveChoiceHighlightElement, slot, width) {
       const window = { innerWidth: width };
@@ -269,6 +323,7 @@ for (const extension of ['js', 'ts']) {
       const hideChoiceRestoreDock = () => {}, hideChoiceWaitingModal = () => {}, applyChoiceBoardHighlights = () => {};
       const clearChoiceBoardHighlights = () => {}, startCountdown = (...args) => calls.push({ countdown: args });
       const bindMobileCardInspect = () => {};
+      const cardPreviewDetails = id => 'Full details: ' + id, setInspector = () => {};
       const hideCardChoiceModal = sendCancel => {
         if (sendCancel) room.send('effect_choice_submit', { choiceId: activeChoiceId, optionId: null });
         fieldChoices.hide();
@@ -312,6 +367,10 @@ for (const extension of ['js', 'ts']) {
         for (const option of payload.options) {
           const button = descendants(choices).find(element => element.title === option.label);
           assert.ok(button, option.label);
+          if (option.id === 'block-cancel') {
+            assert.equal(descendants(button).some(element => element.src), false, 'Declining is an action, not a card');
+            assert.ok(descendants(button).some(element => element.textContent === 'Manter o ataque no alvo original.'));
+          }
           button.onclick();
           assert.deepEqual(modalTest.calls.at(-1), {
             type: 'effect_choice_submit', choiceId: payload.choiceId, optionId: option.id
@@ -326,6 +385,38 @@ for (const extension of ['js', 'ts']) {
   assert.equal(controller.active, true, 'Noncombat effects still use direct field selection');
   assert.equal(modal.style.display, 'none');
   controller.hide();
+  scenarios++;
+  const multi = createModal(controller, canChooseOnField, resolve, 'p1', 390);
+  multi.show({ choiceId: 'modal-multi', options: [
+    { id: 'grave-0', label: 'First card', cardId: 'first', lane: 'grave' },
+    { id: 'grave-1', label: 'Second card', cardId: 'second', lane: 'grave' },
+    { id: 'grave-2', label: 'Disabled card', cardId: 'third', lane: 'grave', disabled: true }
+  ], multiSelect: true, minSelections: 1, maxSelections: 1, submitLabel: 'Deslocar' });
+  let contents = descendants(elements.get('cardChoiceGrid'));
+  const confirmModal = contents.find(element => element.className === 'btn primary choiceSubmit');
+  const firstModal = contents.find(element => element.title === 'First card');
+  const secondModal = contents.find(element => element.title === 'Second card');
+  assert.equal(confirmModal.disabled, true);
+  firstModal.onclick();
+  assert.equal(firstModal.getAttribute('aria-pressed'), 'true');
+  assert.equal(confirmModal.textContent, 'Deslocar (1)');
+  secondModal.onclick();
+  assert.equal(secondModal.getAttribute('aria-pressed'), 'false', 'Modal selection limits remain enforced');
+  confirmModal.onclick();
+  assert.deepEqual(multi.calls.at(-1), { type: 'effect_choice_submit', choiceId: 'modal-multi', optionId: 'grave-0' });
+  scenarios++;
+  const counter = createModal(controller, canChooseOnField, resolve, 'p1', 1280);
+  counter.show({ choiceId: 'counter', activatedCardId: 'Mãos Flamejantes', options: [
+    { id: 'counter-0', label: 'Ativar Interrupção Perfeita', description: 'Pagar 2 fragmentos.', cardId: 'Interrupção Perfeita', lane: 'hand' },
+    { id: 'counter-no', label: 'Não ativar', description: 'Deixar a magia resolver.' }
+  ] });
+  contents = descendants(elements.get('cardChoiceGrid'));
+  assert.equal(elements.get('cardChoiceGrid').children[0].children[0].children[0].className, 'choiceCounteredPanel');
+  assert.ok(contents.some(element => element.textContent === 'Mãos Flamejantes'));
+  assert.ok(contents.some(element => element.textContent === 'Pagar 2 fragmentos.'));
+  assert.ok(contents.some(element => element.className === 'choicePreview'), 'Card details remain available without a permanent preview column');
+  contents.find(element => element.title === 'Não ativar').onclick();
+  assert.deepEqual(counter.calls.at(-1), { type: 'effect_choice_submit', choiceId: 'counter', optionId: 'counter-no' });
   scenarios++;
 }
 console.log(`Direct field choices: ${scenarios} JS/TS scenarios passed (12 characters, 10 equipment, IDs, keyboard, multiselect, cancel, state sync and cleanup).`);

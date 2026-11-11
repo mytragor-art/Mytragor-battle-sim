@@ -9,6 +9,7 @@ class Element {
       setProperty: (name, value) => this.properties.set(name, value),
       removeProperty: name => this.properties.delete(name)
     };
+    this.classList = { remove() {} };
   }
   closest() { return this.arena || null; }
 }
@@ -20,7 +21,27 @@ let scenarios = 0;
 for (const extension of ['js', 'ts']) {
   let source = await readFile(new URL(`../src/ui/handLayout.${extension}`, import.meta.url), 'utf8');
   if (extension === 'ts') source = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.ESNext } }).outputText;
-  const { layoutPlayerHand } = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
+  const { layoutPlayerHand, layoutOpponentHand } = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
+  for (const width of [180, 320, 800]) {
+    for (const count of [0, 1, 3, 7, 12, 20, 60]) {
+      const container = new Element();
+      container.clientWidth = width;
+      const cards = Array.from({ length: count }, () => ({ offsetWidth: 40 }));
+      container.querySelectorAll = () => cards;
+      layoutOpponentHand(container);
+      const overlap = parseFloat(container.properties.get('--opponent-hand-overlap'));
+      assert.ok(Number.isFinite(overlap) && overlap >= 0 && overlap <= 32);
+      if (count > 1) {
+        const spread = count * 40 - (count - 1) * overlap;
+        assert.ok(spread <= width - 48 + 0.001 || overlap === 32,
+          'Fit the opponent hand or keep each back visible and allow scrolling');
+      } else {
+        assert.equal(overlap, 0);
+      }
+      assert.equal(cards.length, count, 'Do not remove or reveal cards to fit the hand');
+      scenarios++;
+    }
+  }
   for (const scale of [0.8, 1]) {
     for (const fragmentBottom of [420, 470, 600]) {
       const container = new Element();
