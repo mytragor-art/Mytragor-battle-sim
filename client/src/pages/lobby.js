@@ -2,7 +2,7 @@
 import { bindLobbyHandlers, connectClient, createPrivateLobby, joinOrCreateLobby, joinPrivateLobby } from "../net/mp";
 import { resolveHttpBase, resolveServerEndpoint } from "../config/runtime";
 import { hydrateSavedDecks, readSavedDecks, resolveDeckAssetPath, resolveLeaderArtwork } from "../ui/deckStore";
-import { getLobbyInputs, log, renderMatches, renderPlayers, renderRooms, setReadyUI, setSlotPhase } from "../ui/lobbyView";
+import { getLobbyInputs, log, renderMatches, renderPlayers, renderRooms, setReadyUI, setSlotPhase, setLobbyDeckAvailability, setLobbyServerAvailable } from "../ui/lobbyView";
 import { getAvatarId, getDisplayName } from "../ui/profile";
 import { trackMatchStarted } from "../analytics";
 const view = getLobbyInputs();
@@ -79,6 +79,7 @@ async function sharePrivateCode() {
 }
 function applySelectedDeck(deck) {
     selectedDeck = deck;
+    setLobbyDeckAvailability(Boolean(deck?.leaderName && deck.cards.length > 0));
     if (view.leaderViewEl)
         view.leaderViewEl.textContent = selectedDeck?.leaderName || "—";
     if (view.deckCardsCountEl)
@@ -181,7 +182,7 @@ function cycleSelectedDeck(direction) {
     syncSelectedDeckFromUI();
 }
 function sendSelectedDeckReady() {
-    if (!room || !selectedDeck)
+    if (!room || !selectedDeck?.leaderName || !selectedDeck.cards.length)
         return false;
     room.send("choose_deck", { deckId: selectedDeck.id, leaderId: selectedDeck.leaderName, cards: selectedDeck.cards, accessories: selectedDeck.accessories || {} });
     room.send("choose_leader", { leaderId: selectedDeck.leaderName });
@@ -238,9 +239,11 @@ async function refreshRooms() {
         if (!resp.ok)
             throw new Error(`status_${resp.status}`);
         const data = await resp.json();
+        setLobbyServerAvailable(true);
         renderRoomList(Array.isArray(data?.rooms) ? data.rooms : []);
     }
     catch (error) {
+        setLobbyServerAvailable(false);
         log("ROOM_LIST_ERROR", { base, error: String(error) });
     }
 }
@@ -272,6 +275,10 @@ function startRoomPolling() {
 async function joinLobby(forceCreate = false) {
     if (isJoining || !view.endpointEl || !view.roomIdEl)
         return false;
+    if (!selectedDeck?.leaderName || !selectedDeck.cards.length) {
+        log("ERROR", { text: "Selecione um baralho com escolhido e cartas antes de entrar." });
+        return false;
+    }
     isJoining = true;
     try {
         const requestedRoomId = view.roomIdEl.value.trim() || undefined;
@@ -355,12 +362,17 @@ async function privateCodeExists(code) {
 async function enterPrivateLobby(mode) {
     if (isJoining || !view.endpointEl)
         return;
+    if (!selectedDeck?.leaderName || !selectedDeck.cards.length) {
+        log("ERROR", { text: "Selecione um baralho com escolhido e cartas antes de entrar." });
+        return;
+    }
     const code = setPrivateCode(view.privateCodeEl?.value || (mode === "create" ? generatePrivateCode() : ""));
     if (!code) {
         log("ERROR", { text: "Digite um código para entrar em sala privada." });
         return;
     }
     isJoining = true;
+    log("PRIVATE_CONNECTING");
     try {
         if (room)
             await leaveCurrentLobby();
@@ -383,8 +395,7 @@ async function enterPrivateLobby(mode) {
             view.roomIdViewEl.textContent = room.id;
         setPrivateCode(code);
         const displayName = getDisplayName();
-        if (displayName)
-            room.send("set_name", { name: displayName });
+        room.send("set_name", { name: displayName, avatarId: getAvatarId() });
         bindLobbyHandlers(room, {
             onAssignSlot: (msg) => {
                 mySlot = msg?.slot || null;
@@ -531,6 +542,7 @@ if (view.endpointEl)
 if (view.roomIdEl)
     view.roomIdEl.value = params.get("roomId")?.trim() || "";
 renderDeckSelector();
+renderPlayers([], null);
 void refreshSavedDecks();
 startRoomPolling();
 if (view.roomIdEl?.value)

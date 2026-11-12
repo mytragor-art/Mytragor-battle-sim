@@ -12,6 +12,9 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <link rel="stylesheet" href="../mobile.css" media="(max-width:880px)">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg-panel: linear-gradient(180deg, rgba(14,26,43,.92), rgba(8,14,26,.78));
@@ -1654,8 +1657,159 @@
       }
     }
   </style>
+  <style>
+    body.deckBuilder {
+      --bg-panel: #191b20f7;
+      --line: #ffffff20;
+      --txt: #e7e8eb;
+      --muted: #b4b7c1;
+      --gold-a: #e0bf79;
+      --gold-b: #e0bf79;
+      font-family: "Source Sans 3", sans-serif;
+    }
+    .deckBuilder * { letter-spacing: 0; }
+    .deckBuilder .panel { border-radius: 6px; box-shadow: none; padding: 12px; }
+    .deckBuilder .panel h2 { font-size: 16px; font-weight: 600; }
+    .deckBuilder .top .logoWrap::after { display: none; }
+    .deckBuilder .top .brandLogo { animation: none; filter: sepia(1) saturate(2) brightness(2); border-radius: 0; }
+    .deckBuilder .btn { border-radius: 4px; box-shadow: none; min-height: 36px; font: 600 13px/1.4 "Source Sans 3", sans-serif; background: #e0bf79; border: 1px solid #e0bf79; }
+    .deckBuilder .btn.ghost,
+    body.deckBuilder #btnAccessories,
+    body.deckBuilder #btnLimpar,
+    body.deckBuilder #btnVerDecks {
+      color: #e0e2e8; background: #ffffff08; border: 1px solid #ffffff29; box-shadow: none;
+    }
+    .deckBuilder .btn:not(:disabled):hover { filter: brightness(1.15); }
+    body.deckBuilder #btnVerDecks {
+      background: #343943;
+      color: #fff7e6;
+      border-color: #cbb17b;
+      font-weight: 700;
+    }
+    body.deckBuilder #btnVerDecks:hover {
+      background: #4a505b;
+      color: #ffffff;
+      border-color: #f0d398;
+      filter: none;
+    }
+    .deckBuilder .btn:disabled { background: #3b3d43; border-color: #ffffff16; color: #a4a7b0; }
+    body.deckBuilder #btnApplyPresetDeck { background: #244c42; border-color: #77b09d; color: #d7eee5; box-shadow: none; }
+    body.deckBuilder #btnBackMenu { background: #343943; color: #fff7e6; border: 1px solid #cbb17b; min-height: 44px; }
+    .deckBuilder input, .deckBuilder select { font-family: "Source Sans 3", sans-serif; }
+    .deckBuilder .filterToggle, .deckBuilder .filterSearchInput { border-radius: 4px; background: #121419; color: #e7e8eb; }
+    .deckBuilder .deck-slot { border-color: #ffffff12; background: #ffffff02; border-radius: 4px; color: #a0a4af; }
+    .deckBuilder .deck-slot.is-remaining { grid-column: 1 / -1; min-height: 56px; font-size: 13px; }
+    .deckBuilder .deck-slot.is-leader { color: #e0bf79; border-color: #e0bf7966; }
+    .deckBuilder .deck-card, .deckBuilder .pool-card { border-radius: 4px; background: #25272e; }
+    .deckBuilder :focus-visible { outline: 2px solid #f0d398; outline-offset: 3px; }
+    @media (min-width: 981px) {
+      .deckBuilder .container { gap: 10px; }
+      .deckBuilder .top { min-height: 56px; grid-template-columns: 88px minmax(0, 1fr); gap: 18px; padding-right: 150px; }
+      .deckBuilder .top .logoWrap { grid-column: 1; }
+      .deckBuilder .top .brandLogo { width: 88px; }
+      .deckBuilder h1 { grid-column: 2; font-size: 22px; color: #f3ead7; }
+      body.deckBuilder #btnBackMenu { position: fixed; top: 14px; right: 12px; left: auto; z-index: 30; }
+      .deckBuilder .board { grid-template-columns: 220px minmax(340px, .95fr) minmax(390px, 1.25fr); gap: 12px; }
+      .deckBuilder .deck-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: none; grid-auto-rows: minmax(56px, max-content); align-content: start; }
+      .deckBuilder .deck-card { min-height: 110px; font-size: 10px; }
+      .deckBuilder .pool-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(3, minmax(160px, 1fr)); }
+      .deckBuilder .pool-card img { width: 100%; height: 110px; object-fit: contain; }
+      .deckBuilder .deck-header { align-items: start; }
+      .deckBuilder .deck-actions { justify-content: start; }
+      .deckBuilder .deck-actions input { width: 100%; }
+    }
+    @media (min-width: 981px) and (max-width: 1180px) {
+      .deckBuilder .board { grid-template-columns: 190px minmax(300px, 1fr) minmax(350px, 1.15fr); gap: 8px; }
+      .deckBuilder .pool-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+    body.deckBuilder #deckList {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-rows: none;
+      grid-auto-rows: max-content;
+      align-content: start;
+      gap: 10px;
+      padding: 4px;
+    }
+    body.deckBuilder #deckList .deck-card {
+      position: relative;
+      display: block;
+      width: 100%;
+      min-height: 0;
+      aspect-ratio: 2 / 3;
+      padding: 0;
+      border: 1px solid #ffffff25;
+      border-radius: 4px;
+      background: #101216;
+      transition: border-color .15s ease;
+    }
+    body.deckBuilder #deckList .deck-card:hover { border-color: #e0bf79; }
+    body.deckBuilder #deckList .deck-card img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      border-radius: 3px;
+      object-fit: contain;
+      background: none;
+    }
+    body.deckBuilder #deckList .deck-copy-count,
+    body.deckBuilder #deckList .deck-leader-badge {
+      position: absolute;
+      z-index: 1;
+      right: 3px;
+      bottom: 3px;
+      min-width: 26px;
+      padding: 2px 6px;
+      border: 1px solid #e0bf79;
+      border-radius: 3px;
+      background: #17191ff5;
+      color: #fff1ce;
+      font: 700 15px/1.3 "Source Sans 3", sans-serif;
+      pointer-events: none;
+    }
+    body.deckBuilder #deckList .deck-leader-badge {
+      top: 3px;
+      left: 3px;
+      right: auto;
+      bottom: auto;
+      font-size: 10px;
+    }
+    body.deckBuilder #deckList .deck-card.is-leader { border-color: #e0bf79; cursor: default; }
+    @media (min-width: 981px) {
+      body.deckBuilder .container { height: 100dvh; }
+      body.deckBuilder .board { grid-template-rows: minmax(0, 1fr); }
+      body.deckBuilder .deck-panel {
+        display: grid;
+        grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+        align-content: stretch;
+      }
+      body.deckBuilder .deck-header { flex-direction: column; gap: 6px; }
+      body.deckBuilder .deck-header h2 { margin: 0; }
+      body.deckBuilder .deck-actions { gap: 4px; }
+      body.deckBuilder #deckList {
+        min-height: 0;
+        height: 100%;
+        max-height: none;
+        grid-template-columns: repeat(var(--deck-columns, 4), minmax(0, 1fr));
+        grid-template-rows: repeat(var(--deck-rows, 5), minmax(0, 1fr));
+        gap: 5px;
+      }
+      body.deckBuilder #deckList .deck-card { aspect-ratio: auto; height: 100%; min-height: 0; }
+      body.deckBuilder #deckList .deck-slot { min-height: 0; }
+      body.deckBuilder .pool-grid {
+        flex: 1;
+        min-height: 0;
+        grid-template-rows: repeat(3, minmax(0, 1fr));
+      }
+      body.deckBuilder .pool-card { min-height: 0; }
+      body.deckBuilder .pool-card img { height: 100%; min-height: 0; flex: 1; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      body.deckBuilder #deckList .deck-card { transition: none; }
+    }
+  </style>
 </head>
-<body>
+<body class="deckBuilder">
   <button id="btnBackMenu" class="btn" onclick="location.href='../../index.html'">Voltar ao menu</button>
 
   <div class="container">
@@ -1684,7 +1838,7 @@
 
       <section class="panel deck-panel mobileDeckDrawer">
         <div class="deck-header">
-          <h2>Seu baralho (41 espaços)</h2>
+          <h2>Seu baralho</h2>
           <div class="deck-actions">
             <input id="deckNameInput" type="text" placeholder="Nome do baralho">
             <button id="btnSalvar" class="btn" disabled>Salvar</button>
@@ -1697,7 +1851,7 @@
 
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
           <div id="deckSize" style="font-weight:800;color:var(--gold-a);">0/41 cartas</div>
-          <div id="deckMeta" style="font-size:11px;color:var(--muted);">(líder + 40)</div>
+          <div id="deckMeta" role="status" aria-live="polite" style="font-size:12px;color:var(--muted);">Escolha um líder · Faltam 40 cartas</div>
         </div>
 
         <div id="deckList" class="deck-grid"></div>
@@ -2727,45 +2881,97 @@
       });
     }
 
+    function fitDeckGrid() {
+      if (window.innerWidth < 981) return;
+      const count = deckList.children.length;
+      if (!count || !deckList.clientHeight || !deckList.clientWidth) return;
+      const hasRemaining = Boolean(deckList.querySelector('.is-remaining'));
+      const cardCount = count - Number(hasRemaining);
+      let bestColumns = 1;
+      let bestWidth = 0;
+      for (let columns = 1; columns <= Math.max(1, cardCount); columns++) {
+        const rows = Math.ceil(cardCount / columns) + Number(hasRemaining);
+        const width = Math.min((deckList.clientWidth - 8 - (columns - 1) * 5) / columns, ((deckList.clientHeight - 8 - (rows - 1) * 5) / rows) * 2 / 3);
+        if (width > bestWidth) {
+          bestWidth = width;
+          bestColumns = columns;
+        }
+      }
+      deckList.style.setProperty('--deck-columns', String(bestColumns));
+      deckList.style.setProperty('--deck-rows', String(Math.ceil(cardCount / bestColumns) + Number(hasRemaining)));
+    }
+
+    const deckGridObserver = new ResizeObserver(fitDeckGrid);
+    deckGridObserver.observe(deckList);
+
     function renderDeck() {
       deckList.innerHTML = '';
       const sortedDeck = [...deck].sort((a, b) => String(a.name).localeCompare(String(b.name), 'pt'));
+      const groups = new Map();
+      for (const card of sortedDeck) {
+        const group = groups.get(card.name);
+        if (group) group.count += 1;
+        else groups.set(card.name, { card, count: 1 });
+      }
 
-      for (let i = 0; i < 41; i++) {
-        if (i === 0 && chosenLeader) {
-          const tile = document.createElement('div');
-          tile.className = 'deck-card';
-          tile.innerHTML = `<img src="${resolveImg(chosenLeader.img)}" alt="${chosenLeader.name}"><div><b>Líder:</b> ${chosenLeader.name}</div>`;
-          attachGridThumb(tile.querySelector('img'), chosenLeader.img);
-          attachPreview(tile, chosenLeader);
-          deckList.appendChild(tile);
-          continue;
-        }
-
-        const card = sortedDeck[i - 1];
-        if (i > 0 && card) {
-          const tile = document.createElement('div');
-          tile.className = 'deck-card';
-          tile.innerHTML = `<img src="${resolveImg(card.img)}" alt="${card.name}"><div>${card.name}</div>`;
-          attachGridThumb(tile.querySelector('img'), card.img);
+      function appendCard(card, count, isLeader = false) {
+        const tile = document.createElement('div');
+        tile.className = `deck-card${isLeader ? ' is-leader' : ''}`;
+        tile.dataset.cardName = card.name;
+        tile.dataset.count = String(count);
+        tile.tabIndex = 0;
+        tile.title = isLeader ? `Líder: ${card.name}` : `${card.name} (${count}/3)`;
+        const image = document.createElement('img');
+        image.src = resolveImg(card.img);
+        image.alt = card.name;
+        const badge = document.createElement('span');
+        badge.className = isLeader ? 'deck-leader-badge' : 'deck-copy-count';
+        badge.textContent = isLeader ? 'Líder' : `${count}x`;
+        tile.append(image, badge);
+        attachGridThumb(image, card.img);
+        if (!isLeader) {
+          tile.setAttribute('role', 'button');
+          tile.setAttribute('aria-label', `${card.name}, ${count} cópias. Remover uma cópia`);
           tile.onclick = () => removeFromDeck(deck.indexOf(card));
-          attachPreview(tile, card);
-          deckList.appendChild(tile);
-        } else {
-          const slot = document.createElement('div');
-          slot.className = 'deck-slot';
-          slot.textContent = i === 0 ? 'Líder' : 'Vazio';
-          deckList.appendChild(slot);
+          tile.addEventListener('keydown', event => {
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+            event.preventDefault();
+            tile.click();
+          });
         }
+        tile.addEventListener('focus', () => setPreview(card));
+        attachPreview(tile, card);
+        deckList.appendChild(tile);
+      }
+
+      if (chosenLeader) appendCard(chosenLeader, 1, true);
+      else {
+        const slot = document.createElement('div');
+        slot.className = 'deck-slot is-leader';
+        slot.textContent = 'Líder';
+        deckList.appendChild(slot);
+      }
+      for (const { card, count } of groups.values()) appendCard(card, count);
+      if (deck.length < 40) {
+        const remaining = document.createElement('div');
+        remaining.className = 'deck-slot is-remaining';
+        remaining.textContent = `${40 - deck.length} espaços disponíveis`;
+        deckList.appendChild(remaining);
       }
 
       deckSize.textContent = `${(chosenLeader ? 1 : 0) + deck.length}/41 cartas`;
+      const missingCards = 40 - deck.length;
+      document.getElementById('deckMeta').textContent = [
+        chosenLeader ? LEADER_FILIACAO[chosenLeader.name] || chosenLeader.name : 'Escolha um líder',
+        missingCards ? `Falta${missingCards === 1 ? '' : 'm'} ${missingCards} carta${missingCards === 1 ? '' : 's'}` : '40 cartas completas'
+      ].join(' · ');
       btnSalvar.disabled = !(chosenLeader && deck.length === 40);
       btnPlay.disabled = !(chosenLeader && deck.length === 40);
       mobileDeckCount.textContent = `${deck.length}/40`;
       mobileDeckLeader.textContent = chosenLeader ? `Líder: ${chosenLeader.name}` : 'Escolher líder';
       mobileDeckSave.disabled = btnSalvar.disabled;
       mobileDeckPlay.disabled = btnPlay.disabled;
+      requestAnimationFrame(fitDeckGrid);
     }
 
     function toggleMobileDeckDrawer(force) {
@@ -2847,6 +3053,7 @@
     function removeFromDeck(idx) {
       deck.splice(idx, 1);
       renderDeck();
+      renderPool();
     }
 
     function getSavedDecksLocal() {

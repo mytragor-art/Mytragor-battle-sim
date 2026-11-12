@@ -28,13 +28,41 @@ const botDeckNameEl = document.getElementById("botDeckName");
 const botDeckLeaderEl = document.getElementById("botDeckLeader");
 const botDeckCardsEl = document.getElementById("botDeckCards");
 const botDeckLeaderArtEl = document.getElementById("botDeckLeaderArt") as HTMLImageElement | null;
+const botDeckFragmentArtEl = document.getElementById("botDeckFragmentArt") as HTMLImageElement | null;
+const botDeckFragmentLabelEl = document.getElementById("botDeckFragmentLabel");
+const btnPreviousBotDeck = document.getElementById("btnPreviousBotDeck") as HTMLButtonElement | null;
+const btnNextBotDeck = document.getElementById("btnNextBotDeck") as HTMLButtonElement | null;
+const btnEditBotDeck = document.getElementById("btnEditBotDeck") as HTMLButtonElement | null;
+const btnOpenBotDeckBuilder = document.getElementById("btnOpenBotDeckBuilder") as HTMLButtonElement | null;
+
+function updateSoloSetup() {
+	const valid = Boolean(selectedDeck?.leaderName && selectedDeck.cards.length && selectedBotDeck?.leaderName && selectedBotDeck.cards.length);
+	if (view.btnReady) {
+		view.btnReady.disabled = isJoining || !valid;
+		view.btnReady.textContent = isJoining ? "Conectando…" : "Iniciar desafio solo";
+	}
+	const status = document.getElementById("soloStatus");
+	if (status) status.textContent = isJoining ? "Preparando sala solo…" : valid ? "Desafio configurado" : "Selecione os dois baralhos para iniciar.";
+	if (!room) renderPlayers([
+		{ slot: "p1", displayName: getDisplayName() || "Você", avatarId: getAvatarId(), leaderId: selectedDeck?.leaderName },
+		{ slot: "p2", displayName: "Inteligência artificial", leaderId: selectedBotDeck?.leaderName }
+	], "p1");
+}
 
 function applySelectedBotDeck(deck: SavedDeck | null) {
 	selectedBotDeck = deck;
+	updateSoloSetup();
 	if (botLeaderEl) botLeaderEl.value = selectedBotDeck?.leaderName || "";
-	if (botDeckNameEl) botDeckNameEl.textContent = selectedBotDeck?.deckName || "Escolha um deck";
+	if (botDeckNameEl) botDeckNameEl.textContent = selectedBotDeck?.deckName || "Escolha um baralho";
 	if (botDeckLeaderEl) botDeckLeaderEl.textContent = `Líder: ${selectedBotDeck?.leaderName || "—"}`;
-	if (botDeckCardsEl) botDeckCardsEl.textContent = selectedBotDeck ? `${selectedBotDeck.cards.length} cartas` : "— cartas";
+	if (botDeckCardsEl) botDeckCardsEl.textContent = selectedBotDeck ? String(selectedBotDeck.cards.length) : "—";
+	if (botDeckFragmentLabelEl) botDeckFragmentLabelEl.textContent = selectedBotDeck?.fragImg ? "Fragmento selecionado" : "Fragmento: —";
+	if (botDeckFragmentArtEl) {
+		botDeckFragmentArtEl.hidden = !selectedBotDeck?.fragImg;
+		if (selectedBotDeck?.fragImg) botDeckFragmentArtEl.src = resolveDeckAssetPath(selectedBotDeck.fragImg);
+	}
+	if (btnPreviousBotDeck) btnPreviousBotDeck.disabled = availableDecks.length < 2;
+	if (btnNextBotDeck) btnNextBotDeck.disabled = availableDecks.length < 2;
 	if (botDeckLeaderArtEl) {
 		botDeckLeaderArtEl.src = selectedBotDeck ? resolveLeaderArtwork(selectedBotDeck) : "/publicadas/ui/layout-background.ai.thumb.webp";
 		botDeckLeaderArtEl.alt = selectedBotDeck ? `Líder da IA: ${selectedBotDeck.leaderName}` : "Líder do deck da IA";
@@ -51,6 +79,7 @@ function applySelectedBotDeck(deck: SavedDeck | null) {
 
 function applySelectedDeck(deck: SavedDeck | null) {
 	selectedDeck = deck;
+	updateSoloSetup();
 	if (view.leaderViewEl) view.leaderViewEl.textContent = selectedDeck?.leaderName || "—";
 	if (view.deckCardsCountEl) view.deckCardsCountEl.textContent = selectedDeck ? String(selectedDeck.cards.length) : "—";
 	if (view.leaderEl) view.leaderEl.value = selectedDeck?.leaderName || "";
@@ -111,6 +140,11 @@ function renderDeckSelector() {
 		option.value = "";
 		option.textContent = "(nenhum deck salvo - abra o deckbuilder no mesmo navegador)";
 		view.deckEl.appendChild(option);
+		if (botDeckEl) {
+			const emptyBot = option.cloneNode(true) as HTMLOptionElement;
+			botDeckEl.replaceChildren(emptyBot);
+		}
+		applySelectedBotDeck(null);
 		applySelectedDeck(null);
 		return;
 	}
@@ -135,7 +169,7 @@ function renderDeckSelector() {
 	if (botDeckEl) {
 		const currentBotValue = botDeckEl.value;
 		const fallbackBotDeck = decks.find((deck) => deck.id !== nextDeck?.id) || nextDeck || null;
-		const nextBotDeck = decks.find((deck) => deck.id === currentBotValue) || selectedBotDeck || fallbackBotDeck;
+		const nextBotDeck = decks.find((deck) => deck.id === currentBotValue) || decks.find((deck) => deck.id === selectedBotDeck?.id) || fallbackBotDeck;
 		botDeckEl.innerHTML = "";
 		const botPlaceholder = document.createElement("option");
 		botPlaceholder.value = "";
@@ -168,6 +202,13 @@ function cycleSelectedDeck(direction: 1 | -1) {
 function syncSelectedBotDeckFromUI() {
 	if (!botDeckEl) return;
 	applySelectedBotDeck(availableDecks.find((deck) => deck.id === botDeckEl.value) || null);
+}
+
+function cycleBotDeck(direction: 1 | -1) {
+	if (!botDeckEl || availableDecks.length < 2) return;
+	const currentIndex = Math.max(0, availableDecks.findIndex((deck) => deck.id === botDeckEl.value));
+	botDeckEl.value = availableDecks[(currentIndex + direction + availableDecks.length) % availableDecks.length].id;
+	syncSelectedBotDeckFromUI();
 }
 
 async function refreshSavedDecks() {
@@ -282,6 +323,7 @@ function startRoomPolling() {
 async function joinLobby(forceCreate = false): Promise<boolean> {
 	if (isJoining || !view.endpointEl || !view.roomIdEl) return false;
 	isJoining = true;
+	updateSoloSetup();
 	try {
 		const requestedRoomId = view.roomIdEl.value.trim() || undefined;
 		if (room && roomId && requestedRoomId && roomId !== requestedRoomId) {
@@ -347,6 +389,7 @@ async function joinLobby(forceCreate = false): Promise<boolean> {
 		return false;
 	} finally {
 		isJoining = false;
+		updateSoloSetup();
 	}
 }
 
@@ -361,8 +404,7 @@ if (botDeckEl) botDeckEl.onchange = syncSelectedBotDeckFromUI;
 if (view.btnPreviousDeck) view.btnPreviousDeck.onclick = () => cycleSelectedDeck(-1);
 if (view.btnNextDeck) view.btnNextDeck.onclick = () => cycleSelectedDeck(1);
 if (view.btnOpenDeckBuilder) view.btnOpenDeckBuilder.onclick = () => { window.location.href = "./ui/deckbuilder.html"; };
-if (view.btnEditActiveDeck) view.btnEditActiveDeck.onclick = () => {
-	const deckToEdit = selectedDeck || availableDecks.find((deck) => deck.id === view.deckEl?.value);
+function openDeckEditor(deckToEdit: SavedDeck | null | undefined) {
 	if (!deckToEdit) {
 		window.location.href = "./ui/deckbuilder.html";
 		return;
@@ -371,7 +413,12 @@ if (view.btnEditActiveDeck) view.btnEditActiveDeck.onclick = () => {
 		localStorage.setItem("mytragor_deck_edit_draft", JSON.stringify({ mode: "edit", deck: deckToEdit }));
 	} catch {}
 	window.location.href = "./ui/deckbuilder.html?edit=1";
-};
+}
+if (view.btnEditActiveDeck) view.btnEditActiveDeck.onclick = () => openDeckEditor(selectedDeck);
+if (btnEditBotDeck) btnEditBotDeck.onclick = () => openDeckEditor(selectedBotDeck);
+if (btnOpenBotDeckBuilder) btnOpenBotDeckBuilder.onclick = () => { window.location.href = "./ui/deckbuilder.html"; };
+if (btnPreviousBotDeck) btnPreviousBotDeck.onclick = () => cycleBotDeck(-1);
+if (btnNextBotDeck) btnNextBotDeck.onclick = () => cycleBotDeck(1);
 window.addEventListener("storage", (event) => {
 	if (event.key && event.key !== "mytragor_decks" && event.key !== "mytragor_play_deck") return;
 	void refreshSavedDecks();
@@ -389,6 +436,7 @@ if (view.btnJoinSelected) view.btnJoinSelected.onclick = () => {
 };
 if (view.btnReady) {
 	view.btnReady.onclick = async () => {
+		if (isJoining || !selectedDeck?.leaderName || !selectedDeck.cards.length || !selectedBotDeck?.leaderName || !selectedBotDeck.cards.length) return;
 		if (!room) {
 			const joined = await joinLobby(true);
 			if (!joined || !room) {

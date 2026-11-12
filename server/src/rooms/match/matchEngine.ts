@@ -1442,7 +1442,7 @@ function triggerAutoEffects(
 	summoned?: Record<Slot, Set<number>>
 ) {
 	const effect = String(cardDef?.effect || "").trim();
-	if (!effect) return;
+	if (!effect || cardDef?.activation) return;
 	const me = asPlayer(state, slot);
 	const foe = asPlayer(state, enemySlot(slot));
 
@@ -2719,22 +2719,156 @@ export function endTurn(
 	startTurn(state, next, broadcast, attacked, summoned, triggeredLeaderThisTurn, askChoice);
 }
 
-export function playCard(state: MatchState, slot: Slot, cardId: string, targetPos: number | undefined, cardKind: string | undefined, broadcast: (name: string, payload: any) => void, summoned: Record<Slot, Set<number>>, triggeredLeaderThisTurn: Record<Slot, Set<string>>, askChoice: AskChoiceFn) {
+function resolveCardAction(state: MatchState, slot: Slot, cardId: string, targetPos: number | undefined, cardKind: string | undefined, broadcast: (name: string, payload: any) => void, summoned: Record<Slot, Set<number>>, triggered: Record<Slot, Set<string>>, askChoice: AskChoiceFn, execute?: (draft: MatchState, emit: typeof broadcast, choose: AskChoiceFn, draftSummoned: typeof summoned, draftTriggered: typeof triggered) => void): void {
+	const draft = state.clone() as MatchState;
+	const draftSummoned = { p1: new Set(summoned.p1), p2: new Set(summoned.p2) };
+	const draftTriggered = { p1: new Set(triggered.p1), p2: new Set(triggered.p2) };
+	const events: { name: string; payload: any }[] = [];
+	let pending = 0;
+	let depth = 1;
+	let cancelled = false;
+	let committed = false;
+	const commit = () => {
+		if (cancelled || committed || pending || depth || state.phase === "FINISHED") return;
+		if (!execute && draft.phase !== "FINISHED" && !events.some(event => event.name === "card_played" && event.payload.cardId === cardId && event.payload.fromHand)) return;
+		committed = true;
+		state.game = draft.game;
+		state.phase = draft.phase;
+		for (const owner of ["p1", "p2"] as Slot[]) {
+			summoned[owner].clear();
+			for (const pos of draftSummoned[owner]) summoned[owner].add(pos);
+			triggered[owner].clear();
+			for (const key of draftTriggered[owner]) triggered[owner].add(key);
+		}
+		for (const event of events) broadcast(event.name, event.payload);
+	};
+	const draftBroadcast = (name: string, payload: any) => {
+		if (name === "error") {
+			cancelled = true;
+			broadcast(name, payload);
+			return;
+		}
+		events.push({ name, payload });
+	};
+	const draftChoice: AskChoiceFn = (owner, payload, resolve) => {
+		pending += 1;
+		let answered = false;
+		askChoice(owner, { ...payload, sourceCardId: payload.sourceCardId || cardId }, optionId => {
+			if (answered || cancelled || committed) return;
+			answered = true;
+			pending -= 1;
+			const selections = optionId?.split("|") || [];
+			const invalid = selections.some(id => !payload.options.some(option => option.id === id && !option.disabled));
+			const cancelledSpell = owner === slot && payload.title.startsWith(`${cardId}:`) && optionId == null && payload.allowCancel !== false;
+			if (state.phase === "FINISHED" || invalid || cancelledSpell) {
+				cancelled = true;
+				return;
+			}
+			depth += 1;
+			try { resolve(optionId); } finally { depth -= 1; }
+			commit();
+		});
+	};
+	if (execute) execute(draft, draftBroadcast, draftChoice, draftSummoned, draftTriggered);
+	else playCard(draft, slot, cardId, targetPos, cardKind, draftBroadcast, draftSummoned, draftTriggered, draftChoice, true);
+	depth -= 1;
+	commit();
+}
+
+function agiotaHandOptions(state: MatchState, slot: Slot, summoned: Record<Slot, Set<number>>): ChoiceOption[] {
+	const player = asPlayer(state, slot);
+	return Array.from(new Set(Array.from(player.hand, cardId => String(cardId || "")))).filter(cardId => {
+		const def = findCardDef(cardId);
+		if (!def || getCardCost(cardId) > 2 || isTrickKind(def.kind || def.tipo)) return false;
+		if (isAllyKind(def.kind || def.tipo) && !player.field.some((id, pos) => !id || !summoned[slot].has(pos))) return false;
+		if (isEquipKind(def.kind || def.tipo) && !player.support.some(id => !id)) return false;
+		if (def.effect === "destroy_env" && !state.game.p1.env && !state.game.p2.env) return false;
+		if (def.effect === "destroy_enemy_ally" && !asPlayer(state, enemySlot(slot)).field.some(Boolean)) return false;
+		if (def.effect === "destroy_equip" && ![state.game.p1, state.game.p2].some(owner => owner.support.some(id => !!id && isEquipKind(findCardDef(id)?.kind)))) return false;
+		return true;
+	}).map(cardId => ({ id: `play:${cardId}`, label: cardId, cardId, side: slot, lane: "hand", description: "Jogar sem pagar fragmentos." }));
+}
+
+function fieldActivationKey(cardId: string, pos: number): string {
+	return findCardDef(cardId)?.effect === "agiota" ? `agiota:${pos}` : `activation:${pos}:${cardId}`;
+}
+
+export function getReadyFieldActivations(state: MatchState, slot: Slot, summoned: Record<Slot, Set<number>>, triggered: Record<Slot, Set<string>>): { pos: number; cardId: string }[] {
+	if (state.phase === "FINISHED" || state.game.turnSlot !== slot || state.game.phase !== "PREP") return [];
+	const player = asPlayer(state, slot);
+	const ready: { pos: number; cardId: string }[] = [];
+	for (let pos = 0; pos < player.field.length; pos += 1) {
+		const cardId = String(player.field[pos] || "");
+		const def = findCardDef(cardId);
+		const activation = def?.activation || (def?.effect === "agiota" ? { selfDamage: 2, oncePerTurn: true } : null);
+		if (!activation || !cardId) continue;
+		const hp = getTargetHP(state, slot, pos);
+		const selfDamage = Number(activation.selfDamage || 0);
+		if (hp < selfDamage || (hp === selfDamage && def?.effect !== "agiota")) continue;
+		if (Number(player.fragments || 0) < Number(activation.fragmentCost || 0)) continue;
+		if (activation.exhaust && isFieldTapped(player, pos)) continue;
+		if (activation.oncePerTurn !== false && triggered[slot].has(fieldActivationKey(cardId, pos))) continue;
+		if (def?.effect === "agiota" && !agiotaHandOptions(state, slot, summoned).length) continue;
+		const effect = activation.effect || def?.effect;
+		if (effect === "destroy_enemy_ally" && !asPlayer(state, enemySlot(slot)).field.some(Boolean)) continue;
+		ready.push({ pos, cardId });
+	}
+	return ready;
+}
+
+export function activateFieldEffect(state: MatchState, slot: Slot, pos: number, expectedCardId: string, broadcast: (name: string, payload: any) => void, summoned: Record<Slot, Set<number>>, triggered: Record<Slot, Set<string>>, askChoice: AskChoiceFn): void {
+	const eligible = () => getReadyFieldActivations(state, slot, summoned, triggered).some(entry => entry.pos === pos && entry.cardId === expectedCardId);
+	if (!eligible()) return;
+	const cardId = expectedCardId;
+	const def = findCardDef(cardId)!;
+	askChoice(slot, {
+		title: `${cardId}: ativar habilidade?`, sourceCardId: cardId, choiceKind: "activation", allowCancel: true,
+		options: [{ id: "activate", label: "Sim, ativar" }]
+	}, optionId => {
+		if (optionId !== "activate" || !eligible()) return;
+		if (def.effect === "agiota") {
+			const options = agiotaHandOptions(state, slot, summoned);
+			askChoice(slot, { title: `${cardId}: escolha uma carta de custo até 2`, sourceCardId: cardId, options, allowCancel: true }, selected => {
+				const pick = options.find(option => option.id === selected);
+				if (!pick?.cardId || !eligible() || !agiotaHandOptions(state, slot, summoned).some(option => option.cardId === pick.cardId)) return;
+				playCard(state, slot, pick.cardId, undefined, `__AGIOTA_${pos} __NO_AGIOTA`, broadcast, summoned, triggered, askChoice);
+			});
+			return;
+		}
+		resolveCardAction(state, slot, cardId, undefined, undefined, broadcast, summoned, triggered, askChoice, (draft, emit, choose, draftSummoned, draftTriggered) => {
+			const player = asPlayer(draft, slot);
+			const activation = def.activation!;
+			player.fragments -= Math.max(0, Number(activation.fragmentCost || 0));
+			if (activation.selfDamage) applyDamageToField(draft, slot, pos, Math.max(0, Number(activation.selfDamage)));
+			if (activation.exhaust) player.fieldTapped[pos] = true;
+			if (activation.oncePerTurn !== false) draftTriggered[slot].add(fieldActivationKey(cardId, pos));
+			triggerAutoEffects(draft, slot, cardId, { ...def, activation: undefined, effect: activation.effect || def.effect }, emit, choose, { lane: "field", pos }, draftSummoned);
+			draft.game.seq += 1;
+			emit("effect_log", { slot, cardId, effect: "field_activation", text: `${cardId}: ativou sua habilidade em campo.` });
+		});
+	});
+}
+
+export function playCard(state: MatchState, slot: Slot, cardId: string, targetPos: number | undefined, cardKind: string | undefined, broadcast: (name: string, payload: any) => void, summoned: Record<Slot, Set<number>>, triggeredLeaderThisTurn: Record<Slot, Set<string>>, askChoice: AskChoiceFn, isSpellDraft = false) {
 	const game = state.game;
 	const pg = slot === "p1" ? game.p1 : game.p2;
 	const cardDef = findCardDef(cardId);
 	const rawCardKind = String(cardKind || "");
 	const forcedAgiotaMatch = rawCardKind.match(/__AGIOTA_(\d+)/);
 	const forcedAgiotaPos = forcedAgiotaMatch ? Number(forcedAgiotaMatch[1]) : -1;
-	const suppressAgiotaPrompt = rawCardKind.includes("__NO_AGIOTA");
 	const sanitizedCardKind = rawCardKind.replace(/__AGIOTA_\d+/g, "").replace(/__NO_AGIOTA/g, "").trim();
 	const idx = pg.hand.findIndex((c) => c === cardId);
 	if (idx < 0) return;
 	const cost = getCardCost(cardId);
 	const actualKind = normalizeKind(String(cardDef?.kind || (cardDef as any)?.tipo || sanitizedCardKind || ""));
+	if (!isSpellDraft && isSpellOrTrickKind(actualKind)) {
+		resolveCardAction(state, slot, cardId, targetPos, cardKind, broadcast, summoned, triggeredLeaderThisTurn, askChoice);
+		return;
+	}
 	const agiotaTurnKey = (pos: number) => `agiota:${pos}`;
 	const payCardCost = (): boolean => {
 		if (forcedAgiotaPos >= 0) {
+			if (cost > 2) return false;
 			const liveAgiotaId = String(pg.field[forcedAgiotaPos] || "");
 			if (!liveAgiotaId || String(findCardDef(liveAgiotaId)?.effect || "") !== "agiota") {
 				broadcast("error", { text: "Agiota inválido para pagar este custo." });
@@ -2745,11 +2879,18 @@ export function playCard(state: MatchState, slot: Slot, cardId: string, targetPo
 				return false;
 			}
 			const agiotaHp = getTargetHP(state, slot, forcedAgiotaPos);
-			if (agiotaHp <= 2) {
+			if (agiotaHp < 2) {
 				broadcast("error", { text: "Vida insuficiente no Agiota para pagar este custo." });
 				return false;
 			}
-			applyDamageToField(state, slot, forcedAgiotaPos, 2);
+			const remaining = applyDamageToField(state, slot, forcedAgiotaPos, 2);
+			if (remaining <= 0) {
+				destroyAttachedSupports(state, slot, forcedAgiotaPos, broadcast);
+				const removed = clearFieldSlotWithAuras(state, slot, forcedAgiotaPos);
+				if (removed && moveRemovedFieldCardOutOfPlay(pg, removed) === "grave") {
+					handleDestroyedAllyTriggers(state, slot, removed, broadcast, askChoice);
+				}
+			}
 			triggeredLeaderThisTurn[slot].add(agiotaTurnKey(forcedAgiotaPos));
 			broadcast("effect_log", { slot, cardId: liveAgiotaId, effect: "agiota", text: `${liveAgiotaId}: sofreu 2 de dano para permitir jogar ${cardId} sem pagar fragmentos.` });
 			return true;
@@ -2761,36 +2902,6 @@ export function playCard(state: MatchState, slot: Slot, cardId: string, targetPo
 		pg.fragments -= cost;
 		return true;
 	};
-	if (forcedAgiotaPos < 0 && !suppressAgiotaPrompt && cost <= 2) {
-		const agiotaOptions: ChoiceOption[] = [];
-		for (let pos = 0; pos < pg.field.length; pos += 1) {
-			const allyId = String(pg.field[pos] || "");
-			if (!allyId) continue;
-			if (String(findCardDef(allyId)?.effect || "") !== "agiota") continue;
-			if (triggeredLeaderThisTurn[slot].has(agiotaTurnKey(pos))) continue;
-			if (getTargetHP(state, slot, pos) <= 2) continue;
-			agiotaOptions.push({ id: `agiota-${pos}`, label: allyId, side: slot, lane: "field", pos, cardId: allyId, description: `Causar 2 de dano a ${allyId} para jogar ${cardId} sem pagar fragmentos.` });
-		}
-		if (agiotaOptions.length) {
-			const options: ChoiceOption[] = [
-				...agiotaOptions,
-				{ id: "agiota-no", label: "Não usar", description: `Pagar o custo normal de ${cost} fragmento(s).` }
-			];
-			askChoice(slot, { title: `${cardId}: deseja usar Aranhas Negras, Agiota?`, choiceKind: "activation", options, allowCancel: true }, (optionId) => {
-				if (!optionId || optionId === "agiota-no") {
-					playCard(state, slot, cardId, targetPos, `${sanitizedCardKind} __NO_AGIOTA`.trim(), broadcast, summoned, triggeredLeaderThisTurn, askChoice);
-					return;
-				}
-				const pick = agiotaOptions.find((option) => option.id === optionId);
-				if (!pick || typeof pick.pos !== "number") {
-					playCard(state, slot, cardId, targetPos, `${sanitizedCardKind} __NO_AGIOTA`.trim(), broadcast, summoned, triggeredLeaderThisTurn, askChoice);
-					return;
-				}
-				playCard(state, slot, cardId, targetPos, `${sanitizedCardKind} __AGIOTA_${pick.pos}`.trim(), broadcast, summoned, triggeredLeaderThisTurn, askChoice);
-			});
-			return;
-		}
-	}
 	if (forcedAgiotaPos < 0 && Number(pg.fragments || 0) < cost) {
 		broadcast("error", { text: "Fragmentos insuficientes." });
 		return;

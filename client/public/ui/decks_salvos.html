@@ -8,6 +8,9 @@
 		window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
 	</script>
 	<script defer src="/_vercel/insights/script.js"></script>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
 	<style>
 	:root {
 		color-scheme: dark;
@@ -575,8 +578,68 @@
 	}
 	</style>
 	<link rel="stylesheet" href="../mobile.css" media="(max-width:880px)">
+	<style>
+	.savedDecks{ --text:#e7e8eb; --muted:#b4b7c1; --gold:#e0bf79; --line:#ffffff20; font:400 15px/1.5 "Source Sans 3",sans-serif; }
+	.savedDecks *{ box-sizing:border-box; letter-spacing:0; }
+	.savedDecks::before, .savedDecks .logoWrap::after, .savedDecks .sidebarPanel::before, .savedDecks .detailPanel::before{ display:none; }
+	.savedDecks .logoImg{ width:100px; border-radius:0; animation:none; filter:sepia(1) saturate(2) brightness(2); }
+	.savedDecks .topbar{ position:relative; gap:20px; padding:12px 18px; border:0; background:#14161de8; backdrop-filter:none; }
+	.savedDecks .topbarMeta{ flex:1; gap:12px; }
+	.savedDecks .topbarHeading{ margin:0 auto 0 0; gap:2px; }
+	.savedDecks .topbarTitle{ font:700 22px/1.3 "Cinzel",Georgia,serif; color:#f3ead7; }
+	.savedDecks .topbarSubtitle{ font-size:12px; text-transform:none; }
+	.savedDecks .searchInput{ width:260px; max-width:100%; min-width:0; min-height:44px; border:1px solid #ffffff29; border-radius:4px; background:#121419; color:var(--text); box-shadow:none; font:400 15px/1.4 "Source Sans 3",sans-serif; }
+	.savedDecks .btn{ display:inline-flex; align-items:center; justify-content:center; min-height:40px; padding:8px 14px; border:1px solid var(--gold); border-radius:4px; background:var(--gold); color:#201b11; box-shadow:none; font:600 14px/1.4 "Source Sans 3",sans-serif; transition:background .15s ease,border-color .15s ease; }
+	.savedDecks .btn:hover{ transform:none; filter:none; background:#f0d398; box-shadow:none; }
+	.savedDecks .btn.isMuted{ background:#343943; color:#fff7e6; border-color:#8b805f; }
+	.savedDecks .btn.isMuted:hover{ background:#4a505b; border-color:#f0d398; }
+	.savedDecks .btn.isDanger{ background:#552c30; color:#ffd2ce; border-color:#b86b70; }
+	.savedDecks .btn.isDanger:hover{ background:#75393f; }
+	.savedDecks .topbar .btn{ min-height:44px; background:#343943; color:#fff7e6; border-color:#cbb17b; }
+	.savedDecks .topbar .btn:hover{ background:#4a505b; }
+	.savedDecks .appShell{ grid-template-columns:280px minmax(0,1fr); gap:0; min-height:0; margin:12px; padding:0; background:#191b20f7; border-top:1px solid #a68d5666; }
+	.savedDecks .sidebarPanel, .savedDecks .detailPanel{ border:0; border-radius:0; background:none; box-shadow:none; }
+	.savedDecks .sidebarPanel{ border-right:1px solid var(--line); }
+	.savedDecks .sidebarHeader{ padding:14px 16px; }
+	.savedDecks .sidebarTitle{ font:600 17px/1.4 "Cinzel",Georgia,serif; }
+	.savedDecks .deckList{ padding:8px; gap:6px; min-height:0; }
+	.savedDecks .deckListItem{ grid-template-columns:40px minmax(0,1fr); gap:10px; padding:10px; border:1px solid transparent; border-radius:4px; background:#ffffff04; }
+	.savedDecks .deckListItem:hover{ transform:none; background:#ffffff0b; border-color:#ffffff29; }
+	.savedDecks .deckListItem.isActive{ background:#e0bf7912; border-color:#b29c67; box-shadow:none; }
+	.savedDecks .deckListLeader{ width:40px; height:56px; object-fit:contain; border-radius:3px; border-color:#ffffff29; box-shadow:none; background:#121419; }
+	.savedDecks .deckListName{ font-size:15px; }
+	.savedDecks .deckListBody{ gap:2px; }
+	.savedDecks .detailHeaderShell{ padding:16px; }
+	.savedDecks .detailHeader{ grid-template-columns:76px minmax(0,1fr); gap:16px; }
+	.savedDecks .detailLeader{ width:76px; height:108px; object-fit:contain; border-radius:4px; border-width:1px; box-shadow:none; background:#121419; }
+	.savedDecks .detailText{ gap:8px; }
+	.savedDecks .detailTitle{ font:700 22px/1.3 "Cinzel",Georgia,serif; overflow-wrap:anywhere; }
+	.savedDecks .detailLeaderName{ font-size:14px; }
+	.savedDecks .detailEyebrow{ font-size:10px; }
+	.savedDecks .detailSummary, .savedDecks .detailTags, .savedDecks .detailActions{ gap:6px; }
+	.savedDecks .detailTags:empty{ display:none; }
+	.savedDecks .statPill, .savedDecks .tagPill{ padding:3px 8px; border-radius:4px; font-size:12px; }
+	.savedDecks .deckCardsWrap{ padding:0 16px 16px; min-height:0; }
+	.savedDecks .deckCardsHeader{ padding:10px 0; }
+	.savedDecks .deckCardsTitle{ font:600 16px/1.4 "Cinzel",Georgia,serif; }
+	.savedDecks .selectedDeckGrid{ grid-template-columns:repeat(auto-fill,minmax(64px,1fr)); gap:7px; }
+	.savedDecks .selectedCard{ border-radius:4px; box-shadow:none; border-color:#ffffff25; background:#101216; }
+	.savedDecks .selectedCard:hover{ transform:none; border-color:var(--gold); }
+	.savedDecks .selectedCard img{ aspect-ratio:2 / 3; object-fit:contain; }
+	.savedDecks .selectedCard{ padding:0; }
+	.savedDecks .selectedCardCount{ position:absolute; right:3px; bottom:3px; padding:2px 6px; border:1px solid #e0bf79; border-radius:3px; background:#17191ff5; color:#fff1ce; font:700 14px/1.3 "Source Sans 3",sans-serif; pointer-events:none; }
+	.savedDecks .emptyState{ min-height:320px; padding:24px; }
+	.savedDecks .emptyStateBox{ padding:0; border:0; border-radius:0; background:none; }
+	.savedDecks .emptyStateBox .btn{ margin-top:18px; }
+	.savedDecks :focus-visible{ outline:2px solid #f0d398; outline-offset:3px; }
+	@media(min-width:901px){ .savedDecks{ height:100dvh; display:flex; flex-direction:column; } .savedDecks .appShell{ flex:1; } .savedDecks .detailContent{ height:100%; } .savedDecks .detailHeaderShell{ flex:none; } .savedDecks .deckCardsWrap{ flex:1; } }
+	@media(min-width:901px){ .savedDecks .deckCardsWrap{ display:flex; flex-direction:column; } .savedDecks .deckCardsHeader{ flex:none; } .savedDecks .selectedDeckGrid{ flex:1; min-height:0; grid-template-columns:repeat(var(--saved-columns,8),minmax(0,1fr)); grid-template-rows:repeat(var(--saved-rows,3),minmax(0,1fr)); } .savedDecks .selectedCard{ min-height:0; } .savedDecks .selectedCard img{ height:100%; aspect-ratio:auto; } }
+	@media(max-width:900px){ .savedDecks .appShell{ grid-template-columns:220px minmax(0,1fr); } .savedDecks .topbar{ flex-wrap:wrap; gap:12px; } .savedDecks .topbarMeta{ min-width:0; } .savedDecks .topbarHeading{ flex:1; } .savedDecks .searchInput{ order:1; width:100%; } .savedDecks .detailActions .btn{ min-height:44px; } }
+	@media(max-width:640px){ .savedDecks .appShell{ grid-template-columns:1fr; margin:8px; } .savedDecks .sidebarPanel{ border-right:0; border-bottom:1px solid var(--line); } .savedDecks .deckList{ max-height:220px; } .savedDecks .topbar{ padding:10px 12px; } .savedDecks .logoImg{ width:64px; } .savedDecks .topbarTitle{ font-size:17px; } .savedDecks .topbarMeta{ gap:8px; } .savedDecks .topbar .btn{ padding:8px 12px; } .savedDecks .detailTitle{ font-size:18px; } .savedDecks .detailHeaderShell{ padding:12px; } .savedDecks .detailHeader{ grid-template-columns:64px minmax(0,1fr); gap:12px; } .savedDecks .detailLeader{ width:64px; height:92px; } .savedDecks .selectedDeckGrid{ grid-template-columns:repeat(4,minmax(0,1fr)); } .savedDecks .deckCardsHeader{ flex-wrap:wrap; gap:4px; } }
+	@media(prefers-reduced-motion:reduce){ .savedDecks *{ transition:none; } }
+	</style>
 </head>
-<body>
+<body class="savedDecks">
 	<div class="topbar">
 		<div class="logoWrap"><img class="logoImg" src="/logo/logomytragor.png" alt="Mytragor" onerror="this.src='../logo/logomytragor.png'" /></div>
 		<div class="topbarMeta">
@@ -584,7 +647,7 @@
 				<span class="topbarTitle">Baralhos Salvos</span>
 				<span class="topbarSubtitle" id="deckCount">0 baralhos salvos</span>
 			</div>
-			<input id="searchDecks" class="searchInput" placeholder="Buscar baralhos ou líder..." />
+			<input id="searchDecks" class="searchInput" type="search" aria-label="Buscar baralhos por nome ou líder" placeholder="Buscar baralhos ou líder..." />
 			<a href="deckbuilder.html" class="btn">Voltar</a>
 		</div>
 	</div>
@@ -593,7 +656,6 @@
 		<aside class="sidebarPanel">
 			<div class="sidebarHeader">
 				<div class="sidebarTitle">Biblioteca</div>
-				<div class="sidebarSubtitle">Escolha um baralho primeiro. Depois, role para baixo para ver a lista completa no centro da tela.</div>
 			</div>
 			<div id="deckList" class="deckList"></div>
 		</aside>
@@ -601,8 +663,8 @@
 		<section class="detailPanel">
 			<div id="emptyState" class="emptyState">
 				<div class="emptyStateBox">
-					<h2 class="detailTitle" style="font-size:28px;margin:0 0 10px;">Nenhum baralho selecionado</h2>
-					<div>Use a busca ou clique em um baralho salvo para ver o líder e todas as cartas com tamanho confortável.</div>
+					<h2 id="savedEmptyTitle" class="detailTitle" style="margin:0 0 10px;">Nenhum baralho selecionado</h2>
+					<a class="btn" href="deckbuilder.html">Montar baralho</a>
 				</div>
 			</div>
 
@@ -662,6 +724,7 @@ const deckState = {
 
 function showEmptyState() {
 	const emptyState = document.getElementById('emptyState');
+	document.getElementById('savedEmptyTitle').textContent = document.getElementById('searchDecks').value.trim() ? 'Nenhum baralho encontrado' : !deckState.all.length ? 'Sua biblioteca está vazia' : 'Nenhum baralho selecionado';
 	const detail = document.getElementById('deckDetail');
 	document.body.classList.add('no-active-deck');
 	emptyState.hidden = false;
@@ -704,7 +767,7 @@ function renderDeckList(decks) {
 	if (!decks.length) {
 		const empty = document.createElement('div');
 		empty.className = 'emptyList';
-		empty.textContent = 'Nenhum baralho encontrado com esse nome.';
+		empty.textContent = deckState.all.length ? 'Nenhum baralho encontrado com esse nome.' : 'Nenhum baralho salvo.';
 		list.appendChild(empty);
 		return;
 	}
@@ -715,6 +778,7 @@ function renderDeckList(decks) {
 		button.type = 'button';
 		button.dataset.deckKey = key;
 		button.className = `deckListItem${deckState.activeKey === key ? ' isActive' : ''}`;
+		button.setAttribute('aria-pressed', String(deckState.activeKey === key));
 		button.onclick = () => {
 			deckState.activeKey = key;
 			renderDeckList(deckState.filtered);
@@ -808,6 +872,28 @@ function openLobbyWithDeck(deckId) {
 	}
 }
 
+function fitSavedDeckGrid() {
+	if (window.innerWidth <= 900) return;
+	const grid = document.getElementById('selectedDeckGrid');
+	const count = grid.querySelectorAll('.selectedCard').length;
+	if (!count || !grid.clientHeight || !grid.clientWidth) return;
+	let bestColumns = 1;
+	let bestWidth = 0;
+	for (let columns = 1; columns <= count; columns++) {
+		const rows = Math.ceil(count / columns);
+		const width = Math.min((grid.clientWidth - (columns - 1) * 7) / columns, ((grid.clientHeight - (rows - 1) * 7) / rows) * 2 / 3);
+		if (width > bestWidth) {
+			bestWidth = width;
+			bestColumns = columns;
+		}
+	}
+	grid.style.setProperty('--saved-columns', String(bestColumns));
+	grid.style.setProperty('--saved-rows', String(Math.ceil(count / bestColumns)));
+}
+
+const savedGridObserver = new ResizeObserver(fitSavedDeckGrid);
+savedGridObserver.observe(document.getElementById('selectedDeckGrid'));
+
 function renderDeckCards(deck) {
 	const grid = document.getElementById('selectedDeckGrid');
 	const note = document.getElementById('deckCardsNote');
@@ -823,13 +909,17 @@ function renderDeckCards(deck) {
 		return;
 	}
 
-	deck.cards.forEach(cardName => {
+	const groups = new Map();
+	deck.cards.forEach(cardName => groups.set(cardName, (groups.get(cardName) || 0) + 1));
+	note.textContent = `${deck.cards.length} cartas · ${groups.size} diferentes`;
+	groups.forEach((count, cardName) => {
 		const imgSrc = getCardImg(cardName);
 		const gridImgSrc = getGridCardImg(cardName);
 		const card = document.createElement('button');
 		card.type = 'button';
 		card.className = 'selectedCard';
-		card.title = cardName;
+		card.title = `${cardName} (${count}x)`;
+		card.setAttribute('aria-label', `${cardName}, ${count} cópias. Ampliar carta`);
 		card.onclick = () => showCardModal(imgSrc, cardName);
 
 		const img = document.createElement('img');
@@ -846,13 +936,14 @@ function renderDeckCards(deck) {
 		};
 
 		const label = document.createElement('div');
-		label.className = 'selectedCardName';
-		label.textContent = cardName;
+		label.className = 'selectedCardCount';
+		label.textContent = `${count}x`;
 
 		card.appendChild(img);
 		card.appendChild(label);
 		grid.appendChild(card);
 	});
+	requestAnimationFrame(fitSavedDeckGrid);
 }
 
 function renderDeckDetail(deck) {

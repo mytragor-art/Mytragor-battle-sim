@@ -18,6 +18,7 @@ type CardDef = {
 	name: string;
 	key?: string;
 	aliases?: string[];
+	keywords?: string[];
 	img?: string;
 	kind?: string;
 	effect?: string;
@@ -201,6 +202,7 @@ let currentPhase = "INITIAL";
 let isMatchFinished = false;
 let isMyTurn = false;
 let currentMyField: string[] = [];
+const fieldActivationReady = new Map<number, string>();
 let currentMyFieldHp: number[] = [];
 let currentMyFieldAtkTemp: number[] = [];
 let currentMyFieldAtkPerm: number[] = [];
@@ -3376,6 +3378,20 @@ window.addEventListener("orientationchange", () => {
 	queueHandStackLayout("aiHand");
 });
 
+function canActivateFieldEffect(index: number): boolean {
+	return !isSpectator && !isMatchFinished && isMyTurn && currentPhase === "PREP"
+		&& !fieldChoices.active && !activeChoiceId && !!currentMyField[index]
+		&& fieldActivationReady.get(index) === currentMyField[index];
+}
+
+function requestFieldActivation(index: number): void {
+	if (!room || !canActivateFieldEffect(index)) return;
+	const cardId = currentMyField[index];
+	fieldActivationReady.clear();
+	renderMyField(currentMyField, currentMyFieldHp);
+	room.send("activate_field_effect", { pos: index, cardId });
+}
+
 function renderLane(zoneId: "you-field" | "ai-field" | "you-support" | "ai-support", cards: string[], activeIndex: number | null, onClick?: (index: number) => void, hpValues?: number[]): void {
 	const zone = document.getElementById(zoneId);
 	if (!zone) return;
@@ -3442,6 +3458,10 @@ function renderLane(zoneId: "you-field" | "ai-field" | "you-support" | "ai-suppo
 		bindMobileCardInspect(slotEl, { cardId, side, lane, index });
 		cardEl.classList.toggle("tapped", lane === "field" && tappedBySide[side].has(index));
 		cardEl.classList.toggle("can-attack", zoneId === "you-field" && canSelectCombatAttacker(index));
+		const activationReady = zoneId === "you-field" && canActivateFieldEffect(index);
+		cardEl.classList.toggle("can-activate", activationReady);
+		cardEl.title = activationReady ? `${cardId}: ativar habilidade` : cardId;
+		cardEl.setAttribute("aria-label", activationReady ? `${cardId}: ativar habilidade` : cardId);
 		cardEl.classList.toggle("can-be-targeted", zoneId === "ai-field" && canSelectCombatTarget({ type: "ally", side: "ai", index }));
 		const renderSide: BattleSide = side;
 		cardEl.classList.toggle("just-untapped", lane === "field" && untapPulseBySide[renderSide] && justUntappedBySide[renderSide].has(index));
@@ -3477,7 +3497,7 @@ function renderLane(zoneId: "you-field" | "ai-field" | "you-support" | "ai-suppo
 				slotEl.classList.add("clickable");
 				slotEl.onclick = () => {
 					const target = { cardId, side, lane, index } as const;
-					if (isMobileGameplay() && currentPhase !== "COMBAT") {
+					if (isMobileGameplay() && currentPhase !== "COMBAT" && !activationReady) {
 						setInspector(target);
 						return;
 					}
@@ -3779,6 +3799,24 @@ function updateArenaTurnPriority(myTurn: boolean): void {
 	applyState(enemyArena, !myTurn, myTurn);
 }
 
+function requestMatchNotice(kind: "concede" | "leave", onConfirm: () => void): void {
+	const dialog = document.getElementById("matchNoticeDialog") as HTMLDialogElement | null;
+	const title = document.getElementById("matchNoticeTitle");
+	const text = document.getElementById("matchNoticeText");
+	const confirmButton = document.getElementById("matchNoticeConfirm");
+	if (!dialog || !title || !text || !confirmButton || dialog.open) return;
+	title.textContent = kind === "concede" ? "Conceder a partida?" : "Sair da partida?";
+	text.textContent = kind === "concede"
+		? "Ao conceder, a partida termina e o oponente vence. Esta ação não pode ser desfeita."
+		: "A partida ainda está em andamento. Você será desconectado e voltará ao lobby.";
+	confirmButton.textContent = kind === "concede" ? "Conceder partida" : "Sair da sala";
+	dialog.returnValue = "cancel";
+	dialog.onclose = () => {
+		if (dialog.returnValue === "confirm") onConfirm();
+	};
+	dialog.showModal();
+}
+
 function goLobby() {
 	clearMatchReconnectTimer();
 	const endpoint = view.endpointEl?.value?.trim() || resolveServerEndpoint(window.location.search);
@@ -3980,8 +4018,22 @@ function scheduleSpectatorReconnect(code: number) {
 	}, 700);
 }
 
+function bindFieldActivationMessages(boundRoom: any): void {
+	fieldActivationReady.clear();
+	boundRoom.onMessage("field_activation_state", (payload: { ready?: { pos: number; cardId: string }[] }) => {
+		if (isSpectator || room !== boundRoom) return;
+		fieldActivationReady.clear();
+		for (const entry of Array.isArray(payload?.ready) ? payload.ready : []) {
+			if (Number.isInteger(entry.pos) && entry.pos >= 0 && entry.pos < 5 && typeof entry.cardId === "string") fieldActivationReady.set(entry.pos, entry.cardId);
+		}
+		renderMyField(currentMyField, currentMyFieldHp);
+	});
+	if (!isSpectator) boundRoom.send("request_field_activations");
+}
+
 function bindActiveMatchRoom() {
 	if (!room) return;
+	bindFieldActivationMessages(room);
 	bindMatchHandlers(room, {
 		onAssignSlot: (msg) => {
 			isSpectator = msg?.spectator === true || isSpectator;
@@ -4344,6 +4396,7 @@ function renderHand(hand: string[]) {
 
 function renderMyField(field: string[], hpValues: number[]) {
 	renderButtonRow("myField", field.map((c, i) => `[${i}] ${c} (ATK 1)`), selectedAttackerPos, "outline:2px solid #2dd4bf;", (index) => {
+		if (canActivateFieldEffect(index)) return requestFieldActivation(index);
 		if (isMyTurn && currentPhase === "COMBAT") {
 			beginBoardAttackFrom(index);
 			return;
@@ -4351,6 +4404,7 @@ function renderMyField(field: string[], hpValues: number[]) {
 			setInspector(field[index] ? { cardId: field[index], side: "you", lane: "field", index } : null);
 	});
 	renderLane("you-field", field, selectedAttackerPos, (index) => {
+		if (canActivateFieldEffect(index)) return requestFieldActivation(index);
 		if (isMyTurn && currentPhase === "COMBAT") {
 			beginBoardAttackFrom(index);
 			return;
@@ -4410,6 +4464,7 @@ async function joinMatch() {
 		captureMatchReconnectionToken(room);
 		clearMatchReconnectTimer();
 		matchReconnectAttempts = 0;
+		bindFieldActivationMessages(room);
 		const displayName = getDisplayName();
 		if (displayName && !isSpectator) {
 			room.send("set_name", { name: displayName, avatarId: getAvatarId() });
@@ -4850,9 +4905,24 @@ if (view.btnNextPhase) view.btnNextPhase.onclick = () => !isSpectator && !fieldC
 if (view.btnEndTurn) view.btnEndTurn.onclick = () => !isSpectator && !fieldChoices.active && room?.send("end_turn");
 if (view.btnConcede) view.btnConcede.onclick = () => {
 	if (isSpectator || isMatchFinished || !room) return;
-	if (window.confirm("Conceder a partida? O oponente vencerá automaticamente.")) room.send("concede");
+	const activeRoom = room;
+	requestMatchNotice("concede", () => {
+		if (!isSpectator && !isMatchFinished && room === activeRoom) activeRoom.send("concede");
+	});
 };
-if (view.btnBackLobby) view.btnBackLobby.onclick = goLobby;
+if (view.btnBackLobby) view.btnBackLobby.onclick = () => {
+	if (!room || isMatchFinished || isSpectator) return goLobby();
+	requestMatchNotice("leave", goLobby);
+};
+
+const matchNoticeDialog = document.getElementById("matchNoticeDialog") as HTMLDialogElement | null;
+if (matchNoticeDialog) matchNoticeDialog.addEventListener("keydown", (event) => {
+	event.stopPropagation();
+	if (event.key === "Escape") {
+		event.preventDefault();
+		matchNoticeDialog.close("cancel");
+	}
+});
 
 const logModal = document.getElementById("logModal") as HTMLElement | null;
 const btnOpenLog = document.getElementById("btnOpenLog") as HTMLButtonElement | null;

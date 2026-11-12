@@ -151,6 +151,7 @@ let currentPhase = "INITIAL";
 let isMatchFinished = false;
 let isMyTurn = false;
 let currentMyField = [];
+const fieldActivationReady = new Map();
 let currentMyFieldHp = [];
 let currentMyFieldAtkTemp = [];
 let currentMyFieldAtkPerm = [];
@@ -1693,13 +1694,7 @@ function setupMobilePreviewToggle() {
         fab.addEventListener("pointercancel", finishDrag);
         restoreFabPosition();
     }
-    const opponentHand = document.getElementById("aiHand");
-if (opponentHand) {
-    const observer = new ResizeObserver(() => queueHandStackLayout("aiHand"));
-    observer.observe(opponentHand);
-}
-
-window.addEventListener("resize", () => {
+    window.addEventListener("resize", () => {
         if (!isMobileGameplay())
             document.body.classList.remove("mobile-preview-open");
         if (fab && fab.style.left && fab.style.top) {
@@ -1763,7 +1758,18 @@ function buildHandCard(cardId, selected, onClick, inspectorView) {
         button.onclick = onClick;
     return button;
 }
-
+function reconcileChildren(container, children) {
+    const retained = new Set(children);
+    for (const child of Array.from(container.children)) {
+        if (!retained.has(child))
+            child.remove();
+    }
+    for (let index = 0; index < children.length; index += 1) {
+        if (container.children[index] !== children[index]) {
+            container.insertBefore(children[index], container.children[index] || null);
+        }
+    }
+}
 function syncBoardCard(slot, cardId, inspectorView) {
     let card = slot.querySelector(":scope > button.card");
     if (!cardId || card?.dataset.cardId !== cardId) {
@@ -1786,19 +1792,6 @@ function syncBoardCard(slot, cardId, inspectorView) {
         badge.remove();
     }
     return card;
-}
-
-function reconcileChildren(container, children) {
-    const retained = new Set(children);
-    for (const child of Array.from(container.children)) {
-        if (!retained.has(child))
-            child.remove();
-    }
-    for (let index = 0; index < children.length; index += 1) {
-        if (container.children[index] !== children[index]) {
-            container.insertBefore(children[index], container.children[index] || null);
-        }
-    }
 }
 function hideMulliganModal() {
     const modal = document.getElementById("mulliganModal");
@@ -3364,7 +3357,13 @@ const playerHand = document.getElementById("youHand");
 if (playerHand) {
     const observer = new ResizeObserver(() => queueHandStackLayout("youHand"));
     for (const element of [playerHand, document.getElementById("board"), document.querySelector(".boardWrap")]) {
-        if (element) observer.observe(element);
+        if (element)
+            observer.observe(element);
+    }
+    const opponentHand = document.getElementById("aiHand");
+    if (opponentHand) {
+        const observer = new ResizeObserver(() => queueHandStackLayout("aiHand"));
+        observer.observe(opponentHand);
     }
 }
 window.addEventListener("resize", () => {
@@ -3375,6 +3374,18 @@ window.addEventListener("orientationchange", () => {
     queueHandStackLayout("youHand");
     queueHandStackLayout("aiHand");
 });
+function canActivateFieldEffect(index) {
+    return !isSpectator && !isMatchFinished && isMyTurn && currentPhase === "PREP"
+        && !fieldChoices.active && !activeChoiceId && !!currentMyField[index]
+        && fieldActivationReady.get(index) === currentMyField[index];
+}
+function requestFieldActivation(index) {
+    if (!room || !canActivateFieldEffect(index)) return;
+    const cardId = currentMyField[index];
+    fieldActivationReady.clear();
+    renderMyField(currentMyField, currentMyFieldHp);
+    room.send("activate_field_effect", { pos: index, cardId });
+}
 function renderLane(zoneId, cards, activeIndex, onClick, hpValues) {
     const zone = document.getElementById(zoneId);
     if (!zone)
@@ -3456,6 +3467,10 @@ function renderLane(zoneId, cards, activeIndex, onClick, hpValues) {
         bindMobileCardInspect(slotEl, { cardId, side, lane, index });
         cardEl.classList.toggle("tapped", lane === "field" && tappedBySide[side].has(index));
         cardEl.classList.toggle("can-attack", zoneId === "you-field" && canSelectCombatAttacker(index));
+        const activationReady = zoneId === "you-field" && canActivateFieldEffect(index);
+        cardEl.classList.toggle("can-activate", activationReady);
+        cardEl.title = activationReady ? `${cardId}: ativar habilidade` : cardId;
+        cardEl.setAttribute("aria-label", activationReady ? `${cardId}: ativar habilidade` : cardId);
         cardEl.classList.toggle("can-be-targeted", zoneId === "ai-field" && canSelectCombatTarget({ type: "ally", side: "ai", index }));
         const renderSide = side;
         cardEl.classList.toggle("just-untapped", lane === "field" && untapPulseBySide[renderSide] && justUntappedBySide[renderSide].has(index));
@@ -3494,7 +3509,7 @@ function renderLane(zoneId, cards, activeIndex, onClick, hpValues) {
                 slotEl.classList.add("clickable");
                 slotEl.onclick = () => {
                     const target = { cardId, side, lane, index };
-                    if (isMobileGameplay() && currentPhase !== "COMBAT") {
+                    if (isMobileGameplay() && currentPhase !== "COMBAT" && !activationReady) {
                         setInspector(target);
                         return;
                     }
@@ -3812,6 +3827,25 @@ function updateArenaTurnPriority(myTurn) {
     applyState(myArena, myTurn, !myTurn);
     applyState(enemyArena, !myTurn, myTurn);
 }
+function requestMatchNotice(kind, onConfirm) {
+    const dialog = document.getElementById("matchNoticeDialog");
+    const title = document.getElementById("matchNoticeTitle");
+    const text = document.getElementById("matchNoticeText");
+    const confirmButton = document.getElementById("matchNoticeConfirm");
+    if (!dialog || !title || !text || !confirmButton || dialog.open)
+        return;
+    title.textContent = kind === "concede" ? "Conceder a partida?" : "Sair da partida?";
+    text.textContent = kind === "concede"
+        ? "Ao conceder, a partida termina e o oponente vence. Esta ação não pode ser desfeita."
+        : "A partida ainda está em andamento. Você será desconectado e voltará ao lobby.";
+    confirmButton.textContent = kind === "concede" ? "Conceder partida" : "Sair da sala";
+    dialog.returnValue = "cancel";
+    dialog.onclose = () => {
+        if (dialog.returnValue === "confirm")
+            onConfirm();
+    };
+    dialog.showModal();
+}
 function goLobby() {
     clearMatchReconnectTimer();
     const endpoint = view.endpointEl?.value?.trim() || resolveServerEndpoint(window.location.search);
@@ -3997,9 +4031,22 @@ function scheduleSpectatorReconnect(code) {
         });
     }, 700);
 }
+function bindFieldActivationMessages(boundRoom) {
+    fieldActivationReady.clear();
+    boundRoom.onMessage("field_activation_state", (payload) => {
+        if (isSpectator || room !== boundRoom) return;
+        fieldActivationReady.clear();
+        for (const entry of Array.isArray(payload?.ready) ? payload.ready : []) {
+            if (Number.isInteger(entry.pos) && entry.pos >= 0 && entry.pos < 5 && typeof entry.cardId === "string") fieldActivationReady.set(entry.pos, entry.cardId);
+        }
+        renderMyField(currentMyField, currentMyFieldHp);
+    });
+    if (!isSpectator) boundRoom.send("request_field_activations");
+}
 function bindActiveMatchRoom() {
     if (!room)
         return;
+    bindFieldActivationMessages(room);
     bindMatchHandlers(room, {
         onAssignSlot: (msg) => {
             isSpectator = msg?.spectator === true || isSpectator;
@@ -4017,7 +4064,10 @@ function bindActiveMatchRoom() {
             const targetPos = Number(msg?.targetPos);
             if (!Number.isInteger(targetPos) || targetPos < 0)
                 return;
-            summonedBySide[side].add(targetPos);
+            if (msg?.canAttackThisTurn === true)
+                summonedBySide[side].delete(targetPos);
+            else
+                summonedBySide[side].add(targetPos);
         },
         onEffectChoice: (msg) => {
             if (!isSpectator)
@@ -4404,6 +4454,7 @@ function renderHand(hand) {
 }
 function renderMyField(field, hpValues) {
     renderButtonRow("myField", field.map((c, i) => `[${i}] ${c} (ATK 1)`), selectedAttackerPos, "outline:2px solid #2dd4bf;", (index) => {
+    if (canActivateFieldEffect(index)) return requestFieldActivation(index);
         if (isMyTurn && currentPhase === "COMBAT") {
             beginBoardAttackFrom(index);
             return;
@@ -4411,6 +4462,7 @@ function renderMyField(field, hpValues) {
         setInspector(field[index] ? { cardId: field[index], side: "you", lane: "field", index } : null);
     });
     renderLane("you-field", field, selectedAttackerPos, (index) => {
+        if (canActivateFieldEffect(index)) return requestFieldActivation(index);
         if (isMyTurn && currentPhase === "COMBAT") {
             beginBoardAttackFrom(index);
             return;
@@ -4469,6 +4521,7 @@ async function joinMatch() {
         captureMatchReconnectionToken(room);
         clearMatchReconnectTimer();
         matchReconnectAttempts = 0;
+        bindFieldActivationMessages(room);
         const displayName = getDisplayName();
         if (displayName && !isSpectator) {
             room.send("set_name", { name: displayName, avatarId: getAvatarId() });
@@ -4490,7 +4543,10 @@ async function joinMatch() {
                 const targetPos = Number(msg?.targetPos);
                 if (!Number.isInteger(targetPos) || targetPos < 0)
                     return;
-                summonedBySide[side].add(targetPos);
+                if (msg?.canAttackThisTurn === true)
+                    summonedBySide[side].delete(targetPos);
+                else
+                    summonedBySide[side].add(targetPos);
             },
             onEffectChoice: (msg) => {
                 if (!isSpectator)
@@ -4900,11 +4956,27 @@ if (view.btnConcede)
     view.btnConcede.onclick = () => {
         if (isSpectator || isMatchFinished || !room)
             return;
-        if (window.confirm("Conceder a partida? O oponente vencerá automaticamente."))
-            room.send("concede");
+        const activeRoom = room;
+        requestMatchNotice("concede", () => {
+            if (!isSpectator && !isMatchFinished && room === activeRoom)
+                activeRoom.send("concede");
+        });
     };
 if (view.btnBackLobby)
-    view.btnBackLobby.onclick = goLobby;
+    view.btnBackLobby.onclick = () => {
+        if (!room || isMatchFinished || isSpectator)
+            return goLobby();
+        requestMatchNotice("leave", goLobby);
+    };
+const matchNoticeDialog = document.getElementById("matchNoticeDialog");
+if (matchNoticeDialog)
+    matchNoticeDialog.addEventListener("keydown", (event) => {
+        event.stopPropagation();
+        if (event.key === "Escape") {
+            event.preventDefault();
+            matchNoticeDialog.close("cancel");
+        }
+    });
 const logModal = document.getElementById("logModal");
 const btnOpenLog = document.getElementById("btnOpenLog");
 const btnCloseLogModal = document.getElementById("btnCloseLogModal");

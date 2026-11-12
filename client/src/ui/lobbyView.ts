@@ -1,4 +1,5 @@
 /* Responsibility: DOM-only helpers for lobby screen. No Colyseus/network code here. */
+import { resolveLeaderArtwork } from "./deckStore";
 
 type Slot = "p1" | "p2" | null;
 
@@ -29,6 +30,79 @@ type SpectatorMatch = {
 };
 
 const byId = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T | null;
+
+let playableDeck = false;
+let joiningLobby = false;
+let lobbyReady = false;
+
+export function setLobbyDeckAvailability(valid: boolean) {
+	if (!byId("lobbyFeedback")) return;
+	playableDeck = valid;
+	for (const id of ["btnReady", "btnCreatePrivate", "btnJoinPrivate", "btnJoinSelected"]) {
+		const button = byId<HTMLButtonElement>(id);
+		if (button) button.disabled = joiningLobby || (!valid && !(id === "btnReady" && lobbyReady));
+	}
+	const note = byId("deckValidation");
+	if (note) note.textContent = valid ? "Baralho disponível para jogar." : "Selecione ou crie um baralho com escolhido e cartas para jogar.";
+}
+
+export function setLobbyServerAvailable(available: boolean) {
+	const node = byId("connectionStatus");
+	if (!node) return;
+	node.textContent = available ? "Servidor disponível" : "Servidor indisponível · tentando novamente";
+	node.dataset.state = available ? "ok" : "error";
+}
+
+function renderDuelPlayers(players: LobbyPlayer[], mySlot: Slot) {
+	const mount = byId("players");
+	if (!mount || (!byId("lobbyFeedback") && !byId("soloStatus"))) return false;
+	const fragment = document.createDocumentFragment();
+	const slots = mySlot === "p2" ? ["p2", "p1"] : ["p1", "p2"];
+	for (const slot of slots) {
+		const player = players.find(entry => entry.slot === slot);
+		const article = document.createElement("article");
+		article.className = `duelist${player ? "" : " is-empty"}`;
+		const image = document.createElement("img");
+		image.className = "duelistPortrait";
+		image.alt = "Avatar do jogador";
+		image.title = "Avatar do jogador";
+		image.src = AVATAR_PATHS[player?.avatarId || ""] || "/publicadas/ui/layout-background.ai.thumb.webp";
+		image.onerror = () => { image.onerror = null; image.src = "/publicadas/ui/layout-background.ai.thumb.webp"; };
+		const info = document.createElement("div");
+		const perspective = document.createElement("small");
+		perspective.textContent = mySlot ? slot === mySlot ? "Você" : "Oponente" : slot === "p1" ? "Duelista 1" : "Duelista 2";
+		const name = document.createElement("strong");
+		name.textContent = player ? player.displayName || "Duelista" : "Aguardando jogador";
+		const leader = document.createElement("span");
+		leader.textContent = player?.leaderId || "Escolhido não selecionado";
+		const status = document.createElement("span");
+		status.className = `duelistStatus${player?.ready ? " is-ready" : ""}`;
+		status.textContent = !player ? "Lugar disponível" : player.ready ? "Pronto para o duelo" : "Preparando baralho";
+		const identity = document.createElement("div");
+		identity.className = "duelistProfile";
+		identity.append(image, name);
+		info.append(perspective, identity, leader, status);
+		if (player?.leaderId) {
+			const chosen = document.createElement("img");
+			chosen.className = "duelistChosen";
+			chosen.alt = `Escolhido: ${player.leaderId}`;
+			chosen.title = `Escolhido: ${player.leaderId}`;
+			chosen.src = resolveLeaderArtwork({ leaderName: player.leaderId });
+			article.append(chosen);
+		} else {
+			const placeholder = document.createElement("div");
+			placeholder.className = "duelistChosen";
+			article.append(placeholder);
+		}
+		article.append(info);
+		fragment.append(article);
+	}
+	mount.replaceChildren(fragment);
+	const readyCount = players.filter(player => player.ready).length;
+	const status = byId("duelStatus");
+	if (status) status.textContent = !players.length ? "Nenhuma sala conectada" : players.length < 2 ? "Aguardando oponente" : readyCount === 2 ? "Preparando a partida…" : "Aguardando confirmação dos duelistas";
+	return true;
+}
 
 const AVATAR_PATHS: Record<string, string> = {
 	"chosen:valbrak": "/avatars/chosens/valbrak.png",
@@ -89,6 +163,12 @@ export function setSlotPhase(slot: Slot, phase: string) {
 }
 
 export function setReadyUI(isReady: boolean) {
+	lobbyReady = isReady;
+	if (byId("lobbyFeedback")) {
+		const button = byId<HTMLButtonElement>("btnReady");
+		if (button) button.textContent = isReady ? "Cancelar pronto" : "Entrar na fila";
+		setLobbyDeckAvailability(playableDeck);
+	}
 	const readyEl = byId("ready") || byId("readyStatus");
 	if (!readyEl) return;
 	readyEl.textContent = isReady ? "PRONTO" : "NÃO PRONTO";
@@ -96,6 +176,7 @@ export function setReadyUI(isReady: boolean) {
 }
 
 export function renderPlayers(players: LobbyPlayer[], mySlot: Slot = null) {
+	if (renderDuelPlayers(players, mySlot)) return;
 	const playersEl = byId("players");
 	if (!playersEl) return;
 
@@ -264,6 +345,23 @@ export function renderMatches(
 }
 
 export function log(msg: string, obj?: unknown) {
+	const feedback = byId("lobbyFeedback");
+	if (feedback) {
+		const data = (obj || {}) as Record<string, unknown>;
+		if (msg === "JOINING" || msg === "PRIVATE_CONNECTING") {
+			joiningLobby = true;
+			feedback.textContent = "Conectando à sala…";
+		} else if (["JOINED", "PRIVATE_CREATED", "PRIVATE_JOINED", "ROOM_LEAVE", "JOIN_ERROR", "ERROR"].includes(msg)) {
+			joiningLobby = false;
+			if (msg === "ROOM_LEAVE") renderDuelPlayers([], null);
+			feedback.textContent = msg === "ROOM_LEAVE" ? "Você saiu da sala." : msg === "JOIN_ERROR" || msg === "ERROR" ? String(data.text || "Não foi possível concluir a ação.") : msg === "JOINED" ? "Sala conectada. Confirme para entrar na fila." : "Sala privada conectada. Aguardando oponente.";
+		} else if (msg === "READY_SENT") {
+			feedback.textContent = data.ready ? "Pronto. Aguardando o outro duelista." : "Pronto cancelado. Você pode trocar seu baralho.";
+		} else if (msg === "START_MATCH") feedback.textContent = "Duelo encontrado. Abrindo a partida…";
+		else if (msg === "PRIVATE_CODE_COPIED") feedback.textContent = "Código da sala copiado.";
+		else if (msg === "PRIVATE_CODE_SHARED") feedback.textContent = "Convite compartilhado.";
+		setLobbyDeckAvailability(playableDeck);
+	}
 	const logEl = byId("log");
 	if (!logEl) return;
 	const line = `[${new Date().toLocaleTimeString()}] ${msg} ${obj ? JSON.stringify(obj) : ""}\n`;

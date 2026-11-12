@@ -9,10 +9,13 @@
   </script>
   <script defer src="/_vercel/insights/script.js"></script>
 
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="./gameplay.css" />
 </head>
 
-<body>
+<body class="gameRoom">
 
 <svg id="attackArrowSvg" class="attackArrowSvg">
   <defs>
@@ -104,17 +107,17 @@
 
             </div>
 
-            <div class="centerBar centerArena">
-              <div class="phaseBar" id="phaseBar">
-                <div class="phaseItem" data-phase="INITIAL">Inicial</div>
-                <div class="phaseItem" data-phase="PREP">Preparação</div>
-                <div class="phaseItem" data-phase="COMBAT">Combate</div>
-                <div class="phaseItem" data-phase="END">Fim</div>
+            <div class="centerBar centerArena" aria-label="Progresso e ações do turno">
+              <div class="phaseBar" id="phaseBar" role="list" aria-label="Fases do turno">
+                <div class="phaseItem" data-phase="INITIAL" role="listitem" aria-label="Inicial" title="Inicial"><span class="phaseNode" aria-hidden="true"></span><span>Inicial</span></div>
+                <div class="phaseItem" data-phase="PREP" role="listitem" aria-label="Preparação" title="Preparação"><span class="phaseNode" aria-hidden="true"></span><span class="phaseLabelWide">Preparação</span><span class="phaseLabelCompact">Prep.</span></div>
+                <div class="phaseItem" data-phase="COMBAT" role="listitem" aria-label="Combate" title="Combate"><span class="phaseNode" aria-hidden="true"></span><span>Combate</span></div>
+                <div class="phaseItem" data-phase="END" role="listitem" aria-label="Fim" title="Fim"><span class="phaseNode" aria-hidden="true"></span><span>Fim</span></div>
               </div>
 
               <div class="phaseActions">
-                <button id="btnLeaderPower" class="btn">Poder do Escolhido</button>
-                <button id="phaseActionBtn" class="btn primary">Continuar</button>
+                <button id="btnLeaderPower" class="btn" type="button" title="Poder do Escolhido" aria-label="Poder do Escolhido"><span class="leaderPowerLabel">Poder do Escolhido</span></button>
+                <button id="phaseActionBtn" class="btn primary" type="button">Preparar</button>
               </div>
             </div>
 
@@ -203,7 +206,18 @@
   </button>
 </div>
 
-<div class="modal" id="logModal">
+<dialog class="modal gameDialog" id="matchNoticeDialog" aria-labelledby="matchNoticeTitle" aria-describedby="matchNoticeText">
+  <form method="dialog" class="modalBox">
+    <h3 id="matchNoticeTitle">Confirmar ação</h3>
+    <p id="matchNoticeText"></p>
+    <div class="matchNoticeActions">
+      <button class="btn" value="cancel" autofocus>Continuar jogando</button>
+      <button class="btn danger" id="matchNoticeConfirm" value="confirm">Confirmar</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="modal" id="logModal" role="dialog" aria-modal="true" aria-label="Diário de Batalha">
   <div class="modalBox logModalBox">
     <div class="logModalHead">
       <div>
@@ -218,7 +232,7 @@
   </div>
 </div>
 
-<div class="modal" id="pileModal">
+<div class="modal" id="pileModal" role="dialog" aria-modal="true" aria-labelledby="pileTitle">
   <div class="modalBox">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
       <h3 id="pileTitle" style="margin:0">—</h3>
@@ -357,7 +371,7 @@
   </div>
 </div>
 
-<div class="modal" id="victoryModal">
+<div class="modal" id="victoryModal" role="dialog" aria-modal="true" aria-labelledby="victoryTitle">
   <div class="modalBox victoryBox">
     <h2 id="victoryTitle" style="margin-top:0">Fim de jogo</h2>
     <div id="victoryMedia" class="victoryMedia" style="display:none;">
@@ -425,12 +439,16 @@
         const itemIndex = PHASE_ORDER.indexOf(itemPhase);
         item.classList.toggle("is-active", itemPhase === current);
         item.classList.toggle("is-done", itemIndex > -1 && itemIndex < currentIndex);
+        if (itemPhase === current) item.setAttribute("aria-current", "step");
+        else item.removeAttribute("aria-current");
       }
 
       const onEndPhase = current === "END";
       const canProceed = onEndPhase ? !btnEndTurn.disabled : !btnNextPhase.disabled;
       phaseActionBtn.disabled = !canProceed;
-      phaseActionBtn.textContent = onEndPhase ? "Encerrar turno" : "Continuar";
+      const actions = { INITIAL: "Preparar", PREP: "Ir ao combate", COMBAT: "Finalizar", END: "Encerrar turno" };
+      phaseActionBtn.textContent = actions[current];
+      phaseActionBtn.setAttribute("aria-label", onEndPhase ? "Encerrar turno" : `Avançar para ${PHASE_ORDER[currentIndex + 1] === "PREP" ? "Preparação" : PHASE_ORDER[currentIndex + 1] === "COMBAT" ? "Combate" : "Fim"}`);
     };
 
     phaseActionBtn.addEventListener("click", () => {
@@ -444,6 +462,8 @@
 
     const observer = new MutationObserver(refreshPhaseUI);
     observer.observe(phaseTextEl, { childList: true, characterData: true, subtree: true });
+    observer.observe(btnNextPhase, { attributes: true, attributeFilter: ["disabled"] });
+    observer.observe(btnEndTurn, { attributes: true, attributeFilter: ["disabled"] });
     refreshPhaseUI();
     window.addEventListener("load", refreshPhaseUI);
   })();

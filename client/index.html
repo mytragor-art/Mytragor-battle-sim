@@ -246,19 +246,22 @@
       display:flex;
       flex-direction:column;
       align-items:center;
-      justify-content:flex-end;
-      gap:12px;
-      min-height:100dvh;
-      padding:20px 0 clamp(160px, 23vh, 250px);
+      justify-content:center;
+      gap:24px;
+      min-height:0;
+      padding:20px 0 24px;
       text-align:center;
     }
 
     .brand{
-      display:none;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:12px;
     }
 
     .logoWrap{
-      display:none;
+      display:block;
     }
 
     .heroCopy{
@@ -311,7 +314,7 @@
     }
     .logoWrap{
       position:relative;
-      display:none;
+      display:block;
       line-height:0;
       isolation:isolate;
     }
@@ -323,7 +326,7 @@
       z-index:0;
       background: radial-gradient(ellipse at 50% 50%, rgba(245, 201, 106, 0.52) 0%, rgba(216, 156, 43, 0.22) 44%, transparent 74%);
       filter: blur(10px);
-      animation:logoGoldAura 3.2s ease-in-out infinite;
+      display:none;
     }
     .brandLogo{
       display:block;
@@ -343,7 +346,7 @@
         drop-shadow(0 0 14px rgba(255, 200, 80, 0.6))
         drop-shadow(0 2px 0 #6e531e)
         drop-shadow(0 8px 20px #00000066);
-      animation:logoGoldPulse 3.2s ease-in-out infinite;
+      animation:none;
     }
     @keyframes logoGoldPulse{
       0%, 100%{
@@ -684,8 +687,8 @@
 
     .startStack{
       display:grid;
-      grid-template-columns:repeat(4, minmax(0, 1fr));
-      gap:8px;
+      grid-template-columns:repeat(6, minmax(0, 1fr));
+      gap:12px;
       width:100%;
     }
 
@@ -694,6 +697,7 @@
     }
 
     .startStack > .gold-btn{
+      grid-column:span 2;
       width:100%;
       min-width:0;
       min-height:48px;
@@ -702,6 +706,20 @@
       font-size:13px;
       letter-spacing:.6px;
     }
+
+    .startStack > .playMode{
+      grid-column:span 3;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:6px;
+      min-height:100px;
+      font-size:17px;
+      letter-spacing:0;
+    }
+    .playMode small{ font:500 14px/1.4 "Cormorant Garamond", Georgia, serif; letter-spacing:0; }
+    .utilityGlyph{ font-size:18px; margin-right:6px; }
 
     .startStackSeal{
       display:flex;
@@ -1019,13 +1037,13 @@
     }
 
     .statsLink{
-      grid-column:1 / -1;
+      grid-column:span 2;
       display:flex;
       align-items:center;
       justify-content:center;
-      gap:14px;
-      min-height:64px;
-      padding:12px 18px;
+      gap:8px;
+      min-height:56px;
+      padding:10px;
       border:1px solid rgba(235,195,110,.48);
       border-radius:14px;
       background:linear-gradient(120deg, #332719, #171920 65%);
@@ -1045,12 +1063,140 @@
     }
     .statsLinkCopy{ display:grid; gap:3px; text-align:left; line-height:1.3; }
     .statsLinkTitle{ font-family:"Cinzel", Georgia, serif; font-size:14px; font-weight:700; letter-spacing:1px; }
-    .statsLinkNote{ color:#c7baa4; font-size:12px; letter-spacing:.2px; }
-    .statsLinkArrow{ margin-left:12px; font-size:22px; line-height:1; }
+    .statsLinkNote{ color:#c7baa4; font-size:11px; letter-spacing:0; }
+    .statsLinkArrow{ display:none; }
     .statsLink:hover{ transform:translateY(-2px); border-color:#f6d994; background:linear-gradient(120deg, #46331c, #202129 65%); }
     .statsLink:active{ transform:translateY(0); }
     .statsLink:focus-visible{ outline:2px solid var(--gold1); outline-offset:3px; }
-    @media (prefers-reduced-motion: reduce){ .statsLink{ transition:none; } .statsLink:hover{ transform:none; } }
+    .brandLogo{ width:240px; max-width:80vw; height:120px; object-fit:contain; }
+    .brand .logoWrap{ display:none; }
+    .brand{ padding-top:120px; }
+    .startStack > .gold-btn.primary{
+      color:#2c1d08;
+      border-color:#efd18b;
+      background:linear-gradient(180deg,#f3d37a,#d7a93d 52%,#9a6a26);
+      text-shadow:none;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 8px 20px rgba(0,0,0,.3);
+    }
+    .heroCopy .eyebrow, .heroCopy .heroText{ display:none; }
+    .heroCopy .title{ margin:0; font:600 24px/1.3 "Cinzel", Georgia, serif; letter-spacing:0; }
+    .actions{ gap:20px; }
+    .profileRow{ justify-content:flex-end; padding-bottom:14px; border-bottom:1px solid rgba(245,201,106,.2); }
+    .campaignInlineButton{ background:rgba(12,14,20,.9); color:var(--gold1); box-shadow:none; font-size:12px; }
+    .campaignShelf{ padding-top:16px; border-top:1px solid rgba(245,201,106,.2); }
+    .campaignShelfBanner{ box-shadow:none; }
+    .campaignShelfBanner img{ max-height:260px; object-fit:contain; background:#0a0a0f; }
+    body::before, body::after, .ambientParticles{ display:none; }
+    :focus-visible{ outline:2px solid var(--gold1); outline-offset:4px; }
+    @media (max-width:980px){
+      .home{ justify-content:flex-start; gap:20px; }
+      .startStack{ grid-template-columns:repeat(6,minmax(0,1fr)); }
+      .brandLogo{ height:110px; }
+      .statsLinkIcon{ display:none; }
+      .statsLinkTitle{ font-size:12px; letter-spacing:0; }
+    }
+    @media (max-width:600px){
+      .wrap{ padding-top:16px; }
+      .home{ padding-top:0; }
+      .profileRow{ justify-content:center; }
+      .startStack{ gap:10px; }
+      .startStack > .playMode{ min-height:94px; font-size:14px; padding:14px 8px; }
+      .startStack > .gold-btn:not(.playMode){ min-height:58px; font-size:11px; letter-spacing:0; }
+      .statsLink{ border-radius:10px; }
+      .statsLinkNote{ font-size:10px; }
+      .statsLinkTitle{ font-size:11px; }
+      .utilityGlyph{ display:block; margin:0 0 3px; }
+      .heroCopy .title{ font-size:20px; }
+      .brand{ padding-top:100px; }
+      .campaignShelf{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+    }
+    .home{ justify-content:flex-start; gap:24px; }
+    .brand{ padding-top:130px; }
+    .heroCopy .title{ color:#f4dfac; font-size:22px; text-shadow:0 2px 6px #000; }
+    .heroCopy .title::before, .heroCopy .title::after{ content:""; display:inline-block; width:30px; height:1px; margin:0 14px 6px; background:#a98b4c; }
+    .actions{
+      width:min(100%,720px);
+      gap:22px;
+      padding:20px 24px 24px;
+      background:linear-gradient(90deg,transparent,rgba(8,10,14,.9) 12%,rgba(8,10,14,.9) 88%,transparent);
+    }
+    .profileRow{ width:auto; align-self:center; justify-content:center; gap:0; padding:0; border:1px solid #82704b; border-radius:8px; background:#111318; }
+    .profileRow .avatarPreviewBtn{ width:46px; height:46px; border:0; border-right:1px solid #514735; border-radius:7px 0 0 7px; box-shadow:none; }
+    .profileRow #btnProfile{ min-width:150px; height:46px; padding:8px 18px; border:0; border-radius:0 7px 7px 0; background:transparent; box-shadow:none; font-size:12px; }
+    .profileRow #btnProfile::before, .profileRow #btnProfile::after{ display:none; }
+    .startStack{ gap:12px; }
+    .startStack > .gold-btn, .startStack > .statsLink{
+      border:1px solid #65583f;
+      border-radius:8px;
+      background:linear-gradient(180deg,#26282d,#15171c);
+      color:#eee5d3;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 4px 12px rgba(0,0,0,.25);
+      text-shadow:none;
+      letter-spacing:0;
+      transition:border-color .18s ease, background .18s ease;
+    }
+    .startStack > .gold-btn::before, .startStack > .gold-btn::after{ display:none; }
+    .startStack > .gold-btn:hover, .startStack > .statsLink:hover{
+      border-color:#e4c47d;
+      background:linear-gradient(180deg,#34332e,#202127);
+      color:#fff0c7;
+      filter:none;
+      transform:none;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 4px 12px rgba(0,0,0,.25);
+    }
+    .startStack > .gold-btn.primary{ background:linear-gradient(180deg,#eed18a,#bb8e36); border-color:#f1d89e; color:#261c0b; }
+    .startStack > .gold-btn.primary:hover{ background:linear-gradient(180deg,#ffe4a3,#d0a247); color:#261c0b; }
+    .startStack > .playMode{ min-height:110px; gap:8px; font-size:16px; }
+    .playMode small{ color:inherit; opacity:.8; font:500 13px/1.3 "Cormorant Garamond",Georgia,serif; text-transform:none; }
+    .startStack > .gold-btn:not(.playMode), .startStack > .statsLink{ min-height:76px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; font-size:12px; }
+    .utilityGlyph{ display:block; margin:0; font-size:20px; color:#d5b66e; line-height:1; }
+    .statsLinkIcon{ display:grid; border:0; background:none; width:22px; height:22px; flex:0 0 22px; color:#d5b66e; }
+    .statsLinkIcon svg{ width:22px; height:22px; }
+    .statsLinkCopy{ text-align:center; }
+    .statsLinkTitle{ font-size:12px; font-weight:600; letter-spacing:0; text-transform:uppercase; }
+    .statsLinkNote{ display:none; }
+    .campaignInlineButton{ display:inline-flex; }
+    .campaignShelf{ display:block; padding-top:0; border-top:1px solid #514735; }
+    .campaignHeading{ margin:0; padding:16px 6px; color:#cbb887; font:600 12px/1.5 "Cinzel",Georgia,serif; text-align:left; }
+    .campaignGallery{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; padding-top:4px; }
+    .campaignShelfBanner{ background:#101217; border-color:#514735; }
+    .campaignShelfBanner img{ width:100%; max-height:none; height:auto; }
+    .campaignVisit{ display:block; padding-top:14px; text-align:center; color:#f0d496; font-size:13px; text-underline-offset:4px; }
+    .adReserveRail{ display:none; }
+    footer{ margin-top:0; padding:0 12px; font-size:10px; letter-spacing:0; }
+    @media (max-width:980px){ .home{ gap:18px; } .brand{ padding-top:110px; } }
+    @media (max-width:600px){
+      .brand{ padding-top:100px; }
+      .heroCopy .title{ font-size:18px; }
+      .heroCopy .title::before, .heroCopy .title::after{ width:20px; margin:0 10px 5px; }
+      .actions{ padding:16px 0 20px; gap:18px; background:linear-gradient(90deg,rgba(8,10,14,.7),rgba(8,10,14,.9),rgba(8,10,14,.7)); }
+      .startStack{ gap:8px; }
+      .startStack > .playMode{ min-height:98px; font-size:13px; padding:12px 6px; }
+      .startStack > .gold-btn:not(.playMode), .startStack > .statsLink{ min-height:82px; font-size:10px; padding:10px 4px; }
+      .statsLinkTitle{ font-size:10px; }
+      .campaignGallery{ grid-template-columns:1fr; }
+      .campaignHeading{ padding:15px 12px; font-size:11px; }
+      .campaignGallery{ padding:0 12px; }
+    }
+    @media (min-width:981px){
+      .wrap{ padding:16px 0; min-height:100dvh; }
+      .home{ padding:0; gap:14px; }
+      .brand{ padding-top:100px; }
+      .actions{ gap:14px; padding:14px 24px; }
+      .campaignHeading{ padding:10px 6px; }
+      .campaignVisit{ padding-top:8px; }
+    }
+    @media (min-width:981px) and (max-height:800px){
+      .brand{ padding-top:70px; }
+      .home{ gap:10px; }
+      .actions{ gap:10px; padding:10px 24px; }
+      .startStack{ padding:0; gap:10px; }
+      .startStack > .playMode{ min-height:80px; }
+      .startStack > .gold-btn:not(.playMode), .startStack > .statsLink{ min-height:60px; }
+      .campaignGallery img{ max-height:120px; object-fit:contain; }
+      .campaignHeading{ padding:8px 6px; }
+    }
+    @media (prefers-reduced-motion: reduce){ .startStack > .gold-btn, .statsLink{ transition:none; } .statsLink:hover{ transform:none; } }
 
     @media (hover: none) and (pointer: coarse){
       .gold-btn:active{
@@ -1070,10 +1216,9 @@
   <aside class="adReserveRail left">
     <div class="adReserveInner">
       <div class="campaignRail">
-        <a class="campaignRailBanner" href="https://meeplestarter.com.br/mytragor" target="_blank" rel="noopener noreferrer" aria-label="Abrir a pré-campanha de Mytragor na MeepleStarter">
-          <img src="/meeplestarter-pre-campanha.png" alt="Mytragor em pré-campanha na MeepleStarter" />
+        <a class="campaignRailBanner" href="https://meeplestarter.com.br/mytragor" target="_blank" rel="noopener noreferrer" aria-label="Abrir a campanha de Mytragor na MeepleStarter">
+          <img src="/meeplestarter-pre-campanha.png" alt="Campanha de Mytragor na MeepleStarter" />
         </a>
-        <a class="campaignRailButton" href="https://meeplestarter.com.br/mytragor" target="_blank" rel="noopener noreferrer">Siga a pré-campanha</a>
       </div>
     </div>
   </aside>
@@ -1081,7 +1226,7 @@
     <div class="adReserveInner">
       <div class="campaignRail">
         <a class="campaignRailBanner" href="https://meeplestarter.com.br/mytragor" target="_blank" rel="noopener noreferrer" aria-label="Abrir as metas sociais de Mytragor na MeepleStarter">
-          <img src="/meeplestarter-metas-sociais.png" alt="Metas sociais da pré-campanha de Mytragor" />
+          <img src="/meeplestarter-metas-sociais.png" alt="Metas sociais da campanha de Mytragor" />
         </a>
       </div>
     </div>
@@ -1104,7 +1249,7 @@
         </div>
         <div class="heroCopy">
           <span class="eyebrow">Card game online</span>
-          <h1 class="title">Comece a batalha.</h1>
+          <h1 class="title">Salão Arcano</h1>
           <p class="heroText">Escolha um modo rapido, prepare seu baralho e entre no duelo com a mesma experiencia no desktop e no celular.</p>
         </div>
       </div>
@@ -1121,28 +1266,31 @@
             <span class="startStackLabel">Salão Arcano</span>
             <p class="startStackNote">Escolha um caminho para entrar no duelo.</p>
           </div>
-          <button class="gold-btn primary" onclick="location.href='lobby.html'">DESAFIAR JOGADOR</button>
-          <button class="gold-btn secondary aiChallengeBtn" onclick="location.href='solo-lobby.html'">DESAFIAR A IA</button>
-          <button class="gold-btn secondary deckBuilderBtn" onclick="location.href='ui/deckbuilder.html'">Montar baralho</button>
-          <button class="gold-btn secondary manualBtn" onclick="location.href='manual.html'">MANUAL DE JOGO</button>
+          <button class="gold-btn primary playMode" onclick="location.href='lobby.html'"><span>Desafiar jogador</span><small>Duelo PvP</small></button>
+          <button class="gold-btn secondary aiChallengeBtn playMode" onclick="location.href='solo-lobby.html'"><span>Desafiar a IA</span><small>Duelo solo</small></button>
+          <button class="gold-btn secondary deckBuilderBtn" onclick="location.href='ui/deckbuilder.html'"><span class="utilityGlyph" aria-hidden="true">▤</span>Montar baralho</button>
+          <button class="gold-btn secondary manualBtn" onclick="location.href='manual.html'"><span class="utilityGlyph" aria-hidden="true">☷</span>Manual</button>
           <a class="statsLink" href="stats.html">
             <span class="statsLinkIcon" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M3 20v-7h6v7m0 0V8h6v12m0 0v-5h6v5M2 20h20"/><path d="m12 2 .9 1.8 2 .3-1.45 1.4.35 2-1.8-.95-1.8.95.35-2L9.1 4.1l2-.3Z" fill="currentColor" stroke="none"/></svg></span>
-            <span class="statsLinkCopy"><span class="statsLinkTitle">Estatísticas</span><span class="statsLinkNote">Explore os favoritos · Top 10</span></span>
+            <span class="statsLinkCopy"><span class="statsLinkTitle">Estatísticas</span><span class="statsLinkNote">Top 10 da arena</span></span>
             <span class="statsLinkArrow" aria-hidden="true">↗</span>
           </a>
         </div>
-        <a class="campaignInlineButton" href="https://meeplestarter.com.br/mytragor" target="_blank" rel="noopener noreferrer">Siga a pré-campanha</a>
-        <div class="campaignShelf" aria-label="Pré-campanha Mytragor">
+        <section class="campaignShelf" aria-labelledby="campaign-title">
+          <h2 class="campaignHeading" id="campaign-title">Mytragor no MeepleStarter · Campanha</h2>
+          <div class="campaignGallery">
           <a class="campaignShelfBanner" href="https://meeplestarter.com.br/mytragor" target="_blank" rel="noopener noreferrer">
-            <img src="/meeplestarter-pre-campanha.png" alt="Mytragor em pré-campanha na MeepleStarter" />
+            <img src="/meeplestarter-pre-campanha.png" alt="Campanha de Mytragor na MeepleStarter" />
           </a>
           <a class="campaignShelfBanner" href="https://meeplestarter.com.br/mytragor" target="_blank" rel="noopener noreferrer">
-            <img src="/meeplestarter-metas-sociais.png" alt="Metas sociais da pré-campanha de Mytragor" />
+            <img src="/meeplestarter-metas-sociais.png" alt="Metas sociais da campanha de Mytragor" />
           </a>
-        </div>
+          </div>
+          <a class="campaignVisit" href="https://meeplestarter.com.br/mytragor" target="_blank" rel="noopener noreferrer">Visitar a campanha ↗</a>
+        </section>
       </div>
 
-      <footer>Mytragor • MVP • Build local</footer>
+      <footer>Mytragor · Simulador de batalhas</footer>
     </main>
   </div>
 

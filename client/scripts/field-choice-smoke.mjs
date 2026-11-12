@@ -138,6 +138,12 @@ for (const extension of ['js', 'ts']) {
   const target = elements.get('you-ally-0');
   const bar = elements.get('fieldChoiceBar');
   bar.rect = { left: 0, right: 520, top: 0, bottom: 90, width: 520, height: 90 };
+  const activationConfirmation = { title: 'Agiota: ativar habilidade?', choiceKind: 'activation', allowCancel: true,
+    options: [{ id: 'activate', label: 'Sim, ativar' }] };
+  assert.equal(controller.show(activationConfirmation), false, 'Activation confirmation must stay in the modal, not require clicking the ally again');
+  assert.equal(canChooseOnField(activationConfirmation.options, resolve), false, 'State refresh must not turn confirmation into source selection');
+  assert.equal(controller.active, false);
+  scenarios += 3;
   target.setAttribute('role', 'group');
   target.setAttribute('tabindex', '-1');
   const dispatch = (element, key = null) => {

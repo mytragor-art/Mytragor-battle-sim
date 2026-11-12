@@ -11,16 +11,100 @@
 	<link rel="stylesheet" href="/mobile.css" media="(max-width:880px)" />
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-	<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:wght@400;500;600;700&display=swap" rel="stylesheet">
+	<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
 	<link rel="stylesheet" href="/src/style.css" />
+	<style>
+		body.lobbyBody.soloLobby{ --solo-line:#ffffff19; --solo-gold:#e0bf79; color:#e7e8eb; font:400 15px/1.5 "Source Sans 3",sans-serif; }
+		.soloLobby .lobbyCenterColumn *{ letter-spacing:0; }
+		.soloLobby .lobbyCenterColumn{ gap:16px; }
+		.soloLobby .lobbyTopBar{ border:0; border-radius:0; box-shadow:none; padding:20px 4px; background:transparent; backdrop-filter:none; }
+		.soloLobby .lobbyTopBar::before, .soloLobby .lobbyDeckPanel::before, .soloLobby .lobbyRoomsPanel::before{ display:none; }
+		.soloLobby .lobbyLogo{ width:88px; filter:sepia(1) saturate(2) brightness(2); }
+		.soloLobby .lobbyHeroCopy{ gap:4px; }
+		.soloLobby h1{ margin:0; color:#f3ead7; font:700 25px/1.3 "Cinzel",Georgia,serif; }
+		.soloLobby .lobbyEyebrow, .soloLobby .lobbySectionEyebrow{ font-size:10px; color:#c8ad73; }
+		.soloLobby .lobbyGridRefined{ grid-template-columns:minmax(0,1.55fr) minmax(310px,1fr); align-items:stretch; gap:0; background:#191b20f7; border-top:1px solid #a68d5666; }
+		.soloLobby .lobbyDeckPanel, .soloLobby .lobbyRoomsPanel{ border:0; border-radius:0; background:transparent; backdrop-filter:none; box-shadow:none; padding:26px; }
+		.soloLobby .lobbyRoomsPanel{ border-left:1px solid var(--solo-line); }
+		.soloLobby .lobbySectionHead{ margin-bottom:16px; }
+		.soloLobby .lobbySectionHead h3{ font-size:19px; }
+		.soloLobby .activeDeckCard{ border:1px solid #ffffff24; border-radius:6px; grid-template-columns:88px minmax(0,1fr); padding:16px; gap:16px; background:#24262d; box-shadow:none; }
+		.soloLobby .activeDeckArt{ width:88px; height:124px; }
+		.soloLobby .activeDeckArt > img:first-child{ width:100%; height:100%; object-fit:contain; }
+		.soloLobby .activeDeckInfo{ align-self:center; min-width:0; }
+		.soloLobby .activeDeckInfo h4{ font-size:18px; overflow-wrap:anywhere; }
+		.soloLobby .activeDeckInfo p{ font:400 14px/1.5 "Source Sans 3",sans-serif; color:#c4c6cf; }
+		.soloLobby .activeDeckMeta{ gap:12px; }
+		.soloLobby .activeDeckMeta .pill{ padding:0; border:0; background:none; font:400 12px/1.5 "Source Sans 3",sans-serif; color:#b5b8c2; }
+		.soloLobby .activeDeckActions{ grid-column:1 / -1; display:flex; flex-wrap:wrap; max-width:none; gap:8px; padding-top:10px; border-top:1px solid var(--solo-line); }
+		.soloLobby .activeDeckCycle{ width:36px; min-width:36px; padding:6px; }
+		.soloLobby #btnEditActiveDeck, .soloLobby #btnEditBotDeck{ margin-left:auto; }
+		.soloLobby .soloSetupGrid{ display:grid; grid-template-columns:1fr; gap:0; margin-top:18px; }
+		.soloLobby .soloDeckCard{ border:0; border-radius:0; padding:16px 0; background:none; box-shadow:none; }
+		.soloLobby .soloDeckCardBot{ border-top:1px solid var(--solo-line); }
+		.soloLobby .lobbyChoiceGrid{ grid-template-columns:minmax(0,1fr); gap:12px; margin-top:16px; }
+		.soloLobby .lobbyModeHead{ display:grid; grid-template-columns:auto 1fr; align-items:center; gap:10px; margin-bottom:12px; }
+		.soloLobby .lobbyModeHead h4{ font-size:17px; }
+		.soloLobby .modeBadge{ border:0; border-radius:4px; padding:4px 7px; background:#e0bf7917; color:#e0bf79; font:600 11px/1.4 "Source Sans 3",sans-serif; text-transform:none; }
+		.soloLobby .modeBadgePrivate{ background:#71baa319; color:#9bd3c0; }
+		.soloLobby label{ font:600 12px/1.5 "Source Sans 3",sans-serif; color:#c8cbd3; margin-bottom:6px; text-transform:none; }
+		.soloLobby select, .soloLobby .input{ min-width:0; width:100%; min-height:44px; padding:10px 12px; border:1px solid #ffffff29; border-radius:4px; background:#121419; color:#e7e8eb; font:400 15px/1.5 "Source Sans 3",sans-serif; }
+		.soloLobby .lobbyModeCardSolo{ min-height:0; padding:20px 0; border:0; border-top:1px solid var(--solo-line); border-radius:0; background:none; box-shadow:none; }
+		.soloLobby .lobbyModeCardSolo::before{ display:none; }
+		.soloLobby .btnGold, .soloLobby .btnGhost{ min-height:40px; border-radius:4px; box-shadow:none; text-shadow:none; font:600 14px/1.4 "Source Sans 3",sans-serif; text-transform:none; }
+		.soloLobby .btnGold{ background:var(--solo-gold); border:1px solid var(--solo-gold); color:#201b11; }
+		.soloLobby .btnGhost, .soloLobby .btnGold.secondary, .soloLobby .lobbyCampaignButton{ background:#ffffff06; border:1px solid #ffffff29; color:#ded8c9; }
+		.soloLobby .btnGold::before, .soloLobby .btnGold::after, .soloLobby .btnGhost::before, .soloLobby .btnGhost::after{ display:none; }
+		.soloLobby .btnGold:not(:disabled):hover{ background:#f0d398; }
+		.soloLobby .btnGhost:not(:disabled):hover, .soloLobby .btnGold.secondary:not(:disabled):hover, .soloLobby .lobbyCampaignButton:hover{ background:#ffffff12; color:#fff1cf; border-color:#c4a665; }
+		.soloLobby .readyPrimary{ min-height:48px; width:100%; }
+		.soloLobby button:disabled{ opacity:.6; cursor:not-allowed; filter:none; }
+		.soloLobby .lobbyReadyMeta .pill{ padding:0; border:0; background:none; font:400 12px/1.5 "Source Sans 3",sans-serif; }
+		.soloLobby .lobbySubPanel, .soloLobby .advancedPanel{ border:0; border-top:1px solid var(--solo-line); border-radius:0; padding:16px 0; background:none; box-shadow:none; }
+		.soloLobby .lobbySubPanel summary, .soloLobby .advancedPanel summary{ font:600 14px/1.4 "Source Sans 3",sans-serif; color:#e3ddcf; }
+		.soloLobby .lobbyUtilityBtn{ min-height:36px; padding:6px 10px; font-size:12px; }
+		.soloLobby .zoneTitle{ font:600 12px/1.5 "Source Sans 3",sans-serif; color:#b4b7c1; text-transform:none; }
+		.soloLobby .roomEmpty{ border:0; background:none; padding:12px 0 0; color:#b4b7c1; font:400 13px/1.5 "Source Sans 3",sans-serif; }
+		.soloLobby #soloStatus{ min-height:40px; margin:0 0 12px; color:#cfba8b; font-size:13px; }
+		.soloLobby .duelist{ display:grid; grid-template-columns:52px minmax(0,1fr); gap:12px; padding:16px 0; border-bottom:1px solid var(--solo-line); }
+		.soloLobby .duelistChosen{ width:52px; height:76px; object-fit:contain; align-self:center; }
+		.soloLobby .duelistPortrait{ width:28px; height:28px; flex:none; object-fit:cover; border:1px solid #65583f; border-radius:6px; background:#0b0d12; }
+		.soloLobby .duelistProfile{ display:flex; align-items:center; gap:8px; min-width:0; }
+		.soloLobby .duelist > div{ display:grid; gap:4px; min-width:0; }
+		.soloLobby .duelist strong{ font:600 16px/1.4 "Source Sans 3",sans-serif; color:#f3ead7; overflow-wrap:anywhere; }
+		.soloLobby .duelist small, .soloLobby .duelist span{ font-size:12px; color:#c5bdaf; overflow-wrap:anywhere; }
+		.soloLobby .duelist .duelistStatus{ color:#e4c47d; }
+		.soloLobby .duelist .duelistStatus.is-ready{ color:#a5d9b2; }
+		.soloLobby :focus-visible{ outline:2px solid #f5c96a; outline-offset:3px; }
+		@media(max-width:1100px){ .soloLobby .lobbyGridRefined{ grid-template-columns:minmax(0,1.4fr) minmax(270px,1fr); } .soloLobby .lobbyDeckPanel, .soloLobby .lobbyRoomsPanel{ padding:20px; } }
+		@media(max-width:880px){
+			.soloLobby .lobbyGridRefined{ grid-template-columns:1fr; }
+			.soloLobby .lobbyHeader{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+			.soloLobby .lobbyHeader .title{ grid-column:1 / -1; }
+			.soloLobby .lobbyHeader .lobbyCampaignButton, .soloLobby .lobbyHeader .lobbyBackBtn{ width:100%; min-width:0; min-height:44px; margin:0; text-align:center; }
+			.soloLobby .lobbyTopBar{ padding:14px; }
+			.soloLobby .lobbyBrand{ align-items:center; }
+			.soloLobby .lobbyLogo{ width:66px; }
+			.soloLobby h1{ font-size:21px; }
+			.soloLobby .lobbyDeckPanel, .soloLobby .lobbyRoomsPanel{ padding:16px; }
+			.soloLobby .lobbyRoomsPanel{ border-left:0; border-top:1px solid var(--solo-line); }
+			.soloLobby .activeDeckCard{ grid-template-columns:70px minmax(0,1fr); padding:12px; gap:12px; }
+			.soloLobby .activeDeckArt{ width:70px; height:100px; }
+			.soloLobby .activeDeckInfo h4{ font-size:16px; }
+			.soloLobby .activeDeckActions{ display:grid; grid-template-columns:36px 36px minmax(0,1fr); }
+			.soloLobby #btnEditActiveDeck, .soloLobby #btnEditBotDeck{ margin-left:0; }
+			.soloLobby #btnOpenDeckBuilder, .soloLobby #btnOpenBotDeckBuilder{ grid-column:1 / -1; }
+		}
+	</style>
+	<link rel="stylesheet" href="/src/ui/lobbyCompact.css" />
 </head>
-<body class="lobbyBody">
+<body class="lobbyBody soloLobby">
 	<div class="page lobbyPage">
 		<div class="lobbyStage">
 			<aside class="lobbyReserveColumn">
 				<div class="lobbyCampaignRail">
-					<a href="https://meeplestarter.com.br/mytragor" target="_blank" rel="noopener noreferrer" aria-label="Abrir a pré-campanha de Mytragor na MeepleStarter"><img src="/meeplestarter-pre-campanha.png" alt="Mytragor em pré-campanha na MeepleStarter" /></a>
-					<a class="lobbyCampaignCta" href="https://meeplestarter.com.br/mytragor" target="_blank" rel="noopener noreferrer">Siga a pré-campanha</a>
+					<a href="https://meeplestarter.com.br/mytragor" target="_blank" rel="noopener noreferrer" aria-label="Abrir a campanha de Mytragor na MeepleStarter"><img src="/meeplestarter-pre-campanha.png" alt="Campanha de Mytragor na MeepleStarter" /></a>
+					<a class="lobbyCampaignCta" href="https://meeplestarter.com.br/mytragor" target="_blank" rel="noopener noreferrer">Visitar a campanha</a>
 				</div>
 			</aside>
 			<main class="lobbyCenterColumn">
@@ -31,45 +115,21 @@
 								<img class="lobbyLogo" src="/logo/logomytragor.png" alt="Mytragor" />
 								<div class="lobbyHeroCopy">
 									<div class="lobbyEyebrow">Arena isolada contra IA</div>
-									<h2>Lobby Solo</h2>
-									<p>Monte seu duelo contra a IA em uma fila própria. Nada desta sala aparece nem interfere no fluxo PvP.</p>
+									<h1>Desafio contra IA</h1>
 								</div>
 							</div>
 						</div>
-						<a class="btnGold lobbyCampaignButton" href="https://meeplestarter.com.br/mytragor" target="_blank" rel="noopener noreferrer">Pré-campanha</a>
+						<a class="btnGold lobbyCampaignButton" href="https://meeplestarter.com.br/mytragor" target="_blank" rel="noopener noreferrer">Campanha</a>
 						<button class="btnGhost lobbyBackBtn" onclick="location.href='index.html'" type="button">Voltar</button>
 					</div>
 				</header>
 
 				<div class="lobbyGrid lobbyGridRefined">
 					<section class="card cardPad panel lobbyLeft lobbyDeckPanel">
-						<div class="lobbySectionEyebrow">Passo 1</div>
+						<div class="lobbySectionEyebrow">Preparação</div>
 						<div class="lobbySectionHead">
 							<h3>Configure o desafio</h3>
-							<p>Escolha seu baralho e o baralho que a IA vai pilotar. Depois basta iniciar.</p>
 						</div>
-
-						<section class="activeDeckCard" aria-live="polite">
-							<div class="activeDeckArt">
-								<img id="activeDeckLeaderArt" src="/publicadas/ui/layout-background.ai.thumb.webp" alt="Líder do baralho selecionado" />
-								<img id="activeDeckFragmentArt" class="activeDeckFragment" hidden alt="Fragmento selecionado" />
-							</div>
-							<div class="activeDeckInfo">
-								<div class="lobbySectionEyebrow">Seu baralho ativo</div>
-								<h4 id="activeDeckName">Escolha um baralho</h4>
-								<p id="activeDeckLeader">Líder: —</p>
-								<div class="activeDeckMeta">
-									<span class="pill"><b id="activeDeckCards">—</b> cartas</span>
-									<span id="activeDeckFragmentLabel" class="pill">Fragmento: —</span>
-								</div>
-							</div>
-							<div class="activeDeckActions">
-								<button id="btnPreviousDeck" class="btnGhost activeDeckCycle" type="button" aria-label="Baralho anterior">◀</button>
-								<button id="btnNextDeck" class="btnGhost activeDeckCycle" type="button" aria-label="Próximo baralho">▶</button>
-								<button id="btnEditActiveDeck" class="btnGhost" type="button">Editar</button>
-								<button id="btnOpenDeckBuilder" class="btnGold secondary" type="button">Novo baralho</button>
-							</div>
-						</section>
 
 						<div class="soloSetupGrid">
 							<div class="lobbyDeckChooser soloDeckCard">
@@ -77,17 +137,32 @@
 									<span class="modeBadge">Você</span>
 									<h4>Seu baralho</h4>
 								</div>
+								<section class="activeDeckCard" aria-live="polite" aria-label="Seu baralho">
+									<div class="activeDeckArt">
+										<img id="activeDeckLeaderArt" src="/publicadas/ui/layout-background.ai.thumb.webp" alt="Líder do baralho selecionado" />
+										<img id="activeDeckFragmentArt" class="activeDeckFragment" hidden alt="Fragmento selecionado" />
+									</div>
+									<div class="activeDeckInfo">
+										<div class="lobbySectionEyebrow">Seu baralho ativo</div>
+										<h4 id="activeDeckName">Escolha um baralho</h4>
+										<p id="activeDeckLeader">Líder: —</p>
+										<div class="activeDeckMeta">
+											<span class="pill"><b id="activeDeckCards">—</b> cartas</span>
+											<span id="activeDeckFragmentLabel" class="pill">Fragmento: —</span>
+										</div>
+									</div>
+									<div class="activeDeckActions">
+										<button id="btnPreviousDeck" class="btnGhost activeDeckCycle" type="button" aria-label="Baralho anterior">◀</button>
+										<button id="btnNextDeck" class="btnGhost activeDeckCycle" type="button" aria-label="Próximo baralho">▶</button>
+										<button id="btnEditActiveDeck" class="btnGhost" type="button">Editar</button>
+										<button id="btnOpenDeckBuilder" class="btnGold secondary" type="button">Novo baralho</button>
+									</div>
+								</section>
 								<div class="grid2 lobbyChoiceGrid">
 									<div>
 										<label for="deck">Baralho</label>
 										<select id="deck">
 											<option value="">(carregando baralhos salvos...)</option>
-										</select>
-									</div>
-									<div>
-										<label for="leader">Líder</label>
-										<select id="leader" disabled>
-											<option value="">(auto pelo baralho salvo)</option>
 										</select>
 									</div>
 								</div>
@@ -98,27 +173,33 @@
 									<span class="modeBadge modeBadgePrivate">IA</span>
 									<h4>Oponente</h4>
 								</div>
+								<section class="activeDeckCard" aria-live="polite" aria-label="Baralho da IA">
+									<div class="activeDeckArt">
+										<img id="botDeckLeaderArt" src="/publicadas/ui/layout-background.ai.thumb.webp" alt="Líder do baralho da IA" />
+										<img id="botDeckFragmentArt" class="activeDeckFragment" hidden alt="Fragmento do baralho da IA" />
+									</div>
+									<div class="activeDeckInfo">
+										<div class="lobbySectionEyebrow">Baralho ativo da IA</div>
+										<h4 id="botDeckName">Escolha um baralho</h4>
+										<p id="botDeckLeader">Líder: —</p>
+										<div class="activeDeckMeta">
+											<span class="pill"><b id="botDeckCards">—</b> cartas</span>
+											<span id="botDeckFragmentLabel" class="pill">Fragmento: —</span>
+										</div>
+									</div>
+									<div class="activeDeckActions">
+										<button id="btnPreviousBotDeck" class="btnGhost activeDeckCycle" type="button" aria-label="Baralho anterior da IA">◀</button>
+										<button id="btnNextBotDeck" class="btnGhost activeDeckCycle" type="button" aria-label="Próximo baralho da IA">▶</button>
+										<button id="btnEditBotDeck" class="btnGhost" type="button">Editar</button>
+										<button id="btnOpenBotDeckBuilder" class="btnGold secondary" type="button">Novo baralho</button>
+									</div>
+								</section>
 								<div class="grid2 lobbyChoiceGrid">
 									<div>
 										<label for="botDeck">Deck da IA</label>
 										<select id="botDeck">
 											<option value="">(carregando baralhos salvos...)</option>
 										</select>
-									</div>
-									<div>
-										<label for="botLeader">Líder da IA</label>
-										<select id="botLeader" disabled>
-											<option value="">(auto pelo baralho salvo)</option>
-										</select>
-									</div>
-								</div>
-								<div class="soloOpponentPreview" aria-live="polite">
-									<img id="botDeckLeaderArt" src="/publicadas/ui/layout-background.ai.thumb.webp" alt="Líder do deck da IA" />
-									<div>
-										<span class="lobbySectionEyebrow">Oponente IA</span>
-										<strong id="botDeckName">Escolha um deck</strong>
-										<span id="botDeckLeader">Líder: —</span>
-										<span id="botDeckCards">— cartas</span>
 									</div>
 								</div>
 							</div>
@@ -128,9 +209,8 @@
 							<div class="lobbyModeHead">
 								<span class="modeBadge">Solo</span>
 								<h4>Desafio contra IA</h4>
-								<p>A partida abre imediatamente quando os dois decks estiverem selecionados.</p>
 							</div>
-							<button class="btnGold readyPrimary" id="btnReady" type="button">Iniciar desafio solo</button>
+							<button class="btnGold readyPrimary" id="btnReady" type="button" aria-describedby="soloStatus" disabled>Iniciar desafio solo</button>
 							<div class="lobbyReadyMeta">
 								<span class="pill">Status: <b id="ready" class="bad">NÃO PRONTO</b></span>
 							</div>
@@ -139,6 +219,14 @@
 						<details class="advancedPanel">
 							<summary>Configurações avançadas</summary>
 							<div class="advancedBody">
+								<label for="leader">Seu líder</label>
+								<select id="leader" disabled><option value="">(auto pelo baralho salvo)</option></select>
+								<label for="botLeader">Líder da IA</label>
+								<select id="botLeader" disabled><option value="">(auto pelo baralho salvo)</option></select>
+								<div class="actionsRow roomStateRow lobbyCompactState">
+									<span class="pill">Slot: <b id="slot">—</b></span>
+									<span class="pill">Fase: <b id="phase">—</b></span>
+								</div>
 								<label for="endpoint">Endpoint (ws)</label>
 								<input class="input" id="endpoint" value="ws://localhost:2567" />
 
@@ -159,13 +247,9 @@
 						<div class="lobbySectionEyebrow">Mesa atual</div>
 						<div class="lobbySectionHead">
 							<h3>Estado do desafio</h3>
-							<p>Quando você estiver pronto e a IA tiver um deck, a partida solo começa automaticamente.</p>
 						</div>
+						<p id="soloStatus" role="status" aria-live="polite">Selecione os dois baralhos para iniciar.</p>
 
-						<div class="actionsRow roomStateRow lobbyCompactState">
-							<span class="pill">Slot: <b id="slot">—</b></span>
-							<span class="pill">Fase: <b id="phase">—</b></span>
-						</div>
 
 						<div class="lobbySubPanel">
 							<div class="zoneTitle">Jogadores na sala</div>
@@ -192,7 +276,7 @@
 			</main>
 			<aside class="lobbyReserveColumn">
 				<div class="lobbyCampaignRail">
-					<a href="https://meeplestarter.com.br/mytragor" target="_blank" rel="noopener noreferrer" aria-label="Abrir as metas sociais de Mytragor na MeepleStarter"><img src="/meeplestarter-metas-sociais.png" alt="Metas sociais da pré-campanha de Mytragor" /></a>
+					<a href="https://meeplestarter.com.br/mytragor" target="_blank" rel="noopener noreferrer" aria-label="Abrir as metas sociais de Mytragor na MeepleStarter"><img src="/meeplestarter-metas-sociais.png" alt="Metas sociais da campanha de Mytragor" /></a>
 				</div>
 			</aside>
 		</div>

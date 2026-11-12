@@ -1,5 +1,116 @@
 /* Responsibility: keep floating control/preview panels above the arena with opaque surfaces. */
 
+.gameRoom { font-family: "Source Sans 3", sans-serif; }
+.gameRoom .btn {
+	border-radius: 6px;
+	border: 1px solid #77716a;
+	background: #34373d;
+	color: #fff7e6;
+	box-shadow: none;
+	font-family: "Source Sans 3", sans-serif;
+	font-weight: 700;
+	letter-spacing: 0;
+	text-transform: none;
+	text-shadow: none;
+}
+.gameRoom .btn::before, .gameRoom .btn::after { content: none; }
+.gameRoom .btn:hover:not(:disabled) { background: #484d55; border-color: #e2c488; }
+.gameRoom .btn.primary, .gameRoom .btn.is-ready { background: #dec18a; color: #201e19; border-color: #eed9b1; }
+.gameRoom .btn.primary:hover:not(:disabled) { background: #f0d8aa; }
+.gameRoom .btn:focus-visible { outline: 3px solid #e2c488; outline-offset: 3px; }
+.gameRoom .pill, .gameRoom .phaseItem { background: #26292e; color: #d8dadd; border-color: #45474c; text-shadow: none; }
+.gameRoom .phaseItem.is-active { background: #dec18a; color: #201e19; border-color: #eed9b1; box-shadow: none; }
+.gameRoom .phaseItem.is-done { color: #e2c488; border-color: #8b7857; }
+.gameRoom #btnConcede { background: #39292d; color: #f0b6b7; border-color: #86575b; }
+.gameRoom #btnBackLobby { background: #34373d; color: #fff7e6; border-color: #cbb17b; }
+.gameRoom #handsCol { background: #1b1d20 !important; border-color: #45474c !important; }
+
+.gameRoom .card.slotCard.can-activate:not(.choiceBoardHighlight):not(.choiceBoardHighlight *) {
+	outline: 2px solid #c4a0ff;
+	outline-offset: 2px;
+	box-shadow: 0 0 0 2px rgba(196, 160, 255, .25), 0 0 18px rgba(196, 160, 255, .6) !important;
+}
+.gameRoom .card.slotCard.can-activate:not(.choiceBoardHighlight):not(.choiceBoardHighlight *):hover { outline-color: #e5d6ff; }
+.gameRoom .choiceBoardHighlight {
+	outline: 2px solid #7dd3fc;
+	outline-offset: 2px;
+	box-shadow: 0 0 0 2px rgba(125, 211, 252, .2), 0 0 14px rgba(56, 189, 248, .45) !important;
+}
+
+.gameRoom #board > .centerBar {
+	--center-scale: max(.4, var(--scale, 1));
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: center;
+	gap: calc(6px / var(--center-scale));
+	height: auto;
+	min-height: calc(36px / var(--center-scale));
+	max-height: none;
+	padding: calc(3px / var(--center-scale)) calc(8px / var(--center-scale));
+	border: 1px solid #706044;
+	border-radius: 6px;
+	background: #1b1d20;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, .3);
+}
+.gameRoom #phaseBar {
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: 0;
+	height: auto;
+	min-height: 0;
+	max-height: none;
+	padding: 0;
+	border: 0;
+	border-radius: 0;
+	background: none;
+	box-shadow: none;
+}
+.gameRoom #phaseBar .phaseItem {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	gap: calc(3px / var(--center-scale));
+	min-height: 0;
+	padding: 0;
+	border: 0;
+	border-radius: 0;
+	background: none;
+	color: #aeb2ba;
+	font: 600 calc(11px / var(--center-scale))/1.2 "Source Sans 3", sans-serif;
+	letter-spacing: 0;
+	transform: none;
+	box-shadow: none;
+}
+.gameRoom #phaseBar .phaseItem:not(:last-child)::after {
+	content: "";
+	position: absolute;
+	top: calc(3px / var(--center-scale));
+	left: calc(50% + 6px / var(--center-scale));
+	width: calc(100% - 12px / var(--center-scale));
+	height: 1px;
+	background: #555960;
+}
+.phaseNode { width: calc(6px / var(--center-scale)); height: calc(6px / var(--center-scale)); border: 1px solid #777c85; border-radius: 50%; background: #26292e; }
+.gameRoom #phaseBar .phaseItem.is-done { color: #d0be98; }
+.gameRoom #phaseBar .is-done .phaseNode, .gameRoom #phaseBar .is-done::after { background: #b79b64; border-color: #b79b64; }
+.gameRoom #phaseBar .phaseItem.is-active { color: #f2d79f; font-weight: 700; }
+.gameRoom #phaseBar .is-active .phaseNode { background: #e2c488; border-color: #f6e4c1; box-shadow: 0 0 0 calc(3px / var(--center-scale)) rgba(226, 196, 136, .16); }
+.gameRoom .centerBar .phaseActions { justify-content: flex-end; gap: calc(6px / var(--center-scale)); }
+.gameRoom .centerBar .btn {
+	height: calc(30px / var(--center-scale));
+	min-height: calc(30px / var(--center-scale));
+	padding: 0 calc(8px / var(--center-scale));
+	font: 700 calc(11px / var(--center-scale))/1.2 "Source Sans 3", sans-serif;
+}
+.gameRoom .centerBar #phaseActionBtn { width: calc(116px / var(--center-scale)); min-width: 0; border-radius: 6px; box-shadow: none; white-space: nowrap; font-size: calc(11px / var(--center-scale)); letter-spacing: 0; }
+.gameRoom .centerBar #phaseActionBtn:disabled { background: #303339; border-color: #555960; color: #aeb2ba; opacity: 1; }
+.gameRoom .centerBar #btnLeaderPower { display: inline-flex; align-items: center; justify-content: center; width: calc(120px / var(--center-scale)); white-space: nowrap; border-color: #8d7954; }
+.gameRoom .centerBar .leaderPowerLabel { display: inline; }
+.phaseLabelCompact { display: none; }
+@media (max-width: 600px) {
+	.gameRoom #phaseBar .phaseItem > span:not(.phaseNode) { display: none; }
+}
+
 #handsCol {
 	position: sticky;
 	z-index: 130;
@@ -9,20 +120,22 @@
 .arenaToolbar {
 	position: relative;
 	z-index: 135;
-	background: linear-gradient(180deg, #111827, #050914) !important;
-	border-color: rgba(255, 255, 255, 0.18) !important;
+	background: #1b1d20 !important;
+	border-color: #45474c !important;
 	box-shadow: 0 16px 34px rgba(0, 0, 0, 0.48) !important;
 	backdrop-filter: none !important;
 }
 
 @media (min-width: 981px) and (hover: hover) and (pointer: fine) {
 	#handsCol {
-		z-index: 0;
+		z-index: 130;
+		pointer-events: none;
 	}
 
 	#handsCol > .arenaToolbar,
 	.arenaToolbar {
-		z-index: 1;
+		z-index: 135;
+		pointer-events: auto;
 	}
 }
 
@@ -33,8 +146,8 @@
 	display: grid;
 	grid-template-rows: auto minmax(0, 1fr);
 	min-height: 0;
-	background: #070b14 !important;
-	border-color: rgba(255, 255, 255, 0.18) !important;
+	background: #1b1d20 !important;
+	border-color: #45474c !important;
 	box-shadow: 0 18px 42px rgba(0, 0, 0, 0.55) !important;
 	backdrop-filter: none !important;
 	overflow: hidden !important;
@@ -54,8 +167,8 @@
 #previewCol .bigMeta,
 .previewDrawer .big,
 .previewDrawer .bigMeta {
-	background: #0b101c !important;
-	border-color: rgba(214, 181, 112, 0.18) !important;
+	background: #24272b !important;
+	border-color: #45474c !important;
 	box-shadow: 0 12px 28px rgba(0, 0, 0, 0.42) !important;
 	backdrop-filter: none !important;
 }
@@ -151,7 +264,7 @@
 }
 
 .fieldChoiceBar {
-	--field-choice-accent: #7dd3fc;
+	--field-choice-accent: #e2c488;
 	position: fixed;
 	top: 50%;
 	left: 50%;
@@ -165,20 +278,20 @@
 	padding: 8px 12px;
 	box-sizing: border-box;
 	overflow: auto;
-	background: #0b1322;
+	background: #1b1d20;
 	border: 1px solid var(--field-choice-accent);
-	border-radius: 10px;
+	border-radius: 8px;
 	box-shadow: 0 6px 20px rgba(0, 0, 0, .4);
 	color: #e2e8f0;
 	font-size: 12px;
 }
 
 .fieldChoiceBar[data-choice-kind="activation"] {
-	--field-choice-accent: #c4a0ff;
+	--field-choice-accent: #e2c488;
 }
 
 .fieldChoiceBar[data-choice-kind="replacement"] {
-	--field-choice-accent: #ffb15f;
+	--field-choice-accent: #e9aa95;
 }
 
 .fieldChoiceBar[hidden] {

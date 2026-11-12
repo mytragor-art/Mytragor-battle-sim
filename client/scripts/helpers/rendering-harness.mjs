@@ -148,7 +148,7 @@ export async function createRenderingHarness(extension, options = {}, cards = {}
         return back;
       };
       const clearAttackTargetHover = () => {};
-      const isMobileGameplay = () => false;
+      const isMobileGameplay = () => !!options.mobile;
       const consumeLanePileFlight = () => options.consumeFlight || false;
       const spawnDeathGhost = (slot, card) => calls.ghosts.push(card);
       const tappedBySide = { you: new Set(), ai: new Set() };
@@ -156,6 +156,7 @@ export async function createRenderingHarness(extension, options = {}, cards = {}
       const justUntappedBySide = { you: new Set(), ai: new Set() };
       const justUntappedLeaderBySide = { you: false, ai: false };
       const canSelectCombatAttacker = () => !!options.attacker;
+      const canActivateFieldEffect = () => !!options.activationReady;
       const canSelectCombatTarget = () => !!options.target;
       const getDisplayedFieldMaxHp = () => options.maxHp || 5;
       const getFieldAttackValue = () => options.attack || 2;

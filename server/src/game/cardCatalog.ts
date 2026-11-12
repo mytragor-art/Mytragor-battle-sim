@@ -25,6 +25,14 @@ export type CardDef = {
 	textA?: string;
 	textB?: string;
 	effectValue?: any;
+	activation?: {
+		phase?: "PREP";
+		oncePerTurn?: boolean;
+		fragmentCost?: number;
+		selfDamage?: number;
+		exhaust?: boolean;
+		effect?: string;
+	};
 	query?: any;
 	max?: number;
 	transform?: {

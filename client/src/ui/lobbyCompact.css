@@ -1,0 +1,125 @@
+body.lobbyBody:is(.pvpLobby, .soloLobby) .page.lobbyPage {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+body.lobbyBody:is(.pvpLobby, .soloLobby) .lobbyCenterColumn { gap: 8px; }
+body.lobbyBody:is(.pvpLobby, .soloLobby) .lobbyTopBar { padding: 8px 4px; }
+body.lobbyBody:is(.pvpLobby, .soloLobby) .lobbyLogo { width: 66px; }
+body.lobbyBody:is(.pvpLobby, .soloLobby) h1 { font-size: 22px; }
+body.lobbyBody:is(.pvpLobby, .soloLobby) .connectionStatus { margin-top: 0; }
+body.lobbyBody:is(.pvpLobby, .soloLobby) .lobbyBackBtn {
+  background: #343943;
+  border: 1px solid #cbb17b;
+  color: #fff7e6;
+  min-height: 44px;
+  font-weight: 700;
+}
+body.lobbyBody:is(.pvpLobby, .soloLobby) .lobbyBackBtn:hover {
+  background: #4a505b;
+  border-color: #f0d398;
+  color: #ffffff;
+}
+body.lobbyBody:is(.pvpLobby, .soloLobby) .lobbyBackBtn:focus-visible {
+  outline: 2px solid #f0d398;
+  outline-offset: 3px;
+}
+body.lobbyBody:is(.pvpLobby, .soloLobby) .lobbyDeckPanel,
+body.lobbyBody:is(.pvpLobby, .soloLobby) .lobbyRoomsPanel { padding: 18px; }
+body.lobbyBody:is(.pvpLobby, .soloLobby) .lobbySectionHead { margin-bottom: 10px; }
+body.lobbyBody:is(.pvpLobby, .soloLobby) .activeDeckCard {
+  grid-template-columns: 64px minmax(0, 1fr);
+  padding: 12px;
+  gap: 10px;
+  margin: 0 0 10px;
+}
+body.lobbyBody:is(.pvpLobby, .soloLobby) .activeDeckArt { width: 64px; height: 90px; }
+body.lobbyBody:is(.pvpLobby, .soloLobby) .activeDeckInfo h4 { font-size: 16px; }
+body.lobbyBody:is(.pvpLobby, .soloLobby) .activeDeckInfo p { margin: 4px 0; }
+body.lobbyBody:is(.pvpLobby, .soloLobby) .activeDeckActions { padding-top: 8px; gap: 6px; }
+body.lobbyBody:is(.pvpLobby, .soloLobby) .lobbyDeckChooser { padding-top: 0; padding-bottom: 0; }
+body.lobbyBody:is(.pvpLobby, .soloLobby) .lobbyChoiceGrid { margin-top: 10px; }
+body.lobbyBody:is(.pvpLobby, .soloLobby) .lobbyModeCard { padding: 12px 0; gap: 8px; }
+body.lobbyBody:is(.pvpLobby, .soloLobby) .lobbySubPanel,
+body.lobbyBody:is(.pvpLobby, .soloLobby) .advancedPanel { padding: 10px 0; }
+body.lobbyBody:is(.pvpLobby, .soloLobby) .advancedPanel:not([open]) { padding: 0; margin-top: 8px; }
+body.lobbyBody:is(.pvpLobby, .soloLobby) .duelist { padding: 12px 0; gap: 10px; }
+body.lobbyBody:is(.pvpLobby, .soloLobby) .duelistChosen { height: 64px; }
+body.lobbyBody:is(.pvpLobby, .soloLobby) .lobbyFeedback { min-height: 24px; padding: 0 0 8px; }
+body.lobbyBody:is(.pvpLobby, .soloLobby) .deckValidation { margin: 6px 0; }
+
+@media (min-width: 981px) {
+  body.lobbyBody.soloLobby .lobbyGridRefined {
+    grid-template-columns: minmax(0, 2.4fr) minmax(250px, 1fr);
+  }
+  body.lobbyBody.soloLobby .soloSetupGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+    margin-top: 0;
+    align-items: start;
+  }
+  body.lobbyBody.soloLobby .soloDeckCard { padding: 0; }
+  body.lobbyBody.soloLobby .soloDeckCardBot { border-top: 0; }
+  body.lobbyBody.soloLobby .lobbyModeHead { margin-bottom: 8px; }
+  body.lobbyBody.soloLobby .lobbyModeCardSolo {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 1fr);
+    align-items: center;
+    gap: 6px 16px;
+    margin-top: 18px;
+  }
+  body.lobbyBody.soloLobby .lobbyModeCardSolo .lobbyModeHead { margin: 0; }
+  body.lobbyBody.soloLobby .lobbyModeCardSolo .readyPrimary { grid-column: 2; grid-row: 1 / 3; }
+  body.lobbyBody.soloLobby .lobbyReadyMeta { margin: 0; }
+  body.lobbyBody.pvpLobby .lobbyModeGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+    align-items: start;
+  }
+  body.lobbyBody.pvpLobby .lobbyModeHead { grid-template-columns: auto minmax(0, 1fr); gap: 8px; }
+  body.lobbyBody.pvpLobby .lobbyModeHead h4 { font-size: 15px; }
+  body.lobbyBody.pvpLobby .modeBadge { justify-self: start; }
+  body.lobbyBody.pvpLobby .privateRoomBlock { gap: 6px; }
+  body.lobbyBody.pvpLobby .privateCodeCopyRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 6px;
+  }
+  body.lobbyBody.pvpLobby .privateCodeCopyRow .pill { font-size: 11px; overflow-wrap: anywhere; }
+  body.lobbyBody.pvpLobby .privateCodeCopyRow button { padding: 6px 8px; font-size: 12px; }
+  body.lobbyBody.pvpLobby .privateActions { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+}
+
+@media (max-width: 980px) {
+  body.lobbyBody:is(.pvpLobby, .soloLobby) .page.lobbyPage {
+    padding-bottom: calc(80px + env(safe-area-inset-bottom));
+  }
+  body.lobbyBody:is(.pvpLobby, .soloLobby) .lobbyRoomsPanel:last-child { margin-bottom: 0; }
+  body.lobbyBody:is(.pvpLobby, .soloLobby) .lobbyHeader { gap: 8px; }
+  body.lobbyBody:is(.pvpLobby, .soloLobby) .lobbyDeckPanel,
+  body.lobbyBody:is(.pvpLobby, .soloLobby) .lobbyRoomsPanel { padding: 14px; }
+  body.lobbyBody:is(.pvpLobby, .soloLobby) .soloSetupGrid { margin-top: 0; }
+}
+
+@media (max-width: 640px) {
+  body.lobbyBody:is(.pvpLobby, .soloLobby) .playersMount {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  body.lobbyBody:is(.pvpLobby, .soloLobby) .duelist {
+    grid-template-columns: minmax(0, 1fr);
+    align-content: start;
+  }
+  body.lobbyBody:is(.pvpLobby, .soloLobby) .duelist strong { font-size: 14px; }
+  body.lobbyBody:is(.pvpLobby, .soloLobby) .duelistChosen:empty { height: 0; }
+}
+
+@media (min-width: 641px) and (max-width: 980px) {
+  body.lobbyBody.soloLobby .soloSetupGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+  body.lobbyBody.soloLobby .soloDeckCardBot { border-top: 0; }
+}

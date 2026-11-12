@@ -95,12 +95,27 @@ for (const extension of ['js', 'ts']) {
   assert.ok(!ally.classList.contains('tapped'));
   assert.equal(ally.querySelectorAll('.markerTag, .equipAttachTag').length, 0, 'Remove obsolete badges');
   assert.equal(ui.calls.animations.filter(call => call.name === 'anim-play').length, 1);
+  options.activationReady = true;
+  options.mobile = true;
+  ui.renderLane('you-field', ['a'], null, index => ui.calls.clicks.push(index), [4]);
+  assert.equal(slot.querySelector('.card'), ally, 'Activation readiness keeps the existing card');
+  assert.ok(ally.classList.contains('can-activate'));
+  assert.match(ally.getAttribute('aria-label'), /ativar habilidade/);
+  const activationClicks = ui.calls.clicks.length;
+  slot.onclick();
+  assert.equal(ui.calls.clicks.length, activationClicks + 1, 'Ready abilities remain clickable on mobile');
+  options.activationReady = false;
+  ui.renderLane('you-field', ['a'], null, index => ui.calls.clicks.push(index), [4]);
+  assert.ok(!ally.classList.contains('can-activate'), 'Remove the glow as soon as readiness ends');
+  slot.onclick();
+  assert.equal(ui.calls.clicks.length, activationClicks + 1, 'Unready mobile cards only inspect');
+  options.mobile = false;
   ui.renderLane('you-field', ['b'], null);
   assert.notEqual(slot.querySelector('.card'), ally, 'Real replacements change the card');
   assert.equal(ui.calls.ghosts.length, 1, 'Keep departure animations');
   ui.renderLane('you-field', [], null);
   assert.equal(slot.querySelector('.card'), null);
-  scenarios += 15;
+  scenarios += 21;
 
   const support = ui.add('you-support');
   const supportSlot = support.appendChild(new Element());

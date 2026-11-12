@@ -10,11 +10,13 @@ import {
 	type AttackTarget,
 	type ChoicePayload,
 	attack,
+	activateFieldEffect,
 	activateLeaderPower,
 	canAttackServer,
 	endTurn,
 	finishMatch,
 	getSlotBySession,
+	getReadyFieldActivations,
 	initGame,
 	nextPhase,
 	resolveOpeningMulligans,
@@ -235,7 +237,16 @@ export class SoloMatchRoom extends Room<MatchState> {
 	}
 
 	private publishSpectatorState() {
+		this.publishFieldActivations();
 		publishSpectatorSnapshot(this.roomId, buildSpectatorSnapshot(this.state));
+	}
+
+	private publishFieldActivations() {
+		for (const client of this.clients) {
+			const slot = getSlotBySession(this.state, client.sessionId);
+			if (!slot) continue;
+			client.send("field_activation_state", { ready: this.activeChoiceSessionId ? [] : getReadyFieldActivations(this.state, slot, this.summonedThisTurn, this.triggeredLeaderThisTurn) });
+		}
 	}
 
 	private sessionIdBySlot(slot: Slot): string | null {
@@ -1685,6 +1696,7 @@ export class SoloMatchRoom extends Room<MatchState> {
 
 	private queueBotTurn(delayMs = BOT_ACTION_DELAY_MS) {
 		this.clearBotTimer();
+		this.publishFieldActivations();
 		if (this.state.phase === "FINISHED") return;
 		if (this.activeChoiceSessionId) return;
 		if (this.pendingChoices.size > 0) return;
@@ -1784,6 +1796,12 @@ export class SoloMatchRoom extends Room<MatchState> {
 		}
 		if (this.state.phase === "FINISHED" || this.pendingChoices.size > 0 || this.activeChoiceSessionId) return true;
 		if (Number(this.state.game.seq || 0) !== leaderSeq) return true;
+
+		const fieldAbility = getReadyFieldActivations(this.state, "p2", this.summonedThisTurn, this.triggeredLeaderThisTurn)[0];
+		if (fieldAbility) {
+			activateFieldEffect(this.state, "p2", fieldAbility.pos, fieldAbility.cardId, (name, payload) => this.broadcastMatchEvent(name, payload), this.summonedThisTurn, this.triggeredLeaderThisTurn, this.askChoice);
+			return true;
+		}
 
 		const nextCard = this.pickPlayableBotCards()[0];
 		if (!nextCard) return false;
@@ -2014,11 +2032,25 @@ export class SoloMatchRoom extends Room<MatchState> {
 			const slot = getSlotBySession(this.state, client.sessionId);
 			const cardId = String(msg?.cardId || "");
 			const targetPos = Number(msg?.targetPos);
-			const cardKind = String(msg?.cardKind || "");
+			const cardKind = String(msg?.cardKind || "").replace(/__AGIOTA_\d+|__NO_AGIOTA/g, "");
 			if (!slot || !cardId) return;
 			playCard(this.state, slot, cardId, Number.isInteger(targetPos) ? targetPos : undefined, cardKind, (name, payload) => this.broadcastMatchEvent(name, payload), this.summonedThisTurn, this.triggeredLeaderThisTurn, this.askChoice);
 			this.refreshInactivityTimer();
 			this.queueBotTurn();
+			}, client);
+		});
+
+		this.onMessage("request_field_activations", () => this.publishFieldActivations());
+
+		this.onMessage("activate_field_effect", (client, msg: { pos?: number; cardId?: string }) => {
+			this.safeRun("activate_field_effect", () => {
+				if (!this.isValidTurnAction(client, ["PREP"])) return;
+				const slot = getSlotBySession(this.state, client.sessionId);
+				const pos = Number(msg?.pos);
+				if (!slot || !Number.isInteger(pos) || pos < 0 || pos >= 5) return;
+				activateFieldEffect(this.state, slot, pos, String(msg?.cardId || ""), (name, payload) => this.broadcastMatchEvent(name, payload), this.summonedThisTurn, this.triggeredLeaderThisTurn, this.askChoice);
+				this.refreshInactivityTimer();
+				this.queueBotTurn();
 			}, client);
 		});
 

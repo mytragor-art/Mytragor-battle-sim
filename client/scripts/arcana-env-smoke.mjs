@@ -62,9 +62,16 @@ async function main() {
 		throw new Error(`Game rejected an action: ${JSON.stringify(message)}`);
 	});
 
-	await waitFor(() => state && turnSlot === "p1" && phase === "MULLIGAN", "opening mulligan");
+	await waitFor(() => {
+		if (!state) return false;
+		if (state.initiativeStatus === "ROLLING") room.send("roll_initiative");
+		if (state.initiativeStatus === "CHOOSING" && state.initiativeWinnerSlot === "p1") {
+			room.send("choose_starter", { starterSlot: "p1" });
+		}
+		return phase === "MULLIGAN";
+	}, "initiative and opening mulligan");
 	room.send("submit_mulligan", { indices: [] });
-	await waitFor(() => phase === "PREP", "preparation phase");
+	await waitFor(() => turnSlot === "p1" && phase === "PREP", "preparation phase");
 	room.send("next_phase");
 	await waitFor(() => phase === "COMBAT", "opening combat phase");
 	room.send("next_phase");

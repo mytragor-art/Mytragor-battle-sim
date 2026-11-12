@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="/mobile.css" media="(max-width:880px)" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
       --panel: rgba(9, 18, 37, 0.72);
@@ -420,28 +420,89 @@
       }
     }
   </style>
+  <style>
+    body.manualPage{ --panel:#191b20f7; --panel-strong:#24262d; --line:#ffffff20; --text:#e7e8eb; --muted:#b4b7c1; --gold:#e0bf79; background:#0a0a0f url('/bgambientes/pagina desktop.png') center top / cover no-repeat fixed; font:400 15px/1.5 "Source Sans 3",sans-serif; }
+    .manualPage *{ letter-spacing:0; }
+    .manualPage::before{ background:#0a0a0f72; }
+    .manualPage .page{ width:min(calc(100% - 32px),1180px); padding:14px 0; }
+    .manualPage .hero{ padding:0; gap:10px; border:0; border-radius:0; background:none; box-shadow:none; backdrop-filter:none; margin-bottom:14px; }
+    .manualPage .heroTop{ flex-wrap:nowrap; }
+    .manualBrand{ display:flex; align-items:center; gap:14px; min-width:0; }
+    .manualLogo{ width:72px; height:auto; filter:sepia(1) saturate(2) brightness(2); }
+    .manualPage h1{ font:700 25px/1.3 "Cinzel",Georgia,serif; }
+    .manualPage .navButton{ flex:none; min-height:44px; border:1px solid #cbb17b; border-radius:4px; background:#343943; color:#fff7e6; box-shadow:none; font:700 14px/1.4 "Source Sans 3",sans-serif; }
+    .manualPage .navButton:hover{ background:#4a505b; border-color:#f0d398; }
+    .manualPage .manualCount{ color:var(--muted); font-size:12px; }
+    .manualPage .manualTabs{ gap:0; width:fit-content; border-bottom:1px solid var(--line); }
+    .manualPage .manualTab{ min-height:44px; padding:0 16px; border:0; border-bottom:2px solid transparent; border-radius:0; background:none; font:600 14px/1.4 "Source Sans 3",sans-serif; color:var(--muted); }
+    .manualPage .manualTab.is-active{ border-bottom-color:var(--gold); color:#fff1ce; background:#e0bf790b; }
+    .manualPage .manualKeywordSearch{ padding:12px 14px; gap:6px; border:0; border-radius:0; background:var(--panel); }
+    .manualPage .manualKeywordSearch label{ font:600 12px/1.4 "Source Sans 3",sans-serif; color:#c8cbd3; }
+    .manualPage .manualKeywordSearch input{ min-height:44px; border-radius:4px; background:#121419; font:400 15px/1.4 "Source Sans 3",sans-serif; }
+    .manualPage .manualSearchResults{ grid-template-columns:repeat(3,minmax(0,1fr)); max-height:160px; overflow:auto; }
+    .manualPage .manualSearchResult{ display:grid; align-content:start; gap:4px; padding:10px; min-height:44px; border-radius:4px; font:400 13px/1.4 "Source Sans 3",sans-serif; }
+    .manualPage .manualSearchResult span{ color:var(--muted); overflow-wrap:anywhere; }
+    .manualPage .quickGuide{ gap:0; background:var(--panel); padding:0 18px; }
+    .manualPage .quickGuideCard{ min-height:0; gap:10px; padding:18px 16px; border:0; border-bottom:1px solid var(--line); border-radius:0; background:none; }
+    .manualPage .quickGuideCard h2{ font-size:17px; }
+    .manualPage .quickGuideCard p{ color:var(--muted); font-size:14px; }
+    .manualPage .manualReaderLayout{ gap:0; background:var(--panel); }
+    .manualPage .manualIndex{ padding:14px; border:0; border-radius:0; background:none; align-content:start; }
+    .manualPage .manualIndexButton{ min-height:44px; padding:8px 10px; border-radius:4px; font:400 14px/1.4 "Source Sans 3",sans-serif; }
+    .manualPage .manualIndexButton.is-active{ border-left:2px solid var(--gold); }
+    .manualPage .manualReader{ padding:14px; gap:10px; border:0; border-left:1px solid var(--line); border-radius:0; background:none; box-shadow:none; }
+    .manualPage .manualReaderHeader h2{ font-size:17px; }
+    .manualPage .manualReaderImage{ border:0; border-radius:3px; padding:0; background:none; min-height:0; }
+    .manualPage .manualPageSelect{ min-height:44px; border-radius:4px; background:#121419; font:400 14px/1.4 "Source Sans 3",sans-serif; }
+    .manualChapterSelect{ display:none; }
+    .manualHeaderActions{ display:flex; align-items:center; gap:8px; min-width:0; }
+    .manualZoomButton{ min-height:44px; padding:0 12px; border:1px solid #8b805f; border-radius:4px; background:#343943; color:#fff7e6; font:600 14px/1.4 "Source Sans 3",sans-serif; cursor:pointer; }
+    .manualZoomButton:hover{ background:#4a505b; border-color:#f0d398; }
+    .manualReaderError{ margin:0; color:#f1aba4; font-size:13px; }
+    .manualPage .manualReaderControls button, .manualPage .quickGuideCard button{ min-height:44px; border-radius:4px; background:#343943; border-color:#8b805f; color:#fff7e6; font:600 14px/1.4 "Source Sans 3",sans-serif; }
+    .manualPage .manualReaderControls button:not(:disabled):hover, .manualPage .quickGuideCard button:hover{ background:#4a505b; border-color:#f0d398; }
+    .manualPage .manualLightboxClose{ min-height:44px; border-radius:4px; background:#343943; border-color:#cbb17b; font:600 14px/1.4 "Source Sans 3",sans-serif; }
+    .manualPage :focus-visible{ outline:2px solid #f0d398; outline-offset:3px; }
+    @media(min-width:901px){ .manualPage .page{ height:100dvh; display:flex; flex-direction:column; gap:12px; } .manualPage .hero{ flex:none; margin:0; } .manualPage .manualView{ flex:1; min-height:0; } .manualPage .manualReaderLayout{ align-items:stretch; } .manualPage .manualReader{ grid-template-rows:auto minmax(0,1fr) auto; min-height:0; } .manualPage .manualReaderImage{ height:100%; width:100%; max-width:100%; } .manualPage .manualIndex{ position:static; } }
+    @media(max-width:900px){ .manualPage .page{ width:calc(100% - 20px); } .manualPage .heroTop{ flex-direction:row; align-items:center; } .manualPage .manualReader{ border-left:0; border-top:1px solid var(--line); } .manualPage .manualIndex{ display:block; overflow:visible; } .manualPage #manualIndexButtons{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); } .manualPage .manualIndexButton{ width:100%; text-align:center; } .manualPage .manualReaderImage{ max-height:65dvh; width:100%; } }
+    @media(max-width:640px){ .manualLogo{ width:52px; } .manualBrand{ gap:10px; } .manualPage h1{ font-size:19px; } .manualPage .navButton{ padding:0 12px; } .manualPage .manualTabs{ width:100%; } .manualPage .manualTab{ padding:0 10px; font-size:13px; } .manualPage .manualSearchResults{ grid-template-columns:1fr; } .manualPage .quickGuide{ padding:0 4px; } .manualPage .quickGuideCard{ padding:14px; } .manualPage .manualReaderHeader{ display:grid; grid-template-columns:minmax(0,1fr); gap:8px; } }
+    @media(max-width:900px){
+      .manualPage:has(#bookView:not([hidden])) .page{ height:100dvh; display:flex; flex-direction:column; gap:10px; padding:10px 0; }
+      .manualPage:has(#bookView:not([hidden])) .hero{ flex:none; margin:0; }
+      .manualPage .manualReaderLayout{ flex:1; min-height:0; grid-template-rows:auto minmax(0,1fr); align-items:stretch; }
+      .manualPage .manualIndex{ padding:10px; }
+      .manualPage .manualIndex h2, .manualPage #manualIndexButtons{ display:none; }
+      .manualPage .manualChapterSelect{ display:block; width:100%; min-height:44px; padding:0 10px; border:1px solid var(--line); border-radius:4px; background:#121419; color:var(--text); font:400 14px/1.4 "Source Sans 3",sans-serif; }
+      .manualPage .manualReader{ min-height:0; height:100%; grid-template-rows:auto minmax(0,1fr) auto; }
+      .manualPage .manualReaderImage{ width:100%; height:100%; max-height:none; }
+      .manualPage .manualReaderHeader{ grid-template-columns:minmax(0,1fr); }
+      .manualPage .manualHeaderActions .manualPageSelect{ flex:1; }
+      .manualPage .manualSearchResults{ max-height:100px; }
+    }
+  </style>
 </head>
-<body>
+<body class="manualPage">
   <main class="page">
     <section class="hero">
       <div class="heroTop">
-        <h1>Como Jogar</h1>
+        <div class="manualBrand">
+          <img class="manualLogo" src="/logo/logomytragor.png" alt="Mytragor">
+          <div><h1>Manual Mytragor</h1><div class="manualCount" id="manualCount"></div></div>
+        </div>
         <a class="navButton" href="./index.html">Voltar</a>
       </div>
-      <p class="subtitle">Manual visual do Mytragor em ordem de leitura. A capa vem primeiro, seguida pelas páginas numeradas.</p>
-      <div class="manualCount" id="manualCount"></div>
       <div class="manualTabs" role="tablist" aria-label="Modo de leitura">
-        <button class="manualTab is-active" id="quickTab" type="button" role="tab" aria-selected="true">Consulta rápida</button>
-        <button class="manualTab" id="bookTab" type="button" role="tab" aria-selected="false">Livro ilustrado</button>
+        <button class="manualTab is-active" id="quickTab" type="button" role="tab" aria-selected="true" aria-controls="quickGuide">Consulta rápida</button>
+        <button class="manualTab" id="bookTab" type="button" role="tab" aria-selected="false" aria-controls="bookView" tabindex="-1">Livro ilustrado</button>
       </div>
-    </section>
-
-    <section class="manualView quickGuide" id="quickGuide" role="tabpanel">
       <div class="manualKeywordSearch">
-        <label for="manualKeywordInput">Buscar palavra-chave no livro</label>
+        <label for="manualKeywordInput">Buscar no manual</label>
         <input id="manualKeywordInput" type="search" placeholder="Ex.: dano" autocomplete="off">
         <div class="manualSearchResults" id="manualSearchResults" aria-live="polite"></div>
       </div>
+    </section>
+
+    <section class="manualView quickGuide" id="quickGuide" role="tabpanel" aria-labelledby="quickTab">
       <article class="quickGuideCard"><h2>Capa</h2><p>Abra a capa oficial do manual.</p><button type="button" data-page="0">Abrir capa</button></article>
       <article class="quickGuideCard"><h2>Fundamentos</h2><p>Páginas 1 a 6: universo de Mytragor, filiações e tipos de carta.</p><button type="button" data-page="1">Abrir fundamentos</button></article>
       <article class="quickGuideCard"><h2>Preparação</h2><p>Páginas 7 a 10: mulligan, construção do baralho e fases do turno.</p><button type="button" data-page="7">Abrir preparação</button></article>
@@ -450,18 +511,22 @@
       <article class="quickGuideCard"><h2>Glossário</h2><p>Páginas 20 e 21: termos de referência do Mytragor.</p><button type="button" data-page="20">Abrir glossário</button></article>
     </section>
 
-    <section class="manualView manualReaderLayout" id="bookView" role="tabpanel" hidden>
+    <section class="manualView manualReaderLayout" id="bookView" role="tabpanel" aria-labelledby="bookTab" hidden>
       <aside class="manualIndex" aria-label="Índice do livro">
         <h2>Índice</h2>
+        <select class="manualChapterSelect" id="manualChapterSelect" aria-label="Ir para capítulo"></select>
         <div id="manualIndexButtons"></div>
       </aside>
       <article class="manualReader">
         <div class="manualReaderHeader">
           <h2 id="manualPageTitle">Capa</h2>
-          <select class="manualPageSelect" id="manualPageSelect" aria-label="Ir para página"></select>
+          <div class="manualHeaderActions">
+            <select class="manualPageSelect" id="manualPageSelect" aria-label="Ir para página"></select>
+            <button class="manualZoomButton" id="manualZoomButton" type="button" aria-haspopup="dialog">Ampliar</button>
+          </div>
         </div>
         <img class="manualReaderImage" id="manualReaderImage" alt="Página do manual" tabindex="0">
-        <p class="manualZoomHint">Toque ou clique na página para ampliar.</p>
+        <p class="manualReaderError" id="manualReaderError" role="status" hidden></p>
         <div class="manualReaderControls">
           <button id="previousPage" type="button">Anterior</button>
           <span class="manualCount" id="pagePosition"></span>
@@ -482,6 +547,8 @@
     const MANUAL_SEARCH_INDEX_PATH = "/manual/search-index.json";
     let searchIndex = [];
     let isSearchIndexReady = false;
+    let searchIndexFailed = false;
+    let lastLightboxFocus = null;
 
     function manualAssetPath(path) {
       const separator = path.includes("?") ? "&" : "?";
@@ -519,6 +586,7 @@
       const pagePosition = document.getElementById("pagePosition");
       const pageSelect = document.getElementById("manualPageSelect");
       const indexButtons = document.getElementById("manualIndexButtons");
+      const chapterSelect = document.getElementById("manualChapterSelect");
       if (manualCount) manualCount.textContent = `${entries.length} páginas no livro oficial`;
 
       entries.forEach((entry, index) => {
@@ -529,6 +597,10 @@
       });
 
       chapters.forEach((chapter) => {
+        const option = document.createElement("option");
+        option.value = String(chapter.page);
+        option.textContent = chapter.label;
+        chapterSelect.appendChild(option);
         const button = document.createElement("button");
         button.type = "button";
         button.className = "manualIndexButton";
@@ -539,21 +611,37 @@
       });
 
       pageSelect.onchange = () => goToPage(Number(pageSelect.value));
+      chapterSelect.onchange = () => goToPage(Number(chapterSelect.value));
       document.getElementById("previousPage").onclick = () => goToPage(currentPage - 1);
       document.getElementById("nextPage").onclick = () => goToPage(currentPage + 1);
       document.getElementById("manualReaderImage").onclick = openLightbox;
-      document.getElementById("manualReaderImage").onkeydown = (event) => { if (event.key === "Enter" || event.key === " ") openLightbox(); };
+      document.getElementById("manualZoomButton").onclick = openLightbox;
+      document.getElementById("manualReaderImage").onkeydown = (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openLightbox(); } };
+      pageImage.onload = () => { document.getElementById("manualReaderError").hidden = true; };
+      pageImage.onerror = () => { const error = document.getElementById("manualReaderError"); error.textContent = "Não foi possível carregar esta página."; error.hidden = false; };
       document.getElementById("closeManualLightbox").onclick = closeLightbox;
       document.getElementById("manualLightbox").onclick = (event) => { if (event.target.id === "manualLightbox") closeLightbox(); };
       document.addEventListener("keydown", (event) => {
-        if (event.key === "Escape") closeLightbox();
+        if (event.key === "Escape") { closeLightbox(); return; }
+        if (!document.getElementById("manualLightbox").hidden) {
+          if (event.key === "Tab") { event.preventDefault(); document.getElementById("closeManualLightbox").focus(); }
+          return;
+        }
+        if (event.target.closest("input,select,textarea,[contenteditable='true'],[role='tablist']")) return;
         if (document.getElementById("bookView").hidden) return;
-        if (event.key === "ArrowLeft") goToPage(currentPage - 1);
-        if (event.key === "ArrowRight") goToPage(currentPage + 1);
+        if (event.key === "ArrowLeft") { event.preventDefault(); goToPage(currentPage - 1); }
+        if (event.key === "ArrowRight") { event.preventDefault(); goToPage(currentPage + 1); }
       });
       document.querySelectorAll("[data-page]").forEach((button) => button.onclick = () => openBookAt(Number(button.dataset.page)));
       document.getElementById("quickTab").onclick = () => setView("quick");
       document.getElementById("bookTab").onclick = () => setView("book");
+      document.querySelector(".manualTabs").onkeydown = (event) => {
+        if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+        event.preventDefault();
+        const view = event.key === "Home" ? "quick" : event.key === "End" ? "book" : event.target.id === "quickTab" ? "book" : "quick";
+        setView(view);
+        document.getElementById(view === "book" ? "bookTab" : "quickTab").focus();
+      };
       document.getElementById("manualKeywordInput").oninput = (event) => renderKeywordResults(event.target.value);
       goToPage(0);
       loadSearchIndex();
@@ -570,7 +658,10 @@
       if (!normalizedQuery) return;
 
       if (!isSearchIndexReady) {
-        results.innerHTML = '<p class="manualSearchEmpty">Preparando a busca no manual...</p>';
+        const status = document.createElement("p");
+        status.className = "manualSearchEmpty";
+        status.textContent = searchIndexFailed ? "Busca indisponível. O índice de capítulos continua disponível." : "Preparando a busca no manual...";
+        results.appendChild(status);
         return;
       }
 
@@ -586,7 +677,15 @@
         const button = document.createElement("button");
         button.type = "button";
         button.className = "manualSearchResult";
-        button.innerHTML = `<strong>${pageLabel}</strong><span>Abrir ${pageLabel.toLowerCase()}</span>`;
+        const label = document.createElement("strong");
+        label.textContent = pageLabel;
+        const excerpt = document.createElement("span");
+        const text = String(entry.text || "").replace(/\s+/g, " ").trim();
+        const matchIndex = Math.max(0, normalizeKeyword(text).indexOf(normalizedQuery));
+        const start = Math.max(0, matchIndex - 40);
+        const end = Math.min(text.length, matchIndex + normalizedQuery.length + 70);
+        excerpt.textContent = `${start ? "..." : ""}${text.slice(start, end)}${end < text.length ? "..." : ""}`;
+        button.append(label, excerpt);
         button.onclick = () => openBookAt(page);
         results.appendChild(button);
       });
@@ -601,6 +700,8 @@
         isSearchIndexReady = true;
         renderKeywordResults(document.getElementById("manualKeywordInput").value);
       } catch (error) {
+        searchIndexFailed = true;
+        renderKeywordResults(document.getElementById("manualKeywordInput").value);
         console.error("Não foi possível carregar a busca do manual", error);
       }
     }
@@ -609,6 +710,7 @@
       const entries = manualEntries();
       currentPage = Math.min(Math.max(0, page), entries.length - 1);
       const entry = entries[currentPage];
+      document.getElementById("manualReaderError").hidden = true;
       document.getElementById("manualPageTitle").textContent = entry.title;
       document.getElementById("manualReaderImage").src = manualAssetPath(entry.src);
       document.getElementById("manualReaderImage").alt = entry.alt;
@@ -617,6 +719,7 @@
       document.getElementById("previousPage").disabled = currentPage === 0;
       document.getElementById("nextPage").disabled = currentPage === entries.length - 1;
       const activeChapter = chapters.reduce((current, chapter) => chapter.page <= currentPage ? chapter : current, chapters[0]);
+      document.getElementById("manualChapterSelect").value = String(activeChapter.page);
       document.querySelectorAll(".manualIndexButton").forEach((button) => button.classList.toggle("is-active", Number(button.dataset.page) === activeChapter.page));
     }
 
@@ -628,19 +731,28 @@
       document.getElementById("bookTab").classList.toggle("is-active", isBook);
       document.getElementById("quickTab").setAttribute("aria-selected", String(!isBook));
       document.getElementById("bookTab").setAttribute("aria-selected", String(isBook));
+      document.getElementById("quickTab").tabIndex = isBook ? -1 : 0;
+      document.getElementById("bookTab").tabIndex = isBook ? 0 : -1;
     }
 
-    function openBookAt(page) { setView("book"); goToPage(page); }
+    function openBookAt(page) { setView("book"); goToPage(page); document.getElementById("manualReaderImage").focus({ preventScroll: true }); }
 
     function openLightbox() {
       const image = document.getElementById("manualReaderImage");
       const lightbox = document.getElementById("manualLightbox");
+      lastLightboxFocus = document.activeElement;
       document.getElementById("manualLightboxImage").src = image.src;
       document.getElementById("manualLightboxImage").alt = image.alt;
       lightbox.hidden = false;
+      document.getElementById("closeManualLightbox").focus();
     }
 
-    function closeLightbox() { document.getElementById("manualLightbox").hidden = true; }
+    function closeLightbox() {
+      const lightbox = document.getElementById("manualLightbox");
+      if (lightbox.hidden) return;
+      lightbox.hidden = true;
+      lastLightboxFocus?.focus({ preventScroll: true });
+    }
 
     renderManual();
   </script>

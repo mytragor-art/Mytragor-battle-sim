@@ -4,6 +4,7 @@ const ENDPOINT = process.env.ENDPOINT ?? "ws://localhost:2567";
 const HTTP_BASE = process.env.HTTP_BASE ?? ENDPOINT.replace(/^ws/i, "http");
 const TIMEOUT_MS = Number(process.env.TIMEOUT_MS ?? 20000);
 const EXTRA_SPECTATORS = Number(process.env.EXTRA_SPECTATORS ?? 4);
+const openRooms = new Set();
 
 function sleep(ms) {
 	return new Promise((resolve) => setTimeout(resolve, ms));
@@ -26,17 +27,13 @@ async function withTimeout(promise, ms, label) {
 }
 
 async function waitFor(predicate, label, ms = TIMEOUT_MS) {
-	return withTimeout(
-		(async () => {
-			while (true) {
-				const value = await predicate();
-				if (value) return value;
-				await sleep(40);
-			}
-		})(),
-		ms,
-		label
-	);
+	const deadline = Date.now() + ms;
+	while (Date.now() < deadline) {
+		const value = await predicate();
+		if (value) return value;
+		await sleep(40);
+	}
+	throw new Error(`Timeout after ${ms}ms: ${label}`);
 }
 
 function lobbyEvents() {
@@ -98,8 +95,10 @@ async function createReadyLobbyPair() {
 	const eventsA = lobbyEvents();
 	const eventsB = lobbyEvents();
 	const roomA = await clientA.create("lobby");
+	openRooms.add(roomA);
 	bindLobby(roomA, eventsA);
 	const roomB = await clientB.joinById(roomA.id);
+	openRooms.add(roomB);
 	bindLobby(roomB, eventsB);
 
 	await waitFor(() => eventsA.lastLobby && eventsB.lastLobby, "lobby state on both clients");
@@ -149,24 +148,39 @@ async function main() {
 	assert(matchRoomId, "matchRoomId should exist in start_match payload");
 	assert(spectatorRoomIdFromStart, "spectatorRoomId should exist in start_match payload");
 
-	const matchList = await fetchJson(`${HTTP_BASE.replace(/\/+$/, "")}/matches`);
-	const listedMatch = Array.isArray(matchList?.rooms) ? matchList.rooms.find((room) => room?.roomId === matchRoomId) : null;
-	assert(listedMatch, "match should be listed in /matches");
-	assert(String(listedMatch?.spectatorRoomId || "") === spectatorRoomIdFromStart, "listed spectatorRoomId should match start_match payload");
-	console.log("[SPECTATOR_SMOKE] ✅ /matches lists the live match");
-
-	const spectatorLookup = await fetchJson(`${HTTP_BASE.replace(/\/+$/, "")}/matches/${encodeURIComponent(matchRoomId)}/spectator`);
-	assert(String(spectatorLookup?.spectatorRoomId || "") === spectatorRoomIdFromStart, "spectator lookup endpoint should resolve the spectator room");
-	console.log("[SPECTATOR_SMOKE] ✅ spectator lookup endpoint resolves the room");
-
 	const matchClientA = new Client(ENDPOINT);
 	const matchClientB = new Client(ENDPOINT);
 	const playerAEvents = matchEvents();
 	const playerBEvents = matchEvents();
 	const playerARoom = await matchClientA.joinById(matchRoomId, { joinToken: joinTokenA });
-	const playerBRoom = await matchClientB.joinById(matchRoomId, { joinToken: joinTokenB });
+	openRooms.add(playerARoom);
 	bindMatch(playerARoom, playerAEvents);
+	const playerBRoom = await matchClientB.joinById(matchRoomId, { joinToken: joinTokenB });
+	openRooms.add(playerBRoom);
 	bindMatch(playerBRoom, playerBEvents);
+
+	const listedMatch = await waitFor(async () => {
+		const list = await fetchJson(`${HTTP_BASE.replace(/\/+$/, "")}/matches`);
+		return list.rooms?.find(room => room.roomId === matchRoomId);
+	}, "joined match listed in /matches");
+	assert(String(listedMatch.spectatorRoomId || "") === spectatorRoomIdFromStart, "listed spectatorRoomId should match start_match payload");
+	console.log("[SPECTATOR_SMOKE] ✅ /matches lists the live match");
+	const spectatorLookup = await fetchJson(`${HTTP_BASE.replace(/\/+$/, "")}/matches/${encodeURIComponent(matchRoomId)}/spectator`);
+	assert(String(spectatorLookup?.spectatorRoomId || "") === spectatorRoomIdFromStart, "spectator lookup endpoint should resolve the spectator room");
+	console.log("[SPECTATOR_SMOKE] ✅ spectator lookup endpoint resolves the room");
+	await waitFor(() => playerAEvents.state && playerBEvents.state, "players receive initiative state");
+	await waitFor(() => {
+		const state = playerAEvents.state;
+		if (state.initiativeStatus === "ROLLING") {
+			playerARoom.send("roll_initiative");
+			playerBRoom.send("roll_initiative");
+		}
+		if (state.initiativeStatus === "CHOOSING") {
+			const winner = state.initiativeWinnerSlot === playerAEvents.assign?.slot ? playerARoom : playerBRoom;
+			winner.send("choose_starter", { starterSlot: "p1" });
+		}
+		return state.game.phase === "MULLIGAN";
+	}, "initiative resolves to the opening hand");
 
 	const spectatorClients = [];
 	const spectatorRooms = [];
@@ -174,6 +188,7 @@ async function main() {
 	for (let index = 0; index < EXTRA_SPECTATORS; index += 1) {
 		const client = new Client(ENDPOINT);
 		const room = await client.joinById(spectatorRoomIdFromStart);
+		openRooms.add(room);
 		const events = matchEvents();
 		bindMatch(room, events);
 		spectatorClients.push(client);
@@ -199,6 +214,11 @@ async function main() {
 	}
 	console.log(`[SPECTATOR_SMOKE] ✅ ${EXTRA_SPECTATORS} spectator(s) received masked state`);
 
+	playerARoom.send("submit_mulligan", { indices: [] });
+	playerBRoom.send("submit_mulligan", { indices: [] });
+	await waitFor(() => playerAEvents.state.game.phase === "PREP"
+		&& spectatorEvents.every(events => events.state?.game?.phase === "PREP"), "mulligan completes for players and spectators");
+
 	const phaseBefore = String(playerAEvents.state?.game?.phase || "");
 	const phaseEventCountBefore = spectatorEvents[0]?.phaseChanged.length ?? 0;
 	await spectatorRooms[0].send("next_phase");
@@ -210,6 +230,13 @@ async function main() {
 
 	const activePlayerRoom = String(playerAEvents.state?.game?.turnSlot || "") === String(playerAEvents.assign?.slot || "") ? playerARoom : playerBRoom;
 	const activePlayerEvents = activePlayerRoom === playerARoom ? playerAEvents : playerBEvents;
+	assert(activePlayerEvents.assign?.slot === playerAEvents.state.game.turnSlot, "the acting player must own the current turn");
+	console.log("[SPECTATOR_SMOKE] phase transition", JSON.stringify({
+		slot: activePlayerEvents.assign.slot,
+		phase: activePlayerEvents.state.game.phase,
+		counts: spectatorEvents.map(events => events.phaseChanged.length),
+		baseline: phaseEventCountBefore
+	}));
 	const phaseBeforePlayerAction = String(activePlayerEvents.state?.game?.phase || "");
 	activePlayerRoom.send("next_phase");
 	const phasePayload = await waitFor(() => spectatorEvents.every((events) => events.phaseChanged.length >= phaseEventCountBefore + 1), "phase_changed delivered to all spectators");
@@ -222,22 +249,20 @@ async function main() {
 		assert(events.reveals.length === 0, `spectator ${index} should still have no private reveal prompts`);
 	}
 
-	const cleanup = [created.lobbyA, created.lobbyB, playerARoom, playerBRoom, ...spectatorRooms];
-	for (const room of cleanup) {
-		try {
-			await room.leave();
-		} catch {
-			// ignore cleanup failures
-		}
-	}
-
 	console.log("[SPECTATOR_SMOKE] ✅ all spectator smoke checks passed");
 }
 
-main().then(
-	() => process.exit(0),
-	(error) => {
-		console.error("[SPECTATOR_SMOKE] ❌ failed:", error?.stack ?? error);
-		process.exit(1);
+async function run() {
+	try {
+		await main();
+	} finally {
+		const results = await Promise.allSettled([...openRooms].filter(room => room.connection?.isOpen)
+			.map(room => withTimeout(room.leave(), 5000, `leaving ${room.id}`)));
+		const failures = results.filter(result => result.status === "rejected");
+		if (failures.length) throw new AggregateError(failures.map(result => result.reason), "Spectator cleanup failed");
 	}
-);
+}
+run().catch(error => {
+	console.error("[SPECTATOR_SMOKE] ❌ failed:", error?.stack ?? error);
+	process.exitCode = 1;
+});

@@ -7,7 +7,7 @@
   <title>Estatísticas · Mytragor</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
     :root { color-scheme: dark; --bg: #0a0a0f; --panel: #12151e; --line: rgba(224, 186, 112, .22); --gold: #f5c96a; --text: #f3ead7; --muted: #c1b8a7; }
     * { box-sizing: border-box; }
@@ -84,20 +84,96 @@
       .table-scroll:focus-visible { outline-offset: -3px; }
     }
   </style>
+  <style>
+    :root { --bg: #111214; --panel: #1b1d20; --line: #3b3d41; --gold: #e2c488; --text: #f4f2ed; --muted: #b9bcc2; }
+    body { background-attachment: fixed; font: 15px/1.45 "Source Sans 3", sans-serif; }
+    .shell { max-width: 1240px; padding: 16px 24px 24px; }
+    nav { padding: 12px 0 16px; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: none; box-shadow: none; gap: 12px; }
+    .brand { gap: 14px; min-width: 0; color: var(--text); }
+    .brand:hover { color: var(--text); }
+    .brand img { width: 76px; height: 56px; }
+    .brand h1 { font-size: 23px; margin: 0 0 4px; text-shadow: none; }
+    .brand p { font: 14px/1.4 "Source Sans 3", sans-serif; margin: 0; color: var(--muted); }
+    .nav-links a { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 8px 14px; border-radius: 6px; border-color: #77716a; background: #34373d; color: #fff7e6; font: 700 14px/1.4 "Source Sans 3", sans-serif; }
+    .nav-links a:hover { background: #484d55; border-color: var(--gold); color: #fff; }
+    main { margin-top: 16px; background: var(--panel); border-top: 2px solid #a88d58; }
+    .controls { gap: 12px; padding: 14px 20px; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: none; box-shadow: none; }
+    .controls label { flex: 1 1 170px; min-width: 0; gap: 4px; color: var(--muted); font-weight: 600; font-size: 13px; }
+    select, button { border-radius: 6px; border-color: #666970; background: #26292e; font: 600 15px/1.4 "Source Sans 3", sans-serif; }
+    select { padding: 8px 30px 8px 12px; }
+    button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; margin: 0; background: #dec18a; color: #201e19; border-color: #eed9b1; box-shadow: none; padding: 8px 16px; }
+    button:hover { background: #f0d8aa; }
+    button span { font-size: 22px; line-height: 1; }
+    .status { margin: 10px 20px 0; min-height: 0; font-size: 13px; }
+    .status:empty { display: none; }
+    #updated { margin: 4px 20px 12px; font-size: 13px; }
+    .error, .warning, #empty { margin: 12px 20px; border-radius: 4px; }
+    .warning { padding: 10px 12px; font-size: 13px; background: #302b20; }
+    .rankings { grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: 0; margin: 0; border-top: 1px solid var(--line); align-items: stretch; }
+    .panel { border: 0; border-radius: 0; background: none; box-shadow: none; padding: 16px 20px 12px; }
+    .rankings .panel + .panel { border-left: 1px solid var(--line); }
+    .panel > h2 { padding: 0; border: 0; }
+    .panel-heading { margin: 0 0 12px; gap: 6px; }
+    h2 { font-size: 18px; color: var(--text); margin: 0; }
+    .section-mark { margin: 3px 0 0; font: 14px/1.4 "Source Sans 3", sans-serif; color: var(--muted); letter-spacing: 0; text-transform: none; }
+    .ranking-tag { color: var(--gold); font-size: 12px; font-weight: 700; white-space: nowrap; }
+    caption { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+    .table-scroll { overflow-x: visible; }
+    table { table-layout: fixed; }
+    th, td { padding: 8px 10px; border-bottom-color: #32353a; }
+    thead th { font-size: 12px; letter-spacing: 0; padding-top: 6px; padding-bottom: 6px; }
+    thead th:first-child, tbody td:first-child { width: 66px; }
+    tbody th { font: 600 15px/1.4 "Source Sans 3", sans-serif; }
+    tbody td:first-child { font: 700 14px/1.4 "Source Sans 3", sans-serif; color: var(--muted); }
+    tbody tr:nth-child(even) { background: #202226; }
+    tbody tr:first-child { background: #302c24; }
+    tbody tr:first-child td { color: #f0d298; }
+    tbody tr:first-child th { color: #f6e2bd; }
+    tbody tr:hover { background: #2d3136; }
+    .empty { font-size: 14px; padding: 18px 0; }
+    .notes { margin-top: 0; padding: 0; border-top: 1px solid var(--line); }
+    .notes summary { cursor: pointer; padding: 14px 20px; color: var(--muted); font-weight: 600; min-height: 44px; }
+    .notes summary:hover { color: var(--text); background: #24272b; }
+    .notes ul { margin: 0; padding: 0 36px 16px; }
+    .notes li { margin: 8px 0; }
+    @media (max-width: 880px) {
+      .rankings { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .controls label { flex-basis: 140px; }
+    }
+    @media (max-width: 600px) {
+      .shell { padding: 12px 12px 20px; }
+      nav { justify-content: space-between; padding: 0 0 12px; gap: 10px; }
+      .brand { gap: 10px; }
+      .brand img { width: 52px; height: 44px; }
+      .brand h1 { font-size: 18px; }
+      .brand p { display: none; }
+      .nav-links { width: auto; }
+      .nav-links a { padding: 8px 12px; }
+      .nav-links .play-link { display: none; }
+      main { margin-top: 12px; }
+      .controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 12px; gap: 10px; }
+      .controls label { min-width: 0; }
+      .controls button { width: 100%; align-self: end; font-size: 14px; padding: 8px; }
+      select { font-size: 14px; padding-left: 8px; }
+      .rankings { grid-template-columns: 1fr; gap: 0; }
+      .rankings .panel + .panel { border-left: 0; border-top: 1px solid var(--line); }
+      .panel { padding: 14px 12px; }
+      .panel-heading { flex-wrap: nowrap; }
+      .status, #updated { margin-left: 12px; margin-right: 12px; }
+      .error, .warning, #empty { margin-left: 12px; margin-right: 12px; }
+      .notes { padding: 0; }
+      .notes summary { padding: 14px 12px; }
+    }
+  </style>
 </head>
 <body>
   <a class="skip" href="#main">Pular para as estatísticas</a>
   <div class="shell">
     <nav aria-label="Navegação principal">
-      <a class="brand" href="index.html" aria-label="Mytragor — início"><img src="/logo/logomytragor.png" alt="Mytragor" width="140" height="68" /></a>
-      <div class="nav-links"><a href="index.html">Início</a><a href="solo-lobby.html">Jogar solo / IA</a></div>
+      <a class="brand" href="index.html" aria-label="Mytragor — início"><img src="/logo/logomytragor.png" alt="Mytragor" width="76" height="56" /><div><h1>Estatísticas</h1><p>Escolhidos e cartas mais usados</p></div></a>
+      <div class="nav-links"><a href="index.html"><span aria-hidden="true">&#8592;</span> Voltar</a><a class="play-link" href="solo-lobby.html">Jogar solo / IA</a></div>
     </nav>
     <main id="main">
-      <header>
-        <span class="eyebrow">Salão Arcano · Estatísticas</span>
-        <h1>Os favoritos do campo.</h1>
-        <p class="intro">Confira o top 10 de escolhidos e cartas mais usados, sem quantidades, percentuais ou dados individuais de jogadores.</p>
-      </header>
       <section class="controls" aria-label="Filtros das estatísticas">
         <label for="mode">Modo
           <select id="mode"><option value="all">Todos os modos</option><option value="pvp">PvP · jogadores</option><option value="solo">Solo · lado humano</option><option value="ai">IA · lado automático</option></select>
@@ -105,7 +181,8 @@
         <label for="days">Período
           <select id="days"><option value="7">Últimos 7 dias</option><option value="30" selected>Últimos 30 dias</option><option value="90">Últimos 90 dias</option></select>
         </label>
-        <button id="refresh" type="button" aria-controls="results">Atualizar dados</button>
+        <label for="sort">Ordenar cartas por<select id="sort"><option value="decks">Baralhos</option><option value="plays">Jogadas resolvidas</option></select></label>
+        <button id="refresh" type="button" aria-controls="results"><span aria-hidden="true">&#8635;</span>Atualizar dados</button>
       </section>
       <p id="status" class="status" role="status" aria-live="polite" aria-atomic="true"></p>
       <p id="error" class="error" role="alert" hidden></p>
@@ -119,20 +196,17 @@
           <p id="empty" class="empty" hidden>Nenhum registro neste modo e período. Experimente outro filtro ou volte após novas partidas.</p>
           <div class="rankings">
           <section class="panel" aria-labelledby="leaders-title">
-            <div class="section-mark">Os protagonistas da arena</div>
-            <h2 id="leaders-title">Top 10 escolhidos</h2>
-            <div class="table-scroll" role="region" aria-label="Ranking de líderes; role horizontalmente se necessário" tabindex="0">
+            <div class="panel-heading"><div><h2 id="leaders-title">Escolhidos</h2><p class="section-mark">Presença nos baralhos</p></div><span class="ranking-tag">TOP 10</span></div>
+            <div class="table-scroll" role="region" aria-label="Ranking de escolhidos" tabindex="0">
               <table><caption>Mais usados nos baralhos, sem exibir quantidades.</caption><thead><tr><th scope="col">Posição</th><th scope="col">Escolhido</th></tr></thead><tbody id="leaders"></tbody></table>
             </div>
             <p id="leaders-empty" class="empty" hidden>Nenhum líder registrado neste recorte.</p>
           </section>
           <section class="panel" aria-labelledby="cards-title">
-            <div class="section-mark">O arsenal dos duelistas</div>
             <div class="panel-heading">
-              <div><h2 id="cards-title">Top 10 cartas</h2><p class="muted">As favoritas por presença nos baralhos ou jogadas resolvidas.</p></div>
-              <label for="sort">Ordenar cartas por<select id="sort"><option value="decks">Baralhos</option><option value="plays">Jogadas resolvidas</option></select></label>
+              <div><h2 id="cards-title">Cartas</h2><p class="section-mark">Presença nos baralhos ou jogadas</p></div><span class="ranking-tag">TOP 10</span>
             </div>
-            <div class="table-scroll" role="region" aria-label="Estatísticas de cartas; role horizontalmente se necessário" tabindex="0">
+            <div class="table-scroll" role="region" aria-label="Ranking de cartas" tabindex="0">
               <table><caption id="cards-caption">Top 10 por presença nos baralhos, sem exibir quantidades.</caption><thead><tr><th scope="col">Posição</th><th scope="col">Carta</th></tr></thead><tbody id="cards"></tbody></table>
             </div>
             <p id="cards-empty" class="empty" hidden>Nenhuma carta registrada neste recorte.</p>
@@ -140,17 +214,16 @@
           </div>
         </div>
       </div>
-      <section class="panel notes" aria-labelledby="notes-title">
-        <h2 id="notes-title">Como funciona o ranking</h2>
+      <details class="notes">
+        <summary>Sobre os dados e o ranking</summary>
         <ul>
           <li>Baralhos são participações registradas, não baralhos únicos nem jogadores únicos. Solo representa o lado humano; IA, o lado automático.</li>
           <li>Cada lista mostra apenas as primeiras 10 posições disponíveis, sem totais, cópias ou percentuais. Uma carta conta uma única vez por baralho em que aparece.</li>
           <li>Jogadas contabilizam cartas resolvidas da mão com evento <code>card_played</code>. Tokens gerados e feitiços reativos sem esse evento ficam de fora; não é uma contagem de todas as ações da partida.</li>
           <li>Não há histórico retroativo: apenas registros desde a ativação da coleta. Os períodos usam dias de calendário UTC.</li>
         </ul>
-      </section>
+      </details>
     </main>
-    <footer>Somente leitura · Sem atualização automática. Troque os filtros ou use “Atualizar dados”.</footer>
     <noscript><p>Ative o JavaScript para consultar as estatísticas agregadas.</p></noscript>
   </div>
   <script type="module" src="/src/stats.ts"></script>

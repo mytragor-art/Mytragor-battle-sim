@@ -1,8 +1,8 @@
 .modal {
-	--dialog-gold: #d6b570;
-	--dialog-muted: #b6becb;
-	--dialog-line: rgba(214, 181, 112, .25);
-	background: rgba(3, 6, 12, .66);
+	--dialog-gold: #e2c488;
+	--dialog-muted: #b9bcc2;
+	--dialog-line: #45474c;
+	background: rgba(8, 9, 11, .78);
 	padding: 12px;
 }
 
@@ -10,48 +10,52 @@
 	box-sizing: border-box;
 	max-width: calc(100vw - 24px);
 	max-height: min(86vh, 86dvh);
-	background: linear-gradient(160deg, #141d2b, #0b101b 75%);
+	background: #1b1d20;
 	border: 1px solid var(--dialog-line);
-	border-radius: 14px;
+	border-top: 2px solid #a88d58;
+	border-radius: 8px;
 	padding: 18px;
-	color: #f0eadc;
-	box-shadow: 0 20px 70px rgba(0, 0, 0, .6), inset 0 1px rgba(255, 236, 194, .05);
-	font-family: Arial, sans-serif;
-	font-size: 13px;
+	color: #f4f2ed;
+	box-shadow: 0 20px 70px rgba(0, 0, 0, .6);
+	font-family: "Source Sans 3", sans-serif;
+	font-size: 15px;
 	line-height: 1.4;
-	scrollbar-color: #78633d #0b101b;
+	overflow: auto;
+	scrollbar-color: #77716a #1b1d20;
 }
 
 .modal h2, .modal h3 {
-	color: #e6cc94;
-	font-family: Georgia, serif;
+	color: #f4f2ed;
+	font-family: "Cinzel", Georgia, serif;
 	line-height: 1.2;
 	text-shadow: none;
 }
 
 .modal .btn, .modal .choiceAction, .modal .choicePreview > summary {
-	font-family: Arial, sans-serif;
+	font-family: "Source Sans 3", sans-serif;
 	text-transform: none;
 	letter-spacing: normal;
 	text-shadow: none;
 }
 
 .modal .btn {
-	min-height: 40px;
+	min-height: 44px;
 	height: auto;
 	padding: 8px 12px;
-	border: 1px solid rgba(195, 205, 222, .23);
-	border-radius: 8px;
-	background: #1b2535;
-	color: #ede8dd;
+	border: 1px solid #77716a;
+	border-radius: 6px;
+	background: #34373d;
+	color: #fff7e6;
 	box-shadow: none;
-	font-size: 13px;
+	font-size: 14px;
 }
 
+.modal .btn::before, .modal .btn::after { content: none; }
+
 .modal .btn.primary {
-	background: linear-gradient(180deg, #dfc488, #b99755);
-	border-color: #e5cb91;
-	color: #211b10;
+	background: #dec18a;
+	border-color: #eed9b1;
+	color: #201e19;
 	font-weight: 700;
 }
 
@@ -107,17 +111,17 @@
 
 .effectChoiceLayout, .effectChoiceOptions { display: grid; gap: 10px; min-width: 0; }
 .choiceContextTitle, .choiceGroupTitle { color: var(--dialog-gold); font-size: 12px; font-weight: 700; }
-.choiceDuelPanel { display: grid; gap: 8px; padding: 10px; border-radius: 9px; background: #101927; border: 1px solid rgba(195, 205, 222, .12); }
+.choiceDuelPanel { display: grid; gap: 8px; padding: 10px; border-radius: 6px; background: #24272b; border: 1px solid #45474c; }
 .choiceDuelRow { display: grid; grid-template-columns: minmax(0, 1fr) 18px minmax(0, 1fr); align-items: start; gap: 6px; }
 .choiceDuelUnit { display: grid; grid-template-columns: 48px minmax(0, 1fr); align-items: center; gap: 5px 8px; min-width: 0; }
-.choiceDuelRole { grid-column: 1 / -1; color: #bfc9d9; font-size: 12px; }
+.choiceDuelRole { grid-column: 1 / -1; color: var(--dialog-muted); font-size: 12px; }
 .choiceDuelUnit--atk .choiceDuelRole { color: #efa18e; }
 .choiceDuelImage { width: 48px; height: 67px; object-fit: cover; border: 1px solid #64748b; border-radius: 5px; }
 .choiceDuelUnit--atk .choiceDuelImage { border-color: #b87262; }
 .choiceDuelName { font-size: 12px; font-weight: 700; overflow-wrap: anywhere; }
 .choiceDuelArrow { align-self: center; color: var(--dialog-gold); font-size: 20px; }
 .choiceDuelStats { display: flex; flex-wrap: wrap; gap: 6px; }
-.choiceStat { font-size: 12px; color: #e7decb; background: #1c2737; border-radius: 5px; padding: 3px 7px; }
+.choiceStat { font-size: 12px; color: #f4f2ed; background: #34373d; border-radius: 5px; padding: 3px 7px; }
 
 .choiceOptionsGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 10px; }
 .choiceOption { display: grid; align-content: start; gap: 5px; min-width: 0; }
@@ -138,16 +142,16 @@
 	padding: 9px 12px;
 	border: 1px solid rgba(214, 181, 112, .4);
 	border-radius: 8px;
-	background: #222b38;
+	background: #34373d;
 	color: #f0eadc;
 	text-align: left;
 	cursor: pointer;
 }
 
-.modal .choiceAction--secondary { background: #111925; border-color: rgba(195, 205, 222, .2); }
+.modal .choiceAction--secondary { background: #26292e; border-color: #666970; }
 .choiceActionImage { flex: 0 0 auto; width: 32px; height: 45px; object-fit: cover; border-radius: 4px; }
 .modal .choiceAction.selected, .modal .choiceCard.selected { outline: 2px solid var(--dialog-gold); outline-offset: 2px; }
-.choiceCounteredPanel { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px; border-left: 2px solid #b87262; background: #101927; border-radius: 6px; }
+.choiceCounteredPanel { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px; border-left: 2px solid #b87262; background: #24272b; border-radius: 6px; }
 .choiceCounteredPanel > img { width: 48px; height: 67px; object-fit: cover; border-radius: 5px; }
 .choiceCounteredName { color: #f0eadc; font-weight: 700; font-size: 14px; }
 .choicePreview { border-top: 1px solid var(--dialog-line); padding-top: 8px; }
@@ -165,6 +169,34 @@
 .waitingChoiceText { margin: 8px 0 12px; color: var(--dialog-muted); }
 .modal .attackConfirmBox { width: 390px; }
 .modal .attackConfirmBadge { color: #efa18e; border-color: rgba(239, 161, 142, .35); background: rgba(239, 161, 142, .07); }
+
+.modal .reconnectSpinner { border-top-color: var(--dialog-gold); }
+.modal .reconnectAttempt, .modal .initiativeEyebrow { color: var(--dialog-gold); letter-spacing: 0; }
+.modal .reconnectText, .modal .initiativeIntro, .modal .logModalSubhead { color: var(--dialog-muted); }
+.modal .initiativeRoll { color: #f4f2ed; }
+.modal .initiativeRoll > span { color: #e2c488; }
+.reconnectModal[data-state="success"] .reconnectAttempt { color: #a4d5b3; }
+.reconnectModal[data-state="failed"] .reconnectAttempt { color: #efb0b3; }
+.reconnectModal[data-state="success"] .reconnectSpinner { border-color: #82b994; }
+.reconnectModal[data-state="failed"] .reconnectSpinner { border-color: #c7898d; }
+
+.gameDialog[open] {
+	display: block;
+	width: min(430px, calc(100vw - 24px));
+	height: fit-content;
+	max-height: calc(100dvh - 24px);
+	margin: auto;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	overflow: auto;
+}
+.gameDialog::backdrop { background: rgba(8, 9, 11, .78); }
+.gameDialog .modalBox { width: 100%; margin: 0; }
+.gameDialog h3 { margin: 0 0 12px; font-size: 20px; overflow-wrap: anywhere; }
+.gameDialog p { margin: 0 0 20px; color: var(--dialog-muted); }
+.matchNoticeActions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; }
+.modal .btn.danger { background: #783e43; border-color: #c7898d; color: #fff2f2; }
 
 @media (max-width: 520px) {
 	.modal .modalBox { padding: 14px; }

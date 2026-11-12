@@ -53,12 +53,13 @@ async function openSoloMatch(label, p1Cards, p2Cards) {
 	await waitFor(() => events.assigned && events.state, `${label} room join`);
 	assert(events.assigned?.slot === "p1", `${label} should assign the human player to p1`);
 	await waitFor(() => String(events.state?.phase || "") === "INITIATIVE", `${label} initiative`);
-	room.send("roll_initiative");
-	await waitFor(() => String(events.state?.initiativeStatus || "") !== "ROLLING", `${label} initiative roll`);
-	if (String(events.state?.initiativeStatus || "") === "CHOOSING") {
-		room.send("choose_starter", { starterSlot: "p2" });
-	}
-	await waitFor(() => String(events.state?.game?.phase || "") === "MULLIGAN", `${label} mulligan`);
+	await waitFor(() => {
+		if (events.state.initiativeStatus === "ROLLING") room.send("roll_initiative");
+		if (events.state.initiativeStatus === "CHOOSING" && events.state.initiativeWinnerSlot === "p1") {
+			room.send("choose_starter", { starterSlot: "p2" });
+		}
+		return events.state.game.phase === "MULLIGAN";
+	}, `${label} initiative and mulligan`);
 	room.send("submit_mulligan", { indices: [] });
 	await waitFor(() => String(events.state?.game?.phase || "") !== "MULLIGAN", `${label} mulligan resolution`);
 
@@ -183,14 +184,21 @@ async function testValbrakBotProgress() {
 		for (let turn = 0; turn < 8; turn += 1) {
 			await passP1Turn(context);
 			await waitFor(
-				() => String(context.events.state?.game?.turnSlot || "") === "p1" && String(context.events.state?.game?.phase || "") === "INITIAL",
+				() => context.events.state?.phase === "FINISHED"
+					|| (String(context.events.state?.game?.turnSlot || "") === "p1"
+						&& ["INITIAL", "PREP"].includes(String(context.events.state?.game?.phase || ""))),
 				`Valbrak bot turn ${turn + 1}`
 			);
+			if (context.events.state.phase === "FINISHED") {
+				assert(Number(context.events.state.game.p1.hp) <= 0, "Early completion must be a real combat victory, not a stalled bot");
+				break;
+			}
 		}
 		const valbrakDraws = context.events.logs.filter((entry) => entry?.effect === "valbrak");
 		assert(valbrakDraws.length > 0, "Valbrak bot should draw after summoning a Cidadão");
-		assert(Number(context.events.state?.game?.turn || 0) >= 16, "Valbrak bot should complete eight full turns");
-		console.log("[CARD_REVISION] Valbrak: IA completou turnos de Cidadão sem travar OK");
+		assert(context.events.state.phase === "FINISHED" || Number(context.events.state.game.turn) >= 16,
+			"Valbrak bot must complete eight turns or win normally before that");
+		console.log("[CARD_REVISION] Valbrak: IA progrediu com Cidadãos até oito turnos ou vitória normal OK");
 	} finally {
 		await close(context);
 	}
