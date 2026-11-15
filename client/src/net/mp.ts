@@ -1,4 +1,5 @@
 import * as Colyseus from "colyseus.js";
+import type { CombatPresentation } from "../animations/combatPresentation";
 
 export type MpConfig = { endpoint: string };
 
@@ -11,6 +12,7 @@ export type LobbyHandlers = {
 };
 
 export type MatchHandlers = {
+	presentation?: CombatPresentation;
 	onAssignSlot?: (msg: any) => void;
 	onStateSync?: (state: any) => void;
 	onCardPlayed?: (msg: any) => void;
@@ -73,22 +75,47 @@ export function bindLobbyHandlers(room: Colyseus.Room, handlers: LobbyHandlers) 
 }
 
 export function bindMatchHandlers(room: Colyseus.Room, handlers: MatchHandlers) {
+	for (const name of ["attack_declared", "attack_redirected", "attack_cancelled"]) {
+		room.onMessage(name, (msg: unknown) => {
+			handlers.presentation?.event(name, msg);
+			handlers.onLog?.(name.toUpperCase(), msg);
+		});
+	}
 	room.onMessage("assign_slot", (msg: any) => handlers.onAssignSlot?.(msg));
 	room.onMessage("card_played", (msg: any) => handlers.onCardPlayed?.(msg));
 	room.onMessage("phase_changed", (msg: any) => handlers.onLog?.("PHASE_CHANGED", msg));
 	room.onMessage("turn_start", (msg: any) => handlers.onLog?.("TURN_START", msg));
 	room.onMessage("mulligan_resolved", (msg: any) => handlers.onLog?.("MULLIGAN_RESOLVED", msg));
-	room.onMessage("attack_resolved", (msg: any) => handlers.onLog?.("ATTACK_RESOLVED", msg));
-	room.onMessage("match_ended", (msg: any) => handlers.onLog?.("MATCH_ENDED", msg));
+	room.onMessage("attack_resolved", (msg: any) => {
+		handlers.presentation?.event("attack_resolved", msg);
+		handlers.onLog?.("ATTACK_RESOLVED", msg);
+	});
+	room.onMessage("match_ended", (msg: any) => {
+		if (handlers.presentation) handlers.presentation.finish(() => handlers.onLog?.("MATCH_ENDED", msg));
+		else handlers.onLog?.("MATCH_ENDED", msg);
+	});
 	room.onMessage("effect_log", (msg: any) => handlers.onLog?.("EFFECT", msg));
-	room.onMessage("effect_choice_required", (msg: any) => handlers.onEffectChoice?.(msg));
+	room.onMessage("effect_choice_required", (msg: any) => {
+		handlers.presentation?.reaction();
+		handlers.onEffectChoice?.(msg);
+	});
 	room.onMessage("revealed_top_card", (msg: any) => handlers.onRevealTopCard?.(msg));
 	room.onMessage("opponent_reconnecting", (msg: any) => handlers.onOpponentReconnecting?.(msg));
 	room.onMessage("opponent_reconnected", (msg: any) => handlers.onOpponentReconnected?.(msg));
-	room.onMessage("choice_waiting", (msg: any) => handlers.onLog?.("CHOICE_WAITING", msg));
+	room.onMessage("choice_waiting", (msg: any) => {
+		handlers.presentation?.reaction();
+		handlers.onLog?.("CHOICE_WAITING", msg);
+	});
 	room.onMessage("choice_waiting_end", (msg: any) => handlers.onLog?.("CHOICE_WAITING_END", msg));
 	room.onMessage("error", (msg: any) => handlers.onError?.(msg));
-	room.onStateChange((state: any) => handlers.onStateSync?.(state));
-	if ((room as any).state) handlers.onStateSync?.((room as any).state);
-	room.onLeave((code) => handlers.onLeave?.(code));
+	const sync = (state: any) => {
+		if (handlers.presentation) handlers.presentation.sync(() => handlers.onStateSync?.(state), state?.publicAttack);
+		else handlers.onStateSync?.(state);
+	};
+	room.onStateChange(sync);
+	if ("state" in room && room.state) sync(room.state);
+	room.onLeave((code) => {
+		handlers.presentation?.reset();
+		handlers.onLeave?.(code);
+	});
 }

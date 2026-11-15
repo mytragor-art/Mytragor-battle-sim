@@ -1,6 +1,7 @@
 /* Responsibility: wire Match UI with Colyseus network. This is the only place combining UI + NET. */
 import { bindMatchHandlers, connectClient, joinMatchById, resolveSpectatorRoomId } from "../net/mp";
 import { animateCardTransfer, animateEl, bindAttackTargetHover, setChosenReady, setupAttackArrow, startAttackArrow, stopAttackArrow } from "../animations/animationHelpers";
+import { createCombatPresentation } from "../animations/combatPresentation";
 import { getGameInputs, log, logText, renderButtonRow } from "../ui/gameView";
 import { setupBoardScale } from "../ui/boardScale";
 import { setupArenaSlots } from "../ui/arenaSlots";
@@ -323,6 +324,10 @@ function sideFromServerSlot(serverSlot) {
         return "you";
     return "ai";
 }
+const combatPresentation = createCombatPresentation((serverSlot, pos) => {
+    const side = sideFromServerSlot(serverSlot);
+    return side ? document.getElementById(pos < 0 ? `${side}-leader` : `${side}-ally-${pos}`) : null;
+});
 function currentBattlePhase() {
     return String(currentPhase || "INITIAL").toUpperCase() === "COMBAT" ? "battle" : "other";
 }
@@ -3380,7 +3385,8 @@ function canActivateFieldEffect(index) {
         && fieldActivationReady.get(index) === currentMyField[index];
 }
 function requestFieldActivation(index) {
-    if (!room || !canActivateFieldEffect(index)) return;
+    if (!room || !canActivateFieldEffect(index))
+        return;
     const cardId = currentMyField[index];
     fieldActivationReady.clear();
     renderMyField(currentMyField, currentMyFieldHp);
@@ -4034,20 +4040,24 @@ function scheduleSpectatorReconnect(code) {
 function bindFieldActivationMessages(boundRoom) {
     fieldActivationReady.clear();
     boundRoom.onMessage("field_activation_state", (payload) => {
-        if (isSpectator || room !== boundRoom) return;
+        if (isSpectator || room !== boundRoom)
+            return;
         fieldActivationReady.clear();
         for (const entry of Array.isArray(payload?.ready) ? payload.ready : []) {
-            if (Number.isInteger(entry.pos) && entry.pos >= 0 && entry.pos < 5 && typeof entry.cardId === "string") fieldActivationReady.set(entry.pos, entry.cardId);
+            if (Number.isInteger(entry.pos) && entry.pos >= 0 && entry.pos < 5 && typeof entry.cardId === "string")
+                fieldActivationReady.set(entry.pos, entry.cardId);
         }
         renderMyField(currentMyField, currentMyFieldHp);
     });
-    if (!isSpectator) boundRoom.send("request_field_activations");
+    if (!isSpectator)
+        boundRoom.send("request_field_activations");
 }
 function bindActiveMatchRoom() {
     if (!room)
         return;
     bindFieldActivationMessages(room);
     bindMatchHandlers(room, {
+        presentation: combatPresentation,
         onAssignSlot: (msg) => {
             isSpectator = msg?.spectator === true || isSpectator;
             slot = isSpectator ? "p1" : (msg?.slot || null);
@@ -4454,7 +4464,8 @@ function renderHand(hand) {
 }
 function renderMyField(field, hpValues) {
     renderButtonRow("myField", field.map((c, i) => `[${i}] ${c} (ATK 1)`), selectedAttackerPos, "outline:2px solid #2dd4bf;", (index) => {
-    if (canActivateFieldEffect(index)) return requestFieldActivation(index);
+        if (canActivateFieldEffect(index))
+            return requestFieldActivation(index);
         if (isMyTurn && currentPhase === "COMBAT") {
             beginBoardAttackFrom(index);
             return;
@@ -4462,7 +4473,8 @@ function renderMyField(field, hpValues) {
         setInspector(field[index] ? { cardId: field[index], side: "you", lane: "field", index } : null);
     });
     renderLane("you-field", field, selectedAttackerPos, (index) => {
-        if (canActivateFieldEffect(index)) return requestFieldActivation(index);
+        if (canActivateFieldEffect(index))
+            return requestFieldActivation(index);
         if (isMyTurn && currentPhase === "COMBAT") {
             beginBoardAttackFrom(index);
             return;
@@ -4527,6 +4539,7 @@ async function joinMatch() {
             room.send("set_name", { name: displayName, avatarId: getAvatarId() });
         }
         bindMatchHandlers(room, {
+            presentation: combatPresentation,
             onAssignSlot: (msg) => {
                 isSpectator = msg?.spectator === true || isSpectator;
                 slot = isSpectator ? "p1" : (msg?.slot || null);

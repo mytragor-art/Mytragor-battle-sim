@@ -2,6 +2,7 @@
 
 import { bindMatchHandlers, connectClient, joinMatchById, resolveSpectatorRoomId } from "../net/mp";
 import { animateCardTransfer, animateEl, bindAttackTargetHover, setChosenReady, setupAttackArrow, startAttackArrow, stopAttackArrow } from "../animations/animationHelpers";
+import { createCombatPresentation } from "../animations/combatPresentation";
 import { getGameInputs, log, logText, renderButtonRow } from "../ui/gameView";
 import { setupBoardScale } from "../ui/boardScale";
 import { setupArenaSlots } from "../ui/arenaSlots";
@@ -379,6 +380,11 @@ function sideFromServerSlot(serverSlot: "p1" | "p2" | null): BattleSide | null {
 	if (serverSlot === slot) return "you";
 	return "ai";
 }
+
+const combatPresentation = createCombatPresentation((serverSlot, pos) => {
+	const side = sideFromServerSlot(serverSlot);
+	return side ? document.getElementById(pos < 0 ? `${side}-leader` : `${side}-ally-${pos}`) : null;
+});
 
 function currentBattlePhase(): string {
 	return String(currentPhase || "INITIAL").toUpperCase() === "COMBAT" ? "battle" : "other";
@@ -4035,6 +4041,7 @@ function bindActiveMatchRoom() {
 	if (!room) return;
 	bindFieldActivationMessages(room);
 	bindMatchHandlers(room, {
+		presentation: combatPresentation,
 		onAssignSlot: (msg) => {
 			isSpectator = msg?.spectator === true || isSpectator;
 			slot = isSpectator ? "p1" : (msg?.slot || null);
@@ -4470,6 +4477,7 @@ async function joinMatch() {
 			room.send("set_name", { name: displayName, avatarId: getAvatarId() });
 		}
 		bindMatchHandlers(room, {
+			presentation: combatPresentation,
 			onAssignSlot: (msg) => {
 				isSpectator = msg?.spectator === true || isSpectator;
 				slot = isSpectator ? "p1" : (msg?.slot || null);

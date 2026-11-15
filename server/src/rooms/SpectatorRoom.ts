@@ -61,6 +61,7 @@ export class SpectatorRoom extends Room<MatchState> {
 
 	private applySnapshot(snapshot: SpectatorSnapshot) {
 		this.state.phase = snapshot.phase;
+		Object.assign(this.state.publicAttack, snapshot.publicAttack);
 		this.state.serverSeq = snapshot.serverSeq;
 		this.syncPublicPlayer("p1", snapshot.players.p1.displayName, snapshot.players.p1.avatarId);
 		this.syncPublicPlayer("p2", snapshot.players.p2.displayName, snapshot.players.p2.avatarId);

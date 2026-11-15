@@ -1,11 +1,11 @@
-import { MatchState } from "./schema/MatchState";
+import { MatchState, PublicAttackState } from "./schema/MatchState";
 
 type PublicSlot = "p1" | "p2";
 
 const HIDDEN_HAND_CARD = "__spectator_hand_hidden__";
 const HIDDEN_DECK_CARD = "__spectator_deck_hidden__";
 
-export type SpectatorEventName = "card_played" | "phase_changed" | "turn_start" | "attack_resolved" | "match_ended";
+export type SpectatorEventName = "card_played" | "phase_changed" | "turn_start" | "attack_declared" | "attack_redirected" | "attack_cancelled" | "attack_resolved" | "match_ended";
 
 export type SpectatorPlayerInfo = {
 	slot: PublicSlot;
@@ -51,6 +51,7 @@ export type SpectatorPlayerView = {
 
 export type SpectatorSnapshot = {
 	phase: string;
+	publicAttack: Pick<PublicAttackState, "active" | "attackId" | "attackerSlot" | "attackerPos" | "attackerName" | "targetSlot" | "target" | "targetPos" | "targetName" | "originalTargetName" | "redirected">;
 	serverSeq: number;
 	players: Record<PublicSlot, SpectatorPlayerInfo>;
 	game: {
@@ -168,6 +169,19 @@ function sanitizePlayer(player: any, slot: PublicSlot): SpectatorPlayerView {
 export function buildSpectatorSnapshot(state: MatchState): SpectatorSnapshot {
 	return {
 		phase: String(state.phase || "IN_MATCH"),
+		publicAttack: {
+			active: state.publicAttack.active,
+			attackId: state.publicAttack.attackId,
+			attackerSlot: state.publicAttack.attackerSlot,
+			attackerPos: state.publicAttack.attackerPos,
+			attackerName: state.publicAttack.attackerName,
+			targetSlot: state.publicAttack.targetSlot,
+			target: state.publicAttack.target,
+			targetPos: state.publicAttack.targetPos,
+			targetName: state.publicAttack.targetName,
+			originalTargetName: state.publicAttack.originalTargetName,
+			redirected: state.publicAttack.redirected
+		},
 		serverSeq: Number(state.serverSeq || 0),
 		players: {
 			p1: { slot: "p1", displayName: findDisplayName(state, "p1"), avatarId: findAvatarId(state, "p1") },
@@ -210,7 +224,7 @@ export function publishSpectatorSnapshot(matchRoomId: string, snapshot: Spectato
 }
 
 export function relaySpectatorEvent(matchRoomId: string, name: string, payload: any): void {
-	if (!["card_played", "phase_changed", "turn_start", "attack_resolved", "match_ended"].includes(name)) return;
+	if (!["card_played", "phase_changed", "turn_start", "attack_declared", "attack_redirected", "attack_cancelled", "attack_resolved", "match_ended"].includes(name)) return;
 	const channel = ensureChannel(matchRoomId);
 	for (const listener of channel.listeners) listener.onEvent(name as SpectatorEventName, payload);
 }

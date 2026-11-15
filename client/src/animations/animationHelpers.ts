@@ -42,7 +42,7 @@ function getElementCenter(el: Element) {
   };
 }
 
-function buildCurve(fromX: number, fromY: number, toX: number, toY: number) {
+export function buildCurve(fromX: number, fromY: number, toX: number, toY: number) {
   const dx = toX - fromX;
   const dy = toY - fromY;
   const bend = Math.max(36, Math.min(180, Math.abs(dx) * 0.25 + Math.abs(dy) * 0.18));

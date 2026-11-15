@@ -49,6 +49,8 @@ function checkServer(slot, { target = 'taunt', choice = 'block-1', tapped = fals
     attacked, { p1: new Set(), p2: new Set() }, { p1: new Set(), p2: new Set() },
     (recipient, request, resolve) => {
       requests++;
+      assert.equal(state.publicAttack.active, true, 'Attack is public before a private reaction');
+      assert.equal(events.filter(event => event.name === 'attack_declared').length, 1);
       assert.equal(recipient, defenderSlot);
       assert.deepEqual(request.options.map(option => option.id), ['block-1', 'block-cancel']);
       assert.equal(request.targetCardId, foe.field[0]);
@@ -63,9 +65,24 @@ function checkServer(slot, { target = 'taunt', choice = 'block-1', tapped = fals
   assert.equal(own.fieldTapped[0], valid);
   if (!valid) {
     assert.ok(events.some(event => event.effect === 'attack_rejected'));
+    assert.equal(events.some(event => event.name === 'attack_declared'), false);
+    assert.equal(state.publicAttack.active, false);
     return;
   }
+  const declaredEvent = events.find(event => event.name === 'attack_declared');
+  assert.equal(declaredEvent.attackerSlot, slot);
+  assert.equal(declaredEvent.targetSlot, defenderSlot);
+  assert.equal(declaredEvent.targetPos, 0, 'Declaration identifies the original target');
+  assert.equal(resolved[0].attackId, declaredEvent.attackId);
+  assert.equal(state.publicAttack.active, false, 'Resolved attack is no longer pending');
   const blocked = eligible && choice === 'block-1';
+  const redirected = events.filter(event => event.name === 'attack_redirected');
+  assert.equal(redirected.length, blocked ? 1 : 0);
+  if (blocked) {
+    assert.equal(redirected[0].targetPos, 1);
+    assert.equal(redirected[0].originalTargetName, foe.field[0]);
+    assert.ok(events.indexOf(redirected[0]) < events.indexOf(resolved[0]));
+  }
   assert.equal(resolved[0].targetPos, blocked ? 1 : 0);
   assert.ok(resolved[0].damage > 0);
   assert.equal(foe.fieldHp[0], blocked ? 6 : 6 - resolved[0].damage);

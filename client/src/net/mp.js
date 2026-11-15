@@ -45,23 +45,52 @@ export function bindLobbyHandlers(room, handlers) {
     room.onLeave((code) => handlers.onLeave?.(code));
 }
 export function bindMatchHandlers(room, handlers) {
+    for (const name of ["attack_declared", "attack_redirected", "attack_cancelled"]) {
+        room.onMessage(name, (msg) => {
+            handlers.presentation?.event(name, msg);
+            handlers.onLog?.(name.toUpperCase(), msg);
+        });
+    }
     room.onMessage("assign_slot", (msg) => handlers.onAssignSlot?.(msg));
     room.onMessage("card_played", (msg) => handlers.onCardPlayed?.(msg));
     room.onMessage("phase_changed", (msg) => handlers.onLog?.("PHASE_CHANGED", msg));
     room.onMessage("turn_start", (msg) => handlers.onLog?.("TURN_START", msg));
     room.onMessage("mulligan_resolved", (msg) => handlers.onLog?.("MULLIGAN_RESOLVED", msg));
-    room.onMessage("attack_resolved", (msg) => handlers.onLog?.("ATTACK_RESOLVED", msg));
-    room.onMessage("match_ended", (msg) => handlers.onLog?.("MATCH_ENDED", msg));
+    room.onMessage("attack_resolved", (msg) => {
+        handlers.presentation?.event("attack_resolved", msg);
+        handlers.onLog?.("ATTACK_RESOLVED", msg);
+    });
+    room.onMessage("match_ended", (msg) => {
+        if (handlers.presentation)
+            handlers.presentation.finish(() => handlers.onLog?.("MATCH_ENDED", msg));
+        else
+            handlers.onLog?.("MATCH_ENDED", msg);
+    });
     room.onMessage("effect_log", (msg) => handlers.onLog?.("EFFECT", msg));
-    room.onMessage("effect_choice_required", (msg) => handlers.onEffectChoice?.(msg));
+    room.onMessage("effect_choice_required", (msg) => {
+        handlers.presentation?.reaction();
+        handlers.onEffectChoice?.(msg);
+    });
     room.onMessage("revealed_top_card", (msg) => handlers.onRevealTopCard?.(msg));
     room.onMessage("opponent_reconnecting", (msg) => handlers.onOpponentReconnecting?.(msg));
     room.onMessage("opponent_reconnected", (msg) => handlers.onOpponentReconnected?.(msg));
-    room.onMessage("choice_waiting", (msg) => handlers.onLog?.("CHOICE_WAITING", msg));
+    room.onMessage("choice_waiting", (msg) => {
+        handlers.presentation?.reaction();
+        handlers.onLog?.("CHOICE_WAITING", msg);
+    });
     room.onMessage("choice_waiting_end", (msg) => handlers.onLog?.("CHOICE_WAITING_END", msg));
     room.onMessage("error", (msg) => handlers.onError?.(msg));
-    room.onStateChange((state) => handlers.onStateSync?.(state));
-    if (room.state)
-        handlers.onStateSync?.(room.state);
-    room.onLeave((code) => handlers.onLeave?.(code));
+    const sync = (state) => {
+        if (handlers.presentation)
+            handlers.presentation.sync(() => handlers.onStateSync?.(state), state?.publicAttack);
+        else
+            handlers.onStateSync?.(state);
+    };
+    room.onStateChange(sync);
+    if ("state" in room && room.state)
+        sync(room.state);
+    room.onLeave((code) => {
+        handlers.presentation?.reset();
+        handlers.onLeave?.(code);
+    });
 }

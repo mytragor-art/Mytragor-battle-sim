@@ -92,6 +92,20 @@ o cancelamento da escolha. Listas longas rolam sem esconder o cabeçalho; a espe
 Teste de regressão (servidor e cliente): `npm.cmd --prefix server run build`, seguido de
 `npm.cmd --prefix client run smoke:interpor-combat`.
 
+## Indicação pública dos ataques
+
+Jogadores e espectadores veem uma seta do atacante ao alvo, destaques nas duas cartas
+e um aviso textual, mesmo quando não há reação disponível. A declaração permanece por
+pelo menos 750 ms antes da apresentação do resultado; Interpor identifica o alvo original
+e redireciona a seta ao bloqueador. Ataques negados também são identificados.
+Decisões privadas não são atrasadas nem expostas ao espectador. A pausa é somente visual:
+o servidor continua sendo responsável pelas regras e pelo dano. Uma reconexão ou entrada
+durante uma reação recupera a indicação pública da partida.
+
+Validação: `npm.cmd --prefix server run build`, seguida de
+`npm.cmd --prefix client run smoke:combat-presentation` e
+`npm.cmd --prefix client run smoke:interpor-combat`.
+
 ## Apresentação do campo
 
 Os campos são espelhados verticalmente: aliados e Escolhidos ficam frente a frente, perto do centro,

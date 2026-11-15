@@ -98,6 +98,55 @@
   box-shadow:0 0 18px rgba(255,0,0,.55);
 }
 
+.combatAttackSvg {
+  position:fixed;
+  inset:0;
+  width:100vw;
+  height:100vh;
+  pointer-events:none;
+  z-index:9998;
+}
+.combatAttackPath {
+  fill:none;
+  stroke:#ffad87;
+  stroke-width:5;
+  stroke-linecap:round;
+  marker-end:url(#combatArrowHead);
+  filter:drop-shadow(0 0 4px #170b08) drop-shadow(0 0 7px #e86e4c);
+}
+.combatNotice {
+  position:fixed;
+  top:max(12px, env(safe-area-inset-top));
+  left:50%;
+  transform:translateX(-50%);
+  width:max-content;
+  max-width:min(640px, calc(100vw - 24px));
+  padding:10px 16px;
+  border:1px solid #e8b06d;
+  border-radius:12px;
+  background:#151b29;
+  color:#fff3df;
+  box-shadow:0 4px 18px #0009;
+  z-index:10001;
+  pointer-events:none;
+  text-align:center;
+  font-size:14px;
+}
+.combatNotice[hidden] { display:none; }
+.combatNotice strong { display:block; color:#ffc785; font-size:12px; text-transform:uppercase; margin-bottom:4px; }
+#board .combatDeclaredAttacker {
+  outline:3px solid #ff7466;
+  outline-offset:3px;
+  border-radius:10px;
+  box-shadow:0 0 20px #ff554499;
+}
+#board .combatDeclaredTarget {
+  outline:3px solid #ffca87;
+  outline-offset:3px;
+  border-radius:10px;
+  box-shadow:0 0 22px #ffbc6699;
+}
+
 #board .card.slotCard.can-attack:not(.tapped) {
   --battle-glow:248,113,113;
 }

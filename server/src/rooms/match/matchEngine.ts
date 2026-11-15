@@ -3519,6 +3519,26 @@ export function attack(
 		return;
 	}
 
+	const attackId = `${game.turn}:${slot}:${attackerPos}:${game.seq}`;
+	const declaredTargetName = target.type === "leader" ? String(enemy.leaderId || "Escolhido") : String(enemy.field[target.targetPos] || "Aliado");
+	Object.assign(state.publicAttack, {
+		active: true, attackId, attackerSlot: slot, attackerPos,
+		attackerName: attackerDef?.name || attackerId, targetSlot: enemySlot,
+		target: target.type, targetPos: target.type === "ally" ? target.targetPos : -1,
+		targetName: declaredTargetName, originalTargetName: declaredTargetName, redirected: false
+	});
+	const publicAttackPayload = () => ({
+		attackId, attackerSlot: slot, attackerPos, attackerName: state.publicAttack.attackerName,
+		targetSlot: enemySlot, target: state.publicAttack.target, targetPos: state.publicAttack.targetPos,
+		targetName: state.publicAttack.targetName, originalTargetName: declaredTargetName,
+		redirected: state.publicAttack.redirected
+	});
+	const cancelPublicAttack = (reason: string) => {
+		state.publicAttack.active = false;
+		broadcast("attack_cancelled", { ...publicAttackPayload(), reason });
+	};
+	broadcast("attack_declared", publicAttackPayload());
+
 	function resolveAfterBlock(finalTargetLocal: AttackTarget) {
 		attacked[slot].add(attackerPos);
 		if (isLeaderAttacker) {
@@ -3539,7 +3559,10 @@ export function attack(
 		if (finalTargetLocal.type === "ally") {
 			ensureFieldSlots(enemy.field as any);
 			const enemyCard = enemy.field[finalTargetLocal.targetPos];
-			if (typeof enemyCard !== "string" || !enemyCard) return;
+			if (typeof enemyCard !== "string" || !enemyCard) {
+				cancelPublicAttack("Alvo indisponível");
+				return;
+			}
 			const enemyCardHp = getTargetHP(state, enemySlot, finalTargetLocal.targetPos);
 			targetCardId = enemyCard;
 			let reduction = getDamageReduction(enemyCard);
@@ -3598,7 +3621,9 @@ export function attack(
 		const targetName = finalTargetLocal.type === "leader" ? asPlayer(state, enemySlot).leaderId : (targetCardId || String(asPlayer(state, enemySlot).field[finalTargetLocal.targetPos] || "Aliado"));
 
 		game.seq += 1;
+		state.publicAttack.active = false;
 		broadcast("attack_resolved", {
+			attackId, targetSlot: enemySlot,
 			attackerSlot: slot, attackerPos, attackerLeader: isLeaderAttacker, attackerId, target: finalTargetLocal.type,
 			targetPos: finalTargetLocal.type === "ally" ? finalTargetLocal.targetPos : undefined,
 			targetCardId, damage, hit, attackValue, targetResistance, diffToResistance,
@@ -3616,6 +3641,7 @@ export function attack(
 	const continueDeclaredAttack = () => {
 		if (!validDeclaredTarget()) {
 			rejectTarget();
+			cancelPublicAttack("Alvo indisponível");
 			return;
 		}
 
@@ -3676,6 +3702,11 @@ export function attack(
 						}
 						(enemy as any).fieldTapped[chosenPos] = true;
 						finalTarget = { type: "ally", targetPos: chosenPos };
+						state.publicAttack.target = "ally";
+						state.publicAttack.targetPos = chosenPos;
+						state.publicAttack.targetName = String(enemy.field[chosenPos] || "Aliado");
+						state.publicAttack.redirected = true;
+						broadcast("attack_redirected", publicAttackPayload());
 						broadcast("effect_log", { slot: enemySlot, cardId: String(enemy.field[chosenPos] || ""), effect: "bloquear", text: `${enemySlot}: interpôs no ataque.` });
 					}
 					resolveAfterBlock(finalTarget);
@@ -3806,6 +3837,7 @@ export function attack(
 								(me as any).fieldPinnedUntilTurn[attackerPos] = Math.max(Number((me as any).fieldPinnedUntilTurn[attackerPos] || 0), Number(state.game.turn || 0) + 2);
 							}
 							broadcast("effect_log", { slot: enemySlot, cardId: contricaoCardId, effect: "freeser", text: `${contricaoCardId}: negou o ataque de ${attackerId} e o manteve exaurido até o fim do próximo turno do oponente.` });
+							cancelPublicAttack("Ataque negado");
 						}, () => offerEmboscadaReaction());
 						return;
 					}

@@ -27,7 +27,7 @@ function getElementCenter(el) {
         y: rect.top + rect.height / 2
     };
 }
-function buildCurve(fromX, fromY, toX, toY) {
+export function buildCurve(fromX, fromY, toX, toY) {
     const dx = toX - fromX;
     const dy = toY - fromY;
     const bend = Math.max(36, Math.min(180, Math.abs(dx) * 0.25 + Math.abs(dy) * 0.18));

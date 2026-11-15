@@ -54,6 +54,9 @@ export class MPClient {
 		this.room.onMessage("attack_resolved", (msg: any) => {
 			this.onLog?.("ATTACK_RESOLVED", msg);
 		});
+		for (const name of ["attack_declared", "attack_redirected", "attack_cancelled"]) {
+			this.room.onMessage(name, (msg: unknown) => this.onLog?.(name.toUpperCase(), msg));
+		}
 
 		this.room.onMessage("match_ended", (msg: any) => {
 			this.onLog?.("MATCH_ENDED", msg);
@@ -138,4 +141,3 @@ export class MPClient {
 		this.room?.send("end_turn", {});
 	}
 }
-
