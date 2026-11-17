@@ -75,6 +75,9 @@ npm.cmd run build:prod
 
 Os builds do cliente agora regeneram automaticamente as miniaturas em `client/public/publicadas` antes do `vite build`.
 Isso evita que a grade do deckbuilder e de decks salvos fique com thumbs antigas quando a arte original muda mantendo o mesmo nome.
+Para atualizar somente as miniaturas dos equipamentos, execute `npm.cmd run assets:thumbs -- --folders equip` na pasta `client`.
+Ao substituir artes mantendo os nomes, atualize também `ASSET_CACHE_VERSION` no jogo (`client/src/pages/game.ts` e `game.js`)
+e em `client/public/ui/deckShared.js`, junto da versão desse script em `deckbuilder.html` e `decks_salvos.html`, para invalidar o cache do navegador.
 
 ## Combate: Interpor e Desafio
 
