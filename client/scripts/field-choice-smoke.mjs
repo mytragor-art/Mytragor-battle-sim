@@ -22,7 +22,12 @@ class Element {
       contains: name => this.classes.has(name)
     };
   }
-  appendChild(child) { this.children.push(child); return child; }
+  appendChild(child) {
+    if (child.parentElement) child.parentElement.children = child.parentElement.children.filter(item => item !== child);
+    this.children.push(child);
+    child.parentElement = this;
+    return child;
+  }
   append(...children) { this.children.push(...children); }
   set innerHTML(value) { assert.equal(value, ''); this.children = []; }
   replaceChildren(...children) { this.children = children; }
@@ -31,7 +36,10 @@ class Element {
   setAttribute(name, value) { this.attributes.set(name, value); }
   removeAttribute(name) { this.attributes.delete(name); }
   querySelector() { return this.children[0] || null; }
-  addEventListener(type, callback) { this.listeners.set(type, callback); }
+  addEventListener(type, callback) {
+    const previous = this.listeners.get(type);
+    this.listeners.set(type, previous ? event => { previous(event); if (!event.stopped) callback(event); } : callback);
+  }
   getBoundingClientRect() {
     return this.rect || { left: 400, right: 480, top: 200, bottom: 310, width: 80, height: 110 };
   }
@@ -39,8 +47,19 @@ class Element {
 globalThis.Node = Element;
 globalThis.KeyboardEvent = class { constructor(key) { this.key = key; } };
 const windowListeners = new Map();
+const timers = new Map();
+let nextTimer = 0;
+const fireTimers = delay => {
+  for (const [id, timer] of [...timers]) {
+    if (timer.delay !== delay) continue;
+    timers.delete(id);
+    timer.callback();
+  }
+};
 globalThis.window = {
   innerWidth: 1280, innerHeight: 900,
+  setTimeout: (callback, delay) => { const id = ++nextTimer; timers.set(id, { callback, delay }); return id; },
+  clearTimeout: id => timers.delete(id),
   addEventListener: (type, callback) => windowListeners.set(type, callback),
   removeEventListener: type => windowListeners.delete(type)
 };
@@ -100,6 +119,8 @@ for (const extension of ['js', 'ts']) {
   const { createResolver } = await import(`data:text/javascript;base64,${Buffer.from(harness).toString('base64')}`);
   const elements = new Map(['board', 'fieldChoiceBar', 'fieldChoiceTitle', 'fieldChoiceHint', 'fieldChoiceActions', 'fieldChoiceCountdown', 'cardChoiceModal', 'cardChoiceTitle', 'cardChoiceGrid']
     .map(id => [id, new Element(id)]));
+  const barHome = new Element('body');
+  barHome.appendChild(elements.get('fieldChoiceBar'));
   const options = [];
   for (const [side, serverSide] of [['you', 'p1'], ['ai', 'p2']]) {
     for (let pos = 0; pos < 5; pos++) {
@@ -132,9 +153,28 @@ for (const extension of ['js', 'ts']) {
   scenarios += 2;
   const sent = [];
   let canceled = 0;
+  const describeFunction = parsed.statements.find(node => ts.isFunctionDeclaration(node)
+    && node.name?.text === 'describeEquipmentChoice');
+  const carrierFunction = parsed.statements.find(node => ts.isFunctionDeclaration(node)
+    && node.name?.text === 'resolveEquipmentChoiceCarrier');
+  const describeHarness = ts.transpileModule(`
+    export function createDescription(slot) {
+      const currentMyLeader = 'Meu Escolhido', currentEnemyLeader = 'Escolhido rival';
+      const currentMyField = ['Arnold', 'Arnold'], currentEnemyField = ['Executor', 'Executor'];
+      const myAttachments = [0, 1, -1, -2, 4], enemyAttachments = [0, 1, -1, -2, 4];
+      const sideFromServerSlot = side => !['p1', 'p2'].includes(side) ? null : side === slot ? 'you' : 'ai';
+      const getSupportArrayForSide = () => Array(5).fill('Manto de Couro');
+      const getSupportAttachArrayForSide = side => side === 'you' ? myAttachments : enemyAttachments;
+      const getCardKind = () => 'equip', resolveCard = id => ({ name: id });
+      ${describeFunction.getText(parsed)}
+      ${carrierFunction.getText(parsed)}
+      return { describe: describeEquipmentChoice, resolve: resolveEquipmentChoiceCarrier, myAttachments, enemyAttachments };
+    }`, { compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.ESNext } }).outputText;
+  const { createDescription } = await import(`data:text/javascript;base64,${Buffer.from(describeHarness).toString('base64')}`);
+  const descriptions = createDescription('p1');
   let controller;
   controller = createFieldChoiceController(resolve, id => { sent.push(id); controller.hide(); },
-    () => { canceled++; controller.hide(); });
+    () => { canceled++; controller.hide(); }, descriptions.describe, descriptions.resolve);
   const target = elements.get('you-ally-0');
   const bar = elements.get('fieldChoiceBar');
   bar.rect = { left: 0, right: 520, top: 0, bottom: 90, width: 520, height: 90 };
@@ -247,14 +287,146 @@ for (const extension of ['js', 'ts']) {
     }
   }
   controller.show({ options: equips });
+  const boardEvent = (type, target, extra = {}) => {
+    const event = { target, pointerType: 'mouse', relatedTarget: null, button: 0,
+      pointerId: 7, clientX: 10, clientY: 10, prevented: false, stopped: false,
+      preventDefault() { this.prevented = true; }, stopImmediatePropagation() { this.stopped = true; }, ...extra };
+    elements.get('board').listeners.get(type)(event);
+    return event;
+  };
+  const firstEquipment = elements.get('you-support-0');
+  const firstCarrier = elements.get('you-ally-0');
+  const secondCarrier = elements.get('you-ally-1');
+  const carrierClass = 'choiceEquipmentCarrierHighlight';
+  const countBeforePreview = sent.length;
+  boardEvent('pointerover', firstEquipment);
+  assert.ok(firstCarrier.classes.has(carrierClass), 'Hover highlights the carrier without clicking');
+  boardEvent('pointerover', elements.get('you-support-1'));
+  assert.equal(firstCarrier.classes.has(carrierClass), false);
+  assert.ok(secondCarrier.classes.has(carrierClass), 'Identical equipment resolves to its own carrier');
+  boardEvent('pointerout', elements.get('you-support-1'));
+  assert.equal(secondCarrier.classes.has(carrierClass), false);
+  boardEvent('focusin', firstEquipment);
+  assert.ok(firstCarrier.classes.has(carrierClass), 'Keyboard focus previews the carrier');
+  boardEvent('focusout', firstEquipment);
+  boardEvent('pointerdown', firstEquipment, { pointerType: 'touch' });
+  assert.equal(firstCarrier.classes.has(carrierClass), false, 'A tap does not start the hold preview');
+  fireTimers(450);
+  assert.ok(firstCarrier.classes.has(carrierClass), 'Holding highlights the carrier');
+  windowListeners.get('pointerup')({ pointerId: 7 });
+  const heldClick = dispatch(firstEquipment);
+  assert.ok(heldClick.prevented && heldClick.stopped);
+  assert.equal(sent.length, countBeforePreview, 'Releasing a hold cannot select the equipment');
+  fireTimers(900);
+  assert.equal(firstCarrier.classes.has(carrierClass), false);
+  boardEvent('pointerdown', firstEquipment, { pointerType: 'touch' });
+  windowListeners.get('pointermove')({ pointerId: 7, clientX: 30, clientY: 10 });
+  fireTimers(450);
+  assert.equal(firstCarrier.classes.has(carrierClass), false, 'Scrolling cancels the hold');
+  windowListeners.get('pointerup')({ pointerId: 7 });
+  dispatch(firstEquipment);
+  assert.equal(sent.length, countBeforePreview, 'A scroll cannot select a card');
+  boardEvent('pointerdown', firstEquipment, { pointerType: 'touch' });
+  windowListeners.get('pointercancel')({ pointerId: 7 });
+  fireTimers(450);
+  assert.equal(firstCarrier.classes.has(carrierClass), false, 'Canceled gestures leave no highlight');
+  boardEvent('pointerdown', firstEquipment, { pointerType: 'touch' });
+  windowListeners.get('pointerup')({ pointerId: 7 });
+  dispatch(firstEquipment);
+  assert.equal(sent.at(-1), 'equip-p1-0', 'A fresh quick tap selects immediately after a hold');
+  assert.equal(controller.active, false);
+  controller.show({ options: equips });
+  boardEvent('pointerover', firstEquipment);
+  controller.refresh();
+  assert.equal(firstCarrier.classes.has(carrierClass), false, 'State sync clears stale carrier highlights');
+  boardEvent('pointerover', firstEquipment);
+  controller.hide();
+  assert.equal(firstCarrier.classes.has(carrierClass), false);
+  assert.equal(timers.size, 0);
+  assert.equal(windowListeners.size, 0);
+  firstEquipment.rect = { left: 400, right: 480, top: 600, bottom: 710, width: 80, height: 110 };
+  firstCarrier.rect = { left: 400, right: 480, top: 470, bottom: 580, width: 80, height: 110 };
+  window.innerHeight = 700;
+  controller.show({ options: [equips[0]] });
+  assert.ok(parseFloat(bar.style.top) + 90 < 470, 'The prompt must not cover the highlighted carrier');
+  controller.hide();
+  firstEquipment.rect = firstCarrier.rect = null;
+  window.innerHeight = 900;
+  const equipmentDock = new Element('fieldChoiceEquipmentDock');
+  equipmentDock.hidden = true;
+  elements.set(equipmentDock.id, equipmentDock);
+  const dockedController = createFieldChoiceController(resolve, id => sent.push(id), () => {},
+    descriptions.describe, descriptions.resolve);
+  for (const width of [390, 1280]) {
+    window.innerWidth = width;
+    for (const equipment of [equips.slice(0, 5), equips.slice(5), [field, ...equips]]) {
+      dockedController.show({ options: equipment });
+      assert.equal(equipmentDock.hidden, false);
+      assert.equal(bar.parentElement, equipmentDock, 'Equipment instructions use a separate layout row, never overlaying cards');
+      assert.ok(bar.classList.contains('fieldChoiceBar--docked'));
+      assert.ok(bar.classList.contains('fieldChoiceBar--equipment'), 'Equipment choices suppress the instruction panel');
+      dockedController.refresh();
+      assert.equal(bar.parentElement, equipmentDock, 'State sync keeps instructions docked');
+      dockedController.hide();
+      assert.equal(equipmentDock.hidden, true, 'Closing a choice releases the reserved space');
+      assert.equal(bar.classList.contains('fieldChoiceBar--docked'), false);
+      assert.equal(bar.classList.contains('fieldChoiceBar--equipment'), false);
+      assert.equal(bar.parentElement, barHome, 'Closing restores the floating bar for other choices');
+      scenarios++;
+    }
+  }
+  dockedController.show({ options: equips, allowCancel: false });
+  assert.equal(dockedController.active, true, 'Equipment choices work without an instruction panel');
+  assert.equal(bar.hidden, true, 'Highlights alone suffice when no controls or timer are needed');
+  assert.equal(equipmentDock.hidden, true, 'A hidden panel must not reserve any board space');
+  assert.ok(resolve(equips[0]).classList.contains('choiceBoardHighlight'));
+  dockedController.hide();
+  dockedController.show({ options: equips, allowCancel: false, timeoutMs: 30000 });
+  assert.equal(bar.hidden, false, 'Timed choices retain their compact countdown');
+  assert.equal(equipmentDock.hidden, false);
+  dockedController.hide();
+  dockedController.show({ options: equips, allowCancel: false, multiSelect: true, minSelections: 1 });
+  assert.equal(bar.hidden, false, 'Multiple choices retain their confirmation action');
+  assert.ok(actions.children.some(button => button.textContent === 'Confirmar (0)'));
+  dockedController.hide();
+  dockedController.show({ options: [field] });
+  assert.equal(bar.classList.contains('fieldChoiceBar--equipment'), false, 'Other target choices retain their instructions');
+  assert.equal(bar.hidden, false);
+  dockedController.hide();
+  scenarios += 4;
+  window.innerWidth = 1280;
+  elements.delete(equipmentDock.id);
+  controller.show({ options: equips });
+  scenarios += 15;
+  for (const slot of ['p1', 'p2']) {
+    const { describe } = createDescription(slot);
+    for (const side of ['p1', 'p2']) {
+      const base = { side, lane: 'support', cardId: 'Manto de Couro' };
+      const name = side === slot ? 'Arnold' : 'Executor';
+      const owner = side === slot ? 'Seu' : 'Oponente';
+      assert.equal(describe({ ...base, pos: 0 }), `Acoplado a: ${name} (${owner}, posição 1)`);
+      assert.equal(describe({ ...base, pos: 1 }), `Acoplado a: ${name} (${owner}, posição 2)`);
+      assert.match(describe({ ...base, pos: 2 }), /Escolhido\)/);
+      for (const pos of [3, 4, 5, -1, undefined]) assert.equal(describe({ ...base, pos }), '');
+      assert.equal(describe({ ...base, pos: 0, lane: 'grave' }), '');
+      assert.equal(describe({ ...base, pos: 0, cardId: 'carta antiga' }), '');
+      scenarios++;
+    }
+  }
   for (const option of equips) {
     const element = resolve(option);
     assert.ok(element.classList.contains('choiceEquipmentExpanded'));
     assert.equal(element.style.getPropertyValue('--choice-equipment-column'), String(option.pos + 1));
     assert.equal(element.style.getPropertyValue('--equipment-column'), '1', 'Logical attachment remains unchanged');
+    const context = descriptions.describe(option);
+    assert.equal(element.getAttribute('data-choice-carrier'), context || null);
+    if (context) assert.ok(element.getAttribute('aria-label').includes(context));
     scenarios++;
   }
   controller.refresh();
+  descriptions.myAttachments[0] = 1;
+  controller.refresh();
+  assert.match(elements.get('you-support-0').getAttribute('data-choice-carrier'), /posição 2/);
   assert.equal(elements.get('ai-support-4').style.getPropertyValue('--choice-equipment-column'), '5');
   dispatch(elements.get('ai-support-4').children[0]);
   assert.equal(sent.at(-1), 'equip-p2-4');
@@ -262,6 +434,7 @@ for (const extension of ['js', 'ts']) {
     const element = resolve(option);
     assert.equal(element.classList.contains('choiceEquipmentExpanded'), false);
     assert.equal(element.style.getPropertyValue('--choice-equipment-column'), '');
+    assert.equal(element.getAttribute('data-choice-carrier'), null, 'Carrier labels are removed after the choice');
   }
   scenarios += 3;
   controller.show({ options: [field, ...equips] });
@@ -317,7 +490,8 @@ for (const extension of ['js', 'ts']) {
       'refreshFieldChoice', 'isNegativeChoiceOption', 'normalizeKind'].includes(node.name?.text));
   assert.equal(modalFunctions.length, 7);
   const modalHarness = ts.transpileModule(`
-    export function createModal(fieldChoices, canChooseOnField, resolveChoiceHighlightElement, slot, width) {
+    export function createModal(fieldChoices, canChooseOnField, resolveChoiceHighlightElement, slot, width, describeEquipmentChoice = () => '') {
+      const modalEquipmentPreview = { reset() {} }, modalEquipmentTargets = new Map();
       const window = { innerWidth: width };
       let pendingFieldChoicePayload = null, activeChoiceId = null, activeChoiceTitleText = '', activeChoiceIsMinimized = false;
       const calls = [], room = { send: (type, payload) => calls.push({ type, ...payload }) };
@@ -387,6 +561,15 @@ for (const extension of ['js', 'ts']) {
     }
   }
   const ordinaryChoice = createModal(controller, canChooseOnField, resolve, 'p1', 1280);
+  const equipmentModal = createModal({ show: () => false, hide() {}, refresh() {} }, () => false, resolve, 'p1', 390, descriptions.describe);
+  equipmentModal.show({ choiceId: 'equip-modal', options: equips.slice(0, 3) });
+  const equipmentContents = descendants(elements.get('cardChoiceGrid'));
+  for (const option of equips.slice(0, 3)) {
+    const context = descriptions.describe(option);
+    assert.ok(equipmentContents.some(element => element.className === 'choiceEquipmentCarrier' && element.textContent === context));
+    assert.ok(equipmentContents.some(element => element.getAttribute('aria-label')?.includes(context)));
+  }
+  scenarios++;
   ordinaryChoice.show({ choiceId: 'ordinary-choice', options: [field] });
   assert.equal(controller.active, true, 'Noncombat effects still use direct field selection');
   assert.equal(modal.style.display, 'none');

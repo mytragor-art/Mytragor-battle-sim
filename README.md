@@ -176,6 +176,12 @@ Escolhas diretas revisadas no catálogo:
   Ao destruir ou deslocar equipamentos acoplados, os elegíveis se abrem temporariamente em cartas
   inteiras separadas, sobre a faixa de suportes/fragmentos, sem cobrir os portadores ou redimensionar
   o campo. A mão fica oculta apenas durante essa seleção para não cobrir os equipamentos.
+  Cada equipamento selecionável identifica o personagem ao qual está acoplado, o lado e a posição
+  (ou Escolhido), tanto no campo quanto no modal, distinguindo inclusive cópias de personagens iguais.
+  Passar o mouse ou focar o equipamento ilumina seu personagem em roxo. No celular, segurar por
+  450 ms mostra o mesmo destaque sem selecionar; um toque rápido continua selecionando normalmente.
+  Nessas escolhas, os destaques substituem o painel de instruções. Somente os controles necessários
+  (Cancelar, Confirmar ou prazo) aparecem, sem painel e em espaço próprio acima do campo, sem cobrir cartas.
   Ao escolher, cancelar ou esgotar o prazo, as faixas compactas e a mão voltam ao normal.
 
 Escolhas da mão, deck e cemitério continuam no modal, mesmo quando existe uma cópia idêntica no campo.

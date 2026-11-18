@@ -1,3 +1,119 @@
+export function createEquipmentCarrierPreview(root, resolve) {
+    let highlighted = null;
+    let timer = null;
+    let pressed = null;
+    let pointerId = null;
+    let startX = 0;
+    let startY = 0;
+    let suppressed = null;
+    const clearTimer = () => {
+        if (timer !== null)
+            window.clearTimeout(timer);
+        timer = null;
+    };
+    const highlight = (carrier) => {
+        if (highlighted === carrier)
+            return;
+        highlighted?.classList.remove("choiceEquipmentCarrierHighlight");
+        highlighted = carrier;
+        highlighted?.classList.add("choiceEquipmentCarrierHighlight");
+    };
+    const reset = () => {
+        if (pressed)
+            suppressed = pressed.equipment;
+        clearTimer();
+        highlight(null);
+        pressed = null;
+        pointerId = null;
+        stopTracking();
+    };
+    const targetFor = (event) => event.target instanceof Node ? resolve(event.target) : null;
+    root.addEventListener("pointerover", event => {
+        if (event.pointerType === "touch" || event.pointerType === "pen" || pressed)
+            return;
+        highlight(targetFor(event)?.carrier || null);
+    }, true);
+    root.addEventListener("pointerout", event => {
+        if (pressed)
+            return;
+        const next = event.relatedTarget instanceof Node ? resolve(event.relatedTarget) : null;
+        highlight(next?.carrier || null);
+    }, true);
+    root.addEventListener("focusin", event => {
+        if (pointerId === null)
+            highlight(targetFor(event)?.carrier || null);
+    }, true);
+    root.addEventListener("focusout", () => highlight(null), true);
+    root.addEventListener("pointerdown", event => {
+        suppressed = null;
+        if ((event.pointerType !== "touch" && event.pointerType !== "pen") || event.button !== 0)
+            return;
+        reset();
+        pressed = targetFor(event);
+        if (!pressed)
+            return;
+        event.stopImmediatePropagation();
+        pointerId = event.pointerId;
+        startX = event.clientX;
+        startY = event.clientY;
+        timer = window.setTimeout(() => {
+            timer = null;
+            if (!pressed)
+                return;
+            suppressed = pressed.equipment;
+            highlight(pressed.carrier);
+        }, 450);
+        window.addEventListener("pointerup", release);
+        window.addEventListener("pointercancel", cancel);
+        window.addEventListener("pointermove", move);
+    }, true);
+    const move = (event) => {
+        if (!pressed || event.pointerId !== pointerId)
+            return;
+        if (Math.hypot(event.clientX - startX, event.clientY - startY) <= 10)
+            return;
+        suppressed = pressed.equipment;
+        clearTimer();
+        highlight(null);
+        pressed = null;
+    };
+    const release = (event) => {
+        if (event.pointerId !== pointerId)
+            return;
+        clearTimer();
+        pressed = null;
+        pointerId = null;
+        stopTracking();
+        if (highlighted)
+            timer = window.setTimeout(() => { timer = null; highlight(null); }, 900);
+    };
+    const cancel = (event) => {
+        if (event.pointerId !== pointerId)
+            return;
+        reset();
+    };
+    function stopTracking() {
+        window.removeEventListener("pointerup", release);
+        window.removeEventListener("pointercancel", cancel);
+        window.removeEventListener("pointermove", move);
+    }
+    root.addEventListener("touchstart", event => {
+        if (targetFor(event))
+            event.stopImmediatePropagation();
+    }, { capture: true, passive: true });
+    root.addEventListener("contextmenu", event => {
+        if (targetFor(event))
+            event.preventDefault();
+    }, true);
+    root.addEventListener("click", event => {
+        if (!suppressed || !(event.target instanceof Node) || !suppressed.contains(event.target) || event.detail === 0)
+            return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        suppressed = null;
+    }, true);
+    return { reset };
+}
 export function getFieldChoiceKind(payload) {
     return payload.choiceKind || "target";
 }
@@ -20,7 +136,7 @@ export function canChooseOnField(options, resolve) {
     }
     return targets.size > 0;
 }
-export function createFieldChoiceController(resolve, submit, cancel) {
+export function createFieldChoiceController(resolve, submit, cancel, describeTarget = () => "", resolveCarrier = () => null) {
     const bar = document.getElementById("fieldChoiceBar");
     const title = document.getElementById("fieldChoiceTitle");
     const hint = document.getElementById("fieldChoiceHint");
@@ -30,12 +146,32 @@ export function createFieldChoiceController(resolve, submit, cancel) {
     if (!bar || !title || !hint || !actions || !countdown || !board) {
         throw new Error("Interface de escolha direta no campo incompleta.");
     }
-    const attributes = ["tabindex", "role", "aria-label", "aria-pressed", "data-choice-kind"];
+    const barHome = bar.parentElement;
+    const equipmentDock = document.getElementById("fieldChoiceEquipmentDock");
+    const attributes = ["tabindex", "role", "aria-label", "aria-pressed", "data-choice-kind", "data-choice-carrier"];
     let state = null;
+    const carrierPreview = createEquipmentCarrierPreview(board, target => {
+        for (const [equipment, option] of state?.targets || []) {
+            if (!equipment.contains(target))
+                continue;
+            const carrier = resolveCarrier(option);
+            if (carrier)
+                return { equipment, carrier };
+        }
+        return null;
+    });
     const positionBar = () => {
         if (!state || bar.hidden)
             return;
-        const targets = Array.from(state.targets.keys(), element => element.getBoundingClientRect())
+        if (equipmentDock && !equipmentDock.hidden)
+            return;
+        const visibleTargets = new Set(state.targets.keys());
+        for (const option of state.payload.options) {
+            const carrier = resolveCarrier(option);
+            if (carrier)
+                visibleTargets.add(carrier);
+        }
+        const targets = Array.from(visibleTargets, element => element.getBoundingClientRect())
             .filter(rect => rect.width > 0 && rect.height > 0);
         const bounds = targets.length ? {
             left: Math.min(...targets.map(rect => rect.left)),
@@ -69,6 +205,7 @@ export function createFieldChoiceController(resolve, submit, cancel) {
     };
     const positionObserver = new ResizeObserver(positionBar);
     function clearTargets() {
+        carrierPreview.reset();
         if (!state)
             return;
         for (const [element, values] of state.saved) {
@@ -141,7 +278,10 @@ export function createFieldChoiceController(resolve, submit, cancel) {
             }
             element.setAttribute("tabindex", "0");
             element.setAttribute("role", "button");
-            element.setAttribute("aria-label", [option.label || option.cardId || "Escolher alvo", option.description].filter(Boolean).join(". "));
+            const context = describeTarget(option);
+            if (context)
+                element.setAttribute("data-choice-carrier", context);
+            element.setAttribute("aria-label", [option.label || option.cardId || "Escolher alvo", context, option.description].filter(Boolean).join(". "));
         }
         updateSelection();
         positionBar();
@@ -150,6 +290,11 @@ export function createFieldChoiceController(resolve, submit, cancel) {
         clearTargets();
         state = null;
         bar.hidden = true;
+        bar.classList.remove("fieldChoiceBar--docked", "fieldChoiceBar--equipment");
+        if (equipmentDock)
+            equipmentDock.hidden = true;
+        if (barHome && bar.parentElement !== barHome)
+            barHome.appendChild(bar);
         bar.removeAttribute("data-choice-kind");
         bar.style.removeProperty("left");
         bar.style.removeProperty("top");
@@ -209,6 +354,9 @@ export function createFieldChoiceController(resolve, submit, cancel) {
                 ? `${purpose}: selecione as cartas destacadas e confirme.`
                 : kind === "replacement" ? "Substituir aliado: clique em quem sairá para abrir a vaga."
                     : `${purpose}: clique ou toque em uma carta destacada.`;
+            if (payload.options.some(option => resolveCarrier(option))) {
+                hint.textContent += " Passe o mouse ou segure o equipamento para iluminar seu personagem.";
+            }
             for (const option of payload.options) {
                 if (resolve(option))
                     continue;
@@ -242,7 +390,14 @@ export function createFieldChoiceController(resolve, submit, cancel) {
                     cancel(); };
                 actions.appendChild(button);
             }
-            bar.hidden = false;
+            const equipmentChoice = payload.options.some(option => resolveCarrier(option));
+            bar.classList.toggle("fieldChoiceBar--equipment", equipmentChoice);
+            bar.hidden = equipmentChoice && actions.children.length === 0 && !(Number(payload.timeoutMs) > 0);
+            if (equipmentDock && equipmentChoice && !bar.hidden) {
+                equipmentDock.appendChild(bar);
+                equipmentDock.hidden = false;
+                bar.classList.add("fieldChoiceBar--docked");
+            }
             refresh();
             positionObserver.observe(bar);
             positionObserver.observe(board);

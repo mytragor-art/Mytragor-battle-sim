@@ -325,6 +325,103 @@
 	pointer-events: none;
 }
 
+#board .choiceEquipmentExpanded[data-choice-carrier]::after,
+#board #ai-support > .choiceEquipmentExpanded[data-choice-carrier]::after {
+	content: attr(data-choice-carrier);
+	top: auto;
+	bottom: 0;
+	height: auto;
+	padding: 5px 3px;
+	background: #090f20;
+	font-size: 10px;
+	line-height: 1.25;
+	white-space: normal;
+	overflow-wrap: anywhere;
+}
+
+.choiceOptionText .choiceEquipmentCarrier {
+	color: #f1d18a;
+	font-weight: 700;
+}
+
+#fieldChoiceEquipmentDock {
+	display: flow-root;
+	flex: 0 0 auto;
+	min-width: 0;
+	width: 100%;
+}
+
+#fieldChoiceEquipmentDock[hidden] {
+	display: none;
+}
+
+#arenaCol:has(#fieldChoiceEquipmentDock:not([hidden])) {
+	display: flex;
+	flex-direction: column;
+}
+
+#arenaCol:has(#fieldChoiceEquipmentDock:not([hidden])) > .boardWrap {
+	flex: 1 1 0%;
+	min-height: 0;
+}
+
+#arenaCol:has(#fieldChoiceEquipmentDock:not([hidden])) > #enemyHandDock {
+	flex: 0 0 auto;
+	align-self: center;
+}
+
+#fieldChoiceEquipmentDock > .fieldChoiceBar--docked {
+	position: static;
+	transform: none;
+	width: min(520px, 100%);
+	max-width: 100%;
+	box-sizing: border-box;
+	margin: 0 auto;
+}
+
+.fieldChoiceBar.fieldChoiceBar--equipment {
+	width: max-content;
+	padding: 0;
+	background: none;
+	border: none;
+	box-shadow: none;
+}
+
+.fieldChoiceBar--equipment .fieldChoiceMessage {
+	flex: 0 1 auto;
+}
+
+.fieldChoiceBar--equipment #fieldChoiceTitle,
+.fieldChoiceBar--equipment #fieldChoiceHint {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+
+#board .choiceEquipmentCarrierHighlight {
+	outline: 3px solid #f0abfc;
+	outline-offset: 3px;
+	animation: equipmentCarrierPulse 1.2s ease-in-out infinite;
+	z-index: 45;
+}
+
+@keyframes equipmentCarrierPulse {
+	0%, 100% { filter: drop-shadow(0 0 3px #d946ef); }
+	50% { filter: drop-shadow(0 0 14px #f0abfc); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	#board .choiceEquipmentCarrierHighlight {
+		animation: none;
+		box-shadow: 0 0 14px #d946ef;
+	}
+}
+
 @media (min-width: 981px), (hover: hover) and (pointer: fine) {
 	#board {
 		min-width: calc(7 * var(--environment-card-w) + 5 * var(--slot-gap, 2px) + var(--pile-col-w, var(--environment-card-w)) + 90px);

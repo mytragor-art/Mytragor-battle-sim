@@ -8,7 +8,7 @@ import { setupBoardScale } from "../ui/boardScale";
 import { setupArenaSlots } from "../ui/arenaSlots";
 import { layoutEquipment } from "../ui/equipmentLayout";
 import { layoutOpponentHand, layoutPlayerHand } from "../ui/handLayout";
-import { canChooseOnField, createFieldChoiceController, getFieldChoiceKind } from "../ui/fieldChoices";
+import { canChooseOnField, createEquipmentCarrierPreview, createFieldChoiceController, getFieldChoiceKind } from "../ui/fieldChoices";
 import { getAvatarId, getDisplayName } from "../ui/profile";
 import { createMobileCardInspect, type MobileInspectCard } from "../ui/mobileCardInspect";
 import { renderCardRulesText } from "../ui/cardRulesText";
@@ -266,7 +266,17 @@ const fieldChoices = createFieldChoiceController(resolveChoiceHighlightElement, 
 	if (!room || !activeChoiceId) return;
 	room.send("effect_choice_submit", { choiceId: activeChoiceId, optionId });
 	hideCardChoiceModal(false);
-}, () => hideCardChoiceModal(true));
+}, () => hideCardChoiceModal(true), describeEquipmentChoice, resolveEquipmentChoiceCarrier);
+const modalEquipmentTargets = new Map<HTMLElement, Parameters<typeof describeEquipmentChoice>[0]>();
+const modalEquipmentGrid = document.getElementById("cardChoiceGrid");
+const modalEquipmentPreview = modalEquipmentGrid ? createEquipmentCarrierPreview(modalEquipmentGrid, target => {
+	for (const [equipment, option] of modalEquipmentTargets) {
+		if (!equipment.contains(target)) continue;
+		const carrier = resolveEquipmentChoiceCarrier(option);
+		if (carrier) return { equipment, carrier };
+	}
+	return null;
+}) : null;
 let pendingFieldChoicePayload: Parameters<typeof fieldChoices.show>[0] | null = null;
 let activePileSide: BattleSide = "you";
 let activePileWhich: "deck" | "grave" | "banished" = "deck";
@@ -2642,6 +2652,31 @@ function resolveChoiceHighlightElement(option: any): HTMLElement | null {
 	return element;
 }
 
+function describeEquipmentChoice(option: { side?: string; lane?: string; pos?: number; cardId?: string }): string {
+	const side = sideFromServerSlot(String(option.side || "") as "p1" | "p2");
+	const pos = option.pos;
+	if (!side || option.lane !== "support" || !Number.isInteger(pos) || pos == null || pos < 0 || pos >= 5) return "";
+	const cardId = getSupportArrayForSide(side)[pos];
+	if (!cardId || (option.cardId && option.cardId !== cardId) || getCardKind(cardId) !== "equip") return "";
+	const target = getSupportAttachArrayForSide(side)[pos];
+	const owner = side === "you" ? "Seu" : "Oponente";
+	if (target === -1) {
+		const leader = side === "you" ? currentMyLeader : currentEnemyLeader;
+		return leader ? `Acoplado a: ${resolveCard(leader)?.name || leader} (${owner}, Escolhido)` : "";
+	}
+	if (!Number.isInteger(target) || target < 0 || target >= 5) return "";
+	const carrier = (side === "you" ? currentMyField : currentEnemyField)[target];
+	return carrier ? `Acoplado a: ${resolveCard(carrier)?.name || carrier} (${owner}, posição ${target + 1})` : "";
+}
+
+function resolveEquipmentChoiceCarrier(option: Parameters<typeof describeEquipmentChoice>[0]): HTMLElement | null {
+	if (!describeEquipmentChoice(option)) return null;
+	const side = sideFromServerSlot(String(option.side || "") as "p1" | "p2");
+	if (!side || option.pos == null) return null;
+	const target = getSupportAttachArrayForSide(side)[option.pos];
+	return document.getElementById(target === -1 ? `${side}-leader` : `${side}-ally-${target}`);
+}
+
 function applyChoiceBoardHighlights(payload: any) {
 	clearChoiceBoardHighlights();
 	const seen = new Set<HTMLElement>();
@@ -2670,6 +2705,7 @@ function showChoiceRestoreDock() {
 }
 
 function minimizeCardChoiceModal() {
+	modalEquipmentPreview?.reset();
 	const modal = document.getElementById("cardChoiceModal") as HTMLElement | null;
 	if (!modal || !activeChoiceId) return;
 	activeChoiceIsMinimized = true;
@@ -2686,6 +2722,8 @@ function restoreCardChoiceModal() {
 }
 
 function hideCardChoiceModal(sendCancel: boolean = true) {
+	modalEquipmentPreview?.reset();
+	modalEquipmentTargets.clear();
 	const modal = document.getElementById("cardChoiceModal") as HTMLElement | null;
 	if (!modal) return;
 	modal.style.display = "none";
@@ -2914,6 +2952,8 @@ function refreshFieldChoice() {
 }
 
 function showEffectChoiceModal(payload: any) {
+	modalEquipmentPreview?.reset();
+	modalEquipmentTargets.clear();
 	const modal = document.getElementById("cardChoiceModal") as HTMLElement | null;
 	const title = document.getElementById("cardChoiceTitle");
 	const grid = document.getElementById("cardChoiceGrid") as HTMLElement | null;
@@ -3049,6 +3089,8 @@ function showEffectChoiceModal(payload: any) {
 		const cardId = visual.cardId || String(option?.cardId || option?.label || "");
 		if (cardId) button.dataset.cardId = cardId;
 		const card = resolveCard(cardId);
+		const equipmentContext = describeEquipmentChoice(option);
+		if (equipmentContext) modalEquipmentTargets.set(button, option);
 		button.classList.toggle("choiceCardMuted", visual.muted);
 		if (!negative && card?.img) {
 			const image = document.createElement("img");
@@ -3064,13 +3106,14 @@ function showEffectChoiceModal(payload: any) {
 		}
 		button.title = disabled
 			? String(option?.disabledReason || option?.label || "Indisponível")
-			: String(option?.label || cardId || "Escolher");
+			: [String(option?.label || cardId || "Escolher"), equipmentContext].filter(Boolean).join(". ");
+		button.setAttribute("aria-label", button.title);
 		const updatePreview = () => {
 			if (!cardId) return;
 			setThumbnailSource(previewImg, card?.img || CARD_BACK_ASSET);
 			previewImg.alt = card?.name || cardId;
 			previewImg.style.filter = visual.muted ? "grayscale(1) saturate(0.15) contrast(1.05) brightness(0.92)" : "none";
-			previewMeta.textContent = [String(option?.description || option?.label || "").trim(), cardPreviewDetails(cardId, card, false, false)].filter(Boolean).join("\n\n");
+			previewMeta.textContent = [equipmentContext, String(option?.description || option?.label || "").trim(), cardPreviewDetails(cardId, card, false, false)].filter(Boolean).join("\n\n");
 		};
 		if (!hasPreviewCard && !negative && card?.img) {
 			updatePreview();
@@ -3110,6 +3153,12 @@ function showEffectChoiceModal(payload: any) {
 		const optionLabel = document.createElement("strong");
 		optionLabel.textContent = String(option?.label || card?.name || "Escolher");
 		optionText.appendChild(optionLabel);
+		if (equipmentContext) {
+			const carrier = document.createElement("span");
+			carrier.className = "choiceEquipmentCarrier";
+			carrier.textContent = equipmentContext;
+			optionText.appendChild(carrier);
+		}
 		const description = String(option?.description || "").trim();
 		if (description) {
 			const detail = document.createElement("span");
